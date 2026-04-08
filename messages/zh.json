@@ -128,7 +128,8 @@
     "briefReport": "简要报告",
     "fullReport": "完整报告",
     "fullReportPlus": "完整报告+",
-    "mostPopular": "最受欢迎"
+    "mostPopular": "最受欢迎",
+    "manageBilling": "管理订阅"
   },
   "settings": {
     "title": "设置",

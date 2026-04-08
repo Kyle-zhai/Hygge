@@ -1,10 +1,15 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 interface PlanCardProps {
   name: string;
+  planKey: string;
   price: string;
   perMonth: string;
   features: string[];
@@ -17,6 +22,7 @@ interface PlanCardProps {
 
 export function PlanCard({
   name,
+  planKey,
   price,
   perMonth,
   features,
@@ -26,6 +32,27 @@ export function PlanCard({
   upgradeLabel,
   popularLabel,
 }: PlanCardProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleUpgrade() {
+    if (planKey === "free" || isCurrent) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planKey }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        router.push(data.url);
+      }
+    } catch {
+      setLoading(false);
+    }
+  }
+
   return (
     <Card className={`relative ${isPopular ? "border-primary shadow-md" : ""}`}>
       {isPopular && (
@@ -49,8 +76,19 @@ export function PlanCard({
             </li>
           ))}
         </ul>
-        <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent}>
-          {isCurrent ? currentPlanLabel : upgradeLabel}
+        <Button
+          className="w-full"
+          variant={isCurrent ? "outline" : "default"}
+          disabled={isCurrent || planKey === "free" || loading}
+          onClick={handleUpgrade}
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isCurrent ? (
+            currentPlanLabel
+          ) : (
+            upgradeLabel
+          )}
         </Button>
       </CardContent>
     </Card>

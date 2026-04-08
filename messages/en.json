@@ -128,7 +128,8 @@
     "briefReport": "Brief Report",
     "fullReport": "Full Report",
     "fullReportPlus": "Full Report+",
-    "mostPopular": "Most Popular"
+    "mostPopular": "Most Popular",
+    "manageBilling": "Manage Billing"
   },
   "settings": {
     "title": "Settings",
