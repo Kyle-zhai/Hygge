@@ -1,0 +1,31 @@
+import type { LLMAdapter } from "../llm/adapter.js";
+import type { Persona } from "../../shared/types/persona.js";
+import type { EvaluationScores, ProjectParsedData } from "../../shared/types/evaluation.js";
+import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
+import { config } from "../config.js";
+
+export interface PersonaReviewResult {
+  scores: EvaluationScores;
+  review_text: string;
+  strengths: string[];
+  weaknesses: string[];
+  llm_model: string;
+}
+
+export async function generatePersonaReview(
+  llm: LLMAdapter,
+  persona: Persona,
+  project: ProjectParsedData,
+  rawInput: string
+): Promise<PersonaReviewResult> {
+  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput);
+  const response = await llm.complete({ system, prompt, maxTokens: 2048 });
+  const parsed = JSON.parse(response.text);
+  return {
+    scores: parsed.scores,
+    review_text: parsed.review_text,
+    strengths: parsed.strengths,
+    weaknesses: parsed.weaknesses,
+    llm_model: config.anthropic.model,
+  };
+}
