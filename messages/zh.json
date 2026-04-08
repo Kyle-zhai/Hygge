@@ -1,0 +1,58 @@
+{
+  "common": {
+    "appName": "Persona",
+    "tagline": "AI 虚拟焦点小组",
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录",
+    "dashboard": "仪表盘",
+    "newEvaluation": "新建评价",
+    "pricing": "定价",
+    "settings": "设置",
+    "loading": "加载中...",
+    "error": "出了点问题",
+    "save": "保存",
+    "cancel": "取消",
+    "submit": "提交",
+    "back": "返回"
+  },
+  "landing": {
+    "hero": "在花钱之前，先验证你的产品",
+    "subtitle": "AI 人格模拟真实用户反馈，在投入营销之前就知道你的产品能否成功。",
+    "cta": "免费开始"
+  },
+  "auth": {
+    "loginTitle": "欢迎回来",
+    "registerTitle": "创建账户",
+    "email": "邮箱",
+    "password": "密码",
+    "loginWith": "使用 {provider} 登录",
+    "noAccount": "还没有账户？",
+    "hasAccount": "已有账户？"
+  },
+  "dashboard": {
+    "title": "我的项目",
+    "empty": "还没有评价记录，开始你的第一次评价吧！",
+    "evaluationsUsed": "本月已使用 {used} / {limit} 次评价",
+    "plan": "当前套餐：{plan}"
+  },
+  "evaluation": {
+    "inputPlaceholder": "描述你的项目、粘贴链接、或上传文件...",
+    "startEvaluation": "开始评价",
+    "selectPersonas": "选择人格",
+    "recommended": "推荐",
+    "inProgress": "评价进行中...",
+    "completed": "评价完成"
+  },
+  "pricing": {
+    "title": "选择你的套餐",
+    "free": "免费版",
+    "pro": "Pro",
+    "max": "Max",
+    "perMonth": "/月",
+    "evaluationsPerMonth": "每月 {count} 次评价",
+    "personasPerEvaluation": "最多 {count} 个人格",
+    "currentPlan": "当前套餐",
+    "upgrade": "升级"
+  }
+}

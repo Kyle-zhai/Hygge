@@ -1,0 +1,58 @@
+{
+  "common": {
+    "appName": "Persona",
+    "tagline": "AI-Powered Virtual Focus Group",
+    "login": "Log In",
+    "register": "Sign Up",
+    "logout": "Log Out",
+    "dashboard": "Dashboard",
+    "newEvaluation": "New Evaluation",
+    "pricing": "Pricing",
+    "settings": "Settings",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "back": "Back"
+  },
+  "landing": {
+    "hero": "Validate Your Product Before You Spend",
+    "subtitle": "AI personas simulate real user feedback. Know if your product will succeed before investing in marketing.",
+    "cta": "Get Started Free"
+  },
+  "auth": {
+    "loginTitle": "Welcome Back",
+    "registerTitle": "Create Account",
+    "email": "Email",
+    "password": "Password",
+    "loginWith": "Continue with {provider}",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "title": "My Projects",
+    "empty": "No evaluations yet. Start your first one!",
+    "evaluationsUsed": "{used} / {limit} evaluations used this month",
+    "plan": "Current Plan: {plan}"
+  },
+  "evaluation": {
+    "inputPlaceholder": "Describe your project, paste a link, or upload a file...",
+    "startEvaluation": "Start Evaluation",
+    "selectPersonas": "Select Personas",
+    "recommended": "Recommended",
+    "inProgress": "Evaluation in progress...",
+    "completed": "Evaluation complete"
+  },
+  "pricing": {
+    "title": "Choose Your Plan",
+    "free": "Free",
+    "pro": "Pro",
+    "max": "Max",
+    "perMonth": "/month",
+    "evaluationsPerMonth": "{count} evaluations/month",
+    "personasPerEvaluation": "Up to {count} personas",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade"
+  }
+}
