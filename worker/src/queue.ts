@@ -9,7 +9,7 @@ const connection: ConnectionOptions = new IORedis(config.redis.url, {
 export const evaluationQueue = new Queue("evaluations", { connection });
 
 export function createWorker(
-  processor: Parameters<typeof Worker>[1],
+  processor: (job: import("bullmq").Job) => Promise<unknown>,
   concurrency = 1
 ) {
   return new Worker("evaluations", processor, {

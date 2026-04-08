@@ -1,9 +1,9 @@
-import type { PersonaReview } from "../../shared/types/evaluation.js";
-import type { Persona } from "../../shared/types/persona.js";
+import type { Persona } from "@shared/types/persona.js";
+import type { ReviewForSimulation } from "../processors/scenario-simulation.js";
 
 export function buildScenarioSimulationPrompt(
   personas: Persona[],
-  reviews: (PersonaReview & { persona_name: string })[]
+  reviews: ReviewForSimulation[]
 ): { system: string; prompt: string } {
   const system = `You are a social dynamics simulator. You will simulate a real-world scenario where all the given personas are in the same physical space (e.g., a tech meetup, conference, or coworking space) and the product is being discussed.
 
@@ -46,7 +46,7 @@ Respond ONLY with valid JSON:
     .map((p) => {
       const review = reviews.find((r) => r.persona_id === p.id);
       const avgScore = review
-        ? Object.values(review.scores).reduce((a, b) => a + b, 0) / 6
+        ? (Object.values(review.scores) as number[]).reduce((a, b) => a + b, 0) / 6
         : 0;
       const stance = avgScore > 6 ? "Positive" : avgScore > 4 ? "Neutral" : "Negative";
       return `### ${p.identity.name} (ID: ${p.id})

@@ -1,5 +1,5 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { ProjectParsedData } from "../../shared/types/evaluation.js";
+import type { ProjectParsedData } from "@shared/types/evaluation.js";
 import { PARSE_PROJECT_SYSTEM, buildParseProjectPrompt } from "../prompts/parse-project.js";
 
 export async function parseProject(

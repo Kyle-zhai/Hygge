@@ -38,7 +38,7 @@ Respond ONLY with valid JSON: { "recommended_ids": ["id1", "id2", ...], "reasoni
       messages: [{ role: "user", content: `Project: ${projectDescription}\n\nAvailable personas:\n${personaList}` }],
     });
 
-    const text = response.content.filter((b): b is { type: "text"; text: string } => b.type === "text").map((b) => b.text).join("");
+    const text = response.content.filter((b) => b.type === "text").map((b) => "text" in b ? b.text : "").join("");
     return NextResponse.json(JSON.parse(text));
   } catch (error) {
     return NextResponse.json({

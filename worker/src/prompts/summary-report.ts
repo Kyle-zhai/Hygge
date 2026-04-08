@@ -1,8 +1,9 @@
-import type { PersonaReview, ProjectParsedData } from "../../shared/types/evaluation.js";
+import type { ProjectParsedData } from "@shared/types/evaluation.js";
+import type { ReviewForSummary } from "../processors/summary-report.js";
 
 export function buildSummaryReportPrompt(
   project: ProjectParsedData,
-  reviews: (PersonaReview & { persona_name: string })[],
+  reviews: ReviewForSummary[],
   rawInput: string
 ): { system: string; prompt: string } {
   const system = `You are a senior product consultant generating a comprehensive evaluation report. You are synthesizing evaluations from multiple AI personas into an actionable product diagnosis.

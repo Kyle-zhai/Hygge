@@ -1,5 +1,5 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { Persona } from "../../shared/types/persona.js";
+import type { Persona } from "@shared/types/persona.js";
 
 const RECOMMEND_SYSTEM = `You are a focus group coordinator. Given a project description and a list of available personas, recommend the most relevant personas for evaluating this project.
 

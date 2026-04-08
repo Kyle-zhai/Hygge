@@ -1,5 +1,5 @@
-import type { Persona } from "../../shared/types/persona.js";
-import type { ProjectParsedData } from "../../shared/types/evaluation.js";
+import type { Persona } from "@shared/types/persona.js";
+import type { ProjectParsedData } from "@shared/types/evaluation.js";
 
 export function buildPersonaReviewPrompt(
   persona: Persona,
