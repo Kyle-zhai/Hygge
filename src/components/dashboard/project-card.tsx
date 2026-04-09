@@ -52,10 +52,7 @@ export async function ProjectCard({ project }: ProjectCardProps) {
                 {t(latestEval.status as "pending" | "processing" | "completed" | "failed")}
               </Badge>
             )}
-            <DeleteProjectButton
-              projectId={project.id}
-              confirmText={locale === "zh" ? "确定要删除这条记录吗？" : "Delete this record?"}
-            />
+            <DeleteProjectButton projectId={project.id} locale={locale} />
           </div>
         </div>
       </CardHeader>
