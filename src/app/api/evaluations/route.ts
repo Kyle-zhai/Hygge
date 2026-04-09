@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { Queue } from "bullmq";
+import IORedis from "ioredis";
+
+// Module-level singleton: reuse across requests (avoids cold-start per request)
+let _queue: Queue | null = null;
+function getQueue(): Queue {
+  if (!_queue) {
+    let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
+      redisUrl = redisUrl.replace("redis://", "rediss://");
+    }
+    const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+    _queue = new Queue("evaluations", { connection });
+  }
+  return _queue;
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -70,16 +86,9 @@ export async function POST(request: Request) {
   // Increment usage
   await supabase.from("subscriptions").update({ evaluations_used: subscription.evaluations_used + 1 }).eq("id", subscription.id);
 
-  // Push job to queue
+  // Push job to queue (reuses module-level connection)
   try {
-    const { Queue } = await import("bullmq");
-    const IORedis = (await import("ioredis")).default;
-    let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-    if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
-      redisUrl = redisUrl.replace("redis://", "rediss://");
-    }
-    const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
-    const queue = new Queue("evaluations", { connection });
+    const queue = getQueue();
     await queue.add("evaluate", {
       evaluationId: evaluation.id,
       projectId: project.id,
@@ -89,7 +98,6 @@ export async function POST(request: Request) {
       selectedPersonaIds,
       planTier: subscription.plan,
     });
-    await connection.quit();
   } catch (queueError) {
     console.error("Failed to push to queue:", queueError);
   }

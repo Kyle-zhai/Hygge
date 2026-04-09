@@ -31,7 +31,7 @@ export default async function EvaluationResultPage({
     .in("id", evaluation.selected_persona_ids);
 
   const reviews = (evaluation as any).persona_reviews || [];
-  const report = ((evaluation as any).summary_reports || [])[0] || null;
+  const report = (evaluation as any).summary_reports || null;
 
   return (
     <ReportView

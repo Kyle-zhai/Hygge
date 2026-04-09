@@ -1,12 +1,88 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader2, FileText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+
+const STEP_KEYS = [
+  "generatingStep1",
+  "generatingStep2",
+  "generatingStep3",
+  "generatingStep4",
+  "generatingStep5",
+] as const;
+
+const CYCLE_INTERVAL_MS = 3000;
+
+function WaveDots() {
+  return (
+    <span className="inline-flex items-center gap-[2px] ml-1" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="inline-block h-[4px] w-[4px] rounded-full bg-[#E2DDD5]"
+          style={{
+            animation: "wave-bounce 1.4s ease-in-out infinite",
+            animationDelay: `${i * 0.16}s`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes wave-bounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+          40% { transform: translateY(-6px); opacity: 1; }
+        }
+      `}</style>
+    </span>
+  );
+}
+
+function GeneratingReportIndicator({
+  t,
+}: {
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setStepIndex((prev) => (prev + 1) % STEP_KEYS.length);
+    }, CYCLE_INTERVAL_MS);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex items-center justify-center gap-2 text-sm text-[#9B9594]"
+    >
+      <FileText className="h-4 w-4 animate-pulse text-[#E2DDD5]" />
+      <div className="relative h-5 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={stepIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="inline-flex items-center whitespace-nowrap"
+          >
+            {t(STEP_KEYS[stepIndex])}
+            <WaveDots />
+          </motion.span>
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
 
 interface PersonaInfo {
   id: string;
@@ -143,14 +219,7 @@ export function ProgressTracker({
 
       {/* Generating report state */}
       {allReviewsDone && status !== "completed" && status !== "failed" && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-center gap-2 text-sm text-[#9B9594]"
-        >
-          <FileText className="h-4 w-4 animate-pulse text-[#E2DDD5]" />
-          {t("generatingReport")}
-        </motion.div>
+        <GeneratingReportIndicator t={t} />
       )}
 
       {/* View Report button */}
