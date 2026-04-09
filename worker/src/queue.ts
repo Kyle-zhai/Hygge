@@ -2,12 +2,15 @@ import { Queue, Worker, type ConnectionOptions } from "bullmq";
 import IORedis from "ioredis";
 import { config } from "./config.js";
 
-const redisUrl = config.redis.url;
+// Upstash requires TLS — force rediss:// scheme if needed
+let redisUrl = config.redis.url;
 const isUpstash = redisUrl.includes("upstash.io");
+if (isUpstash && redisUrl.startsWith("redis://")) {
+  redisUrl = redisUrl.replace("redis://", "rediss://");
+}
 
 const connection: ConnectionOptions = new IORedis(redisUrl, {
   maxRetriesPerRequest: null,
-  tls: isUpstash ? { rejectUnauthorized: false } : undefined,
 });
 
 export const evaluationQueue = new Queue("evaluations", { connection });
