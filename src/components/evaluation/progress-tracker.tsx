@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader2, FileText } from "lucide-react";
-import { subscribeToEvaluation, unsubscribe } from "@/lib/supabase/realtime";
+import { createClient } from "@/lib/supabase/client";
 
 interface PersonaInfo {
   id: string;
@@ -32,6 +32,21 @@ export function ProgressTracker({
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set(initialCompletedIds));
   const [status, setStatus] = useState(initialStatus);
 
+  const poll = useCallback(async () => {
+    const supabase = createClient();
+    const { data: evaluation } = await supabase
+      .from("evaluations")
+      .select("status, persona_reviews(persona_id)")
+      .eq("id", evaluationId)
+      .single();
+
+    if (!evaluation) return;
+
+    const reviewIds = (evaluation.persona_reviews || []).map((r: any) => r.persona_id);
+    setCompletedIds(new Set(reviewIds));
+    setStatus(evaluation.status);
+  }, [evaluationId]);
+
   useEffect(() => {
     if (status === "completed") {
       const timer = setTimeout(() => {
@@ -40,19 +55,10 @@ export function ProgressTracker({
       return () => clearTimeout(timer);
     }
 
-    const channel = subscribeToEvaluation(evaluationId, {
-      onStatusChange: (newStatus) => {
-        setStatus(newStatus);
-      },
-      onNewReview: (review) => {
-        setCompletedIds((prev) => new Set([...prev, review.persona_id]));
-      },
-    });
-
-    return () => {
-      unsubscribe(channel);
-    };
-  }, [evaluationId, locale, router, status]);
+    // Poll every 3 seconds
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [evaluationId, locale, router, status, poll]);
 
   const allReviewsDone = completedIds.size >= personas.length;
   const progress = personas.length > 0 ? (completedIds.size / personas.length) * 100 : 0;
