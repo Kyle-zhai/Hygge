@@ -41,8 +41,13 @@ export function ReportView({ report, reviews, personas, locale }: ReportViewProp
 
   useEffect(() => {
     if (pendingScroll.current !== null) {
-      window.scrollTo(0, pendingScroll.current);
+      const target = pendingScroll.current;
       pendingScroll.current = null;
+      window.scrollTo(0, target);
+      // Override browser scroll restoration after layout settles
+      const t1 = setTimeout(() => window.scrollTo(0, target), 50);
+      const t2 = setTimeout(() => window.scrollTo(0, target), 150);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [showScores]);
 
