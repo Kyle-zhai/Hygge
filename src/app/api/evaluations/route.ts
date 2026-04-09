@@ -74,7 +74,11 @@ export async function POST(request: Request) {
   try {
     const { Queue } = await import("bullmq");
     const IORedis = (await import("ioredis")).default;
-    const connection = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null });
+    let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
+      redisUrl = redisUrl.replace("redis://", "rediss://");
+    }
+    const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
     const queue = new Queue("evaluations", { connection });
     await queue.add("evaluate", {
       evaluationId: evaluation.id,
