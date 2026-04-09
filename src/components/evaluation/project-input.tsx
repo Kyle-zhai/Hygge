@@ -51,13 +51,13 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
 
   return (
     <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414] transition-all duration-300 focus-within:border-[#E2DDD5]/50 focus-within:ring-2 focus-within:ring-[#E2DDD5]/10">
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-3 pt-3 pb-3">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t("inputPlaceholder")}
-          className="min-h-[140px] resize-none border-0 bg-transparent px-1 py-1 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
+          className="min-h-[140px] resize-none border-0 bg-transparent px-3 py-2 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
           disabled={disabled}
         />
 
