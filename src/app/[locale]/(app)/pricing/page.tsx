@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PlanCard } from "@/components/pricing/plan-card";
+import { PricingComparison } from "@/components/pricing/pricing-comparison";
 import { ManageBillingButton } from "./manage-billing-button";
 
 export default async function PricingPage() {
@@ -22,66 +22,21 @@ export default async function PricingPage() {
     }
   }
 
-  const plans = [
-    {
-      key: "free",
-      name: t("free"),
-      price: "$0",
-      features: [
-        t("evaluationsPerMonth", { count: 1 }),
-        t("personasPerEvaluation", { count: 3 }),
-        t("briefReport"),
-      ],
-    },
-    {
-      key: "pro",
-      name: t("pro"),
-      price: "$20",
-      isPopular: true,
-      features: [
-        t("evaluationsPerMonth", { count: 10 }),
-        t("personasPerEvaluation", { count: 10 }),
-        t("fullReport"),
-      ],
-    },
-    {
-      key: "max",
-      name: t("max"),
-      price: "$100",
-      features: [
-        t("evaluationsPerMonth", { count: 40 }),
-        t("personasPerEvaluation", { count: 20 }),
-        t("fullReportPlus"),
-      ],
-    },
-  ];
-
   return (
-    <div className="mx-auto max-w-4xl py-8">
-      <div className="mb-12 text-center">
-        <h1 className="text-3xl font-semibold text-[#EAEAE8] sm:text-4xl tracking-[-0.02em]">
+    <div className="mx-auto max-w-5xl py-8">
+      <div className="mb-14 text-center">
+        <h1 className="text-3xl font-semibold text-[#EAEAE8] sm:text-4xl tracking-[-0.02em] leading-tight max-w-2xl mx-auto">
           {t("title")}
         </h1>
+        <p className="mt-3 text-[#9B9594] text-base">
+          {t("subtitle")}
+        </p>
       </div>
-      <div className="grid items-start gap-6 md:grid-cols-3">
-        {plans.map((plan) => (
-          <PlanCard
-            key={plan.key}
-            name={plan.name}
-            planKey={plan.key}
-            price={plan.price}
-            perMonth={t("perMonth")}
-            features={plan.features}
-            isCurrent={currentPlan === plan.key}
-            isPopular={plan.isPopular}
-            currentPlanLabel={t("currentPlan")}
-            upgradeLabel={t("upgrade")}
-            popularLabel={t("mostPopular")}
-          />
-        ))}
-      </div>
+
+      <PricingComparison currentPlan={currentPlan} />
+
       {hasStripeSubscription && (
-        <div className="mt-8 text-center">
+        <div className="mt-10 text-center">
           <ManageBillingButton label={t("manageBilling")} />
         </div>
       )}
