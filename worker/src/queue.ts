@@ -2,8 +2,12 @@ import { Queue, Worker, type ConnectionOptions } from "bullmq";
 import IORedis from "ioredis";
 import { config } from "./config.js";
 
-const connection: ConnectionOptions = new IORedis(config.redis.url, {
+const redisUrl = config.redis.url;
+const isUpstash = redisUrl.includes("upstash.io");
+
+const connection: ConnectionOptions = new IORedis(redisUrl, {
   maxRetriesPerRequest: null,
+  tls: isUpstash ? { rejectUnauthorized: false } : undefined,
 });
 
 export const evaluationQueue = new Queue("evaluations", { connection });
