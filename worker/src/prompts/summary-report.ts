@@ -1,4 +1,4 @@
-import type { ProjectParsedData } from "@shared/types/evaluation.js";
+import type { ProjectParsedData } from "../types/evaluation.js";
 import type { ReviewForSummary } from "../processors/summary-report.js";
 
 export function buildSummaryReportPrompt(

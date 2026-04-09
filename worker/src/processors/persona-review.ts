@@ -1,6 +1,6 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { Persona } from "@shared/types/persona.js";
-import type { EvaluationScores, ProjectParsedData } from "@shared/types/evaluation.js";
+import type { Persona } from "../types/persona.js";
+import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
 import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
 import { config } from "../config.js";
 

@@ -2,14 +2,10 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy shared types
-COPY shared/ ./shared/
-
-# Copy worker package files
-COPY worker/package.json worker/package-lock.json* ./worker/
+# Copy package files
+COPY worker/package.json worker/package-lock.json* ./
 
 # Install dependencies
-WORKDIR /app/worker
 RUN npm install
 
 # Copy worker source
@@ -24,10 +20,9 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY --from=builder /app/worker/package.json ./
-COPY --from=builder /app/worker/node_modules/ ./node_modules/
-COPY --from=builder /app/worker/dist/ ./dist/
-COPY --from=builder /app/shared/ ./shared/
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules/ ./node_modules/
+COPY --from=builder /app/dist/ ./dist/
 
 # Copy persona data
 COPY worker/data/ ./data/

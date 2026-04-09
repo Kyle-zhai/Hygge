@@ -1,5 +1,5 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { Persona } from "@shared/types/persona.js";
+import type { Persona } from "../types/persona.js";
 
 const RECOMMEND_SYSTEM = `You are a discussion panel coordinator. Given a topic description and a list of available personas, recommend the most relevant personas for discussing this topic. The topic may be a product, idea, policy, event, design, creative work, business strategy, or any other subject.
 

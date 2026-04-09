@@ -1,6 +1,6 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { EvaluationScores, ProjectParsedData } from "@shared/types/evaluation.js";
-import type { SummaryReport } from "@shared/types/report.js";
+import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
+import type { SummaryReport } from "../types/report.js";
 import { buildSummaryReportPrompt } from "../prompts/summary-report.js";
 
 export interface ReviewForSummary {

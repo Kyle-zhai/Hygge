@@ -7,7 +7,7 @@ import { parseProject } from "./parse-project.js";
 import { generatePersonaReview } from "./persona-review.js";
 import { generateSummaryReport } from "./summary-report.js";
 import { runScenarioSimulation } from "./scenario-simulation.js";
-import type { Persona } from "@shared/types/persona.js";
+import type { Persona } from "../types/persona.js";
 
 interface EvaluationJobData {
   evaluationId: string;
@@ -61,7 +61,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     const reviews: Array<{
       persona_id: string;
       persona_name: string;
-      scores: import("@shared/types/evaluation.js").EvaluationScores;
+      scores: import("../types/evaluation.js").EvaluationScores;
       review_text: string;
       strengths: string[];
       weaknesses: string[];

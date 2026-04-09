@@ -1,4 +1,4 @@
-import type { Persona } from "@shared/types/persona.js";
+import type { Persona } from "../types/persona.js";
 import type { ReviewForSimulation } from "../processors/scenario-simulation.js";
 
 export function buildScenarioSimulationPrompt(

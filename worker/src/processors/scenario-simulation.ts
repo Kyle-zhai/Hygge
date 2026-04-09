@@ -1,7 +1,7 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { EvaluationScores } from "@shared/types/evaluation.js";
-import type { Persona } from "@shared/types/persona.js";
-import type { ScenarioSimulationResult } from "@shared/types/report.js";
+import type { EvaluationScores } from "../types/evaluation.js";
+import type { Persona } from "../types/persona.js";
+import type { ScenarioSimulationResult } from "../types/report.js";
 import { buildScenarioSimulationPrompt } from "../prompts/scenario-simulation.js";
 
 export interface ReviewForSimulation {
