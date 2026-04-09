@@ -58,8 +58,34 @@ export function ProgressTracker({
   const allReviewsDone = completedIds.size >= personas.length;
   const progress = personas.length > 0 ? (completedIds.size / personas.length) * 100 : 0;
 
+  const stepLabels = [
+    t("step1"),
+    t("selectPersonas"),
+    locale === "zh" ? "讨论进行中" : "Discussion",
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* 3-Step indicator — step 3 active */}
+      <div className="flex items-center gap-3">
+        {stepLabels.map((label, i) => {
+          const stepNum = i + 1;
+          const isActive = stepNum === 3;
+          const isPast = stepNum < 3;
+          return (
+            <div key={i} className="flex items-center gap-3 flex-1 last:flex-none">
+              <div className={`flex items-center gap-2 shrink-0 ${isActive ? "text-[#EAEAE8]" : isPast ? "text-[#9B9594]" : "text-[#666462]"}`}>
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${isActive ? "bg-[#E2DDD5] text-[#0C0C0C]" : isPast ? "bg-[#E2DDD5]/20 text-[#E2DDD5]" : "bg-[#1C1C1C] text-[#666462]"}`}>
+                  {stepNum}
+                </div>
+                <span className="text-sm font-medium hidden sm:inline">{label}</span>
+              </div>
+              {i < stepLabels.length - 1 && <div className="h-px flex-1 bg-[#2A2A2A]" />}
+            </div>
+          );
+        })}
+      </div>
+
       <div className="text-center">
         <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
           {t("progressTitle")}
@@ -82,7 +108,7 @@ export function ProgressTracker({
         <AnimatePresence mode="popLayout">
           {personas.map((persona, index) => {
             const isDone = completedIds.has(persona.id);
-            const isProcessing = !isDone && index <= completedIds.size;
+            const isProcessing = !isDone;
             return (
               <motion.div
                 key={persona.id}

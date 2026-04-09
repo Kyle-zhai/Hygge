@@ -18,6 +18,7 @@ import {
   ChevronRight,
   List,
   Circle,
+  BarChart3,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -106,6 +107,7 @@ interface ReportTextViewProps {
   reviews: ReviewData[];
   personas: PersonaData[];
   locale: string;
+  onViewScores?: () => void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -497,6 +499,7 @@ export function ReportTextView({
   reviews,
   personas,
   locale,
+  onViewScores,
 }: ReportTextViewProps) {
   const t = useTranslations("evaluation");
   const [activeSection, setActiveSection] = useState("executive-summary");
@@ -523,9 +526,11 @@ export function ReportTextView({
 
   const getPersonaOccupation = useCallback(
     (persona: PersonaData | undefined): string => {
-      return persona?.demographics?.occupation || "";
+      if (!persona) return "";
+      if (locale === "zh") return persona.demographics?.occupation || "";
+      return persona.identity?.locale_variants?.en?.tagline || persona.demographics?.occupation || "";
     },
-    []
+    [locale]
   );
 
   const getPersonaAvatar = useCallback(
@@ -955,6 +960,19 @@ export function ReportTextView({
               }
             )}
           </div>
+
+          {/* View Numerical Scores button */}
+          {onViewScores && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={onViewScores}
+                className="inline-flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-5 py-2.5 text-sm font-medium text-[#E2DDD5] transition-all duration-200 hover:border-[#3A3A3A] hover:bg-[#222222]"
+              >
+                <BarChart3 className="h-4 w-4" />
+                {locale === "zh" ? "查看数值评分详情" : "View Numerical Scores"}
+              </button>
+            </div>
+          )}
         </AnimatedSection>
 
         {/* ════════════════════════════════════════════════════════════

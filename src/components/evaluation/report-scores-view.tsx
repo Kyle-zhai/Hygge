@@ -2,7 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PersonaReviewCard } from "@/components/evaluation/persona-review-card";
 import { ReportSection } from "@/components/evaluation/report-section";
 
@@ -98,9 +100,10 @@ interface ReportScoresViewProps {
   reviews: ReviewData[];
   personas: PersonaData[];
   locale: string;
+  onBack?: () => void;
 }
 
-export function ReportScoresView({ report, reviews, personas, locale }: ReportScoresViewProps) {
+export function ReportScoresView({ report, reviews, personas, locale, onBack }: ReportScoresViewProps) {
   const t = useTranslations("evaluation");
 
   const personaMap = new Map(personas.map((p) => [p.id, p]));
@@ -112,6 +115,18 @@ export function ReportScoresView({ report, reviews, personas, locale }: ReportSc
       transition={{ duration: 0.3 }}
       className="space-y-8"
     >
+      {/* Back button */}
+      {onBack && (
+        <Button
+          variant="ghost"
+          onClick={onBack}
+          className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] -ml-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {locale === "zh" ? "返回文字报告" : "Back to Report"}
+        </Button>
+      )}
+
       {/* Header: Overall Score + Market Readiness */}
       {report && (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -134,12 +149,15 @@ export function ReportScoresView({ report, reviews, personas, locale }: ReportSc
           {reviews.map((review) => {
             const persona = personaMap.get(review.persona_id);
             const localized = persona?.identity?.locale_variants?.[locale] || persona?.identity;
+            const occupation = locale === "zh"
+              ? (persona?.demographics?.occupation || "")
+              : (persona?.identity?.locale_variants?.en?.tagline || persona?.demographics?.occupation || "");
             return (
               <PersonaReviewCard
                 key={review.id}
                 personaName={localized?.name || "Unknown"}
                 personaAvatar={persona?.identity?.avatar || "?"}
-                personaOccupation={persona?.demographics?.occupation || ""}
+                personaOccupation={occupation}
                 scores={review.scores}
                 reviewText={review.review_text}
                 strengths={review.strengths}
