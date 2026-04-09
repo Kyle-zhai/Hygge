@@ -57,7 +57,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t("inputPlaceholder")}
-          className="min-h-[140px] resize-none border-0 bg-transparent p-0 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
+          className="min-h-[140px] resize-none border-0 bg-transparent px-1 py-1 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
           disabled={disabled}
         />
 
