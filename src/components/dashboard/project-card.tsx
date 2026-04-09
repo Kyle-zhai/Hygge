@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DeleteProjectButton } from "./delete-project-button";
 
 interface Evaluation {
   id: string;
@@ -41,15 +42,21 @@ export async function ProjectCard({ project }: ProjectCardProps) {
     <Card className="card-glow border-[#2A2A2A] bg-[#141414] transition-all duration-300 hover:border-[#3A3A3A]">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg leading-tight text-[#EAEAE8]">{title}</CardTitle>
-          {latestEval && (
-            <Badge
-              variant="secondary"
-              className={`shrink-0 border text-xs ${statusColors[latestEval.status] || "border-[#2A2A2A] bg-[#1C1C1C] text-[#9B9594]"}`}
-            >
-              {t(latestEval.status as "pending" | "processing" | "completed" | "failed")}
-            </Badge>
-          )}
+          <CardTitle className="text-lg leading-tight text-[#EAEAE8] flex-1">{title}</CardTitle>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {latestEval && (
+              <Badge
+                variant="secondary"
+                className={`border text-xs ${statusColors[latestEval.status] || "border-[#2A2A2A] bg-[#1C1C1C] text-[#9B9594]"}`}
+              >
+                {t(latestEval.status as "pending" | "processing" | "completed" | "failed")}
+              </Badge>
+            )}
+            <DeleteProjectButton
+              projectId={project.id}
+              confirmText={locale === "zh" ? "确定要删除这条记录吗？" : "Delete this record?"}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
