@@ -38,50 +38,54 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
 
   // Feature definitions: each plan's features stack upward
   // Free = base, Pro = base + new, Max = base + pro + new
+  // Each tier shows ALL its features. Higher tiers visually have more rows.
+  // "extras" are features NEW in this tier (highlighted in gold).
   const plans = [
     {
       key: "free",
       name: t("free"),
       price: "$0",
-      features: [
+      base: [
         t("feat_discussions_1"),
         t("feat_personas_3"),
         t("feat_brief_report"),
         t("feat_basic_analysis"),
       ],
       extras: [] as string[],
-      includesFrom: null as string | null,
     },
     {
       key: "pro",
       name: t("pro"),
       price: "$20",
       isPopular: true,
-      features: [
+      base: [
         t("feat_discussions_10"),
         t("feat_personas_10"),
-        t("feat_full_report"),
-        t("feat_deep_analysis"),
+        t("feat_brief_report"),
+        t("feat_basic_analysis"),
       ],
       extras: [
+        t("feat_full_report"),
+        t("feat_deep_analysis"),
         t("feat_export"),
       ],
-      includesFrom: t("free"),
     },
     {
       key: "max",
       name: t("max"),
       price: "$100",
-      features: [
+      base: [
         t("feat_discussions_40"),
         t("feat_personas_20"),
-        t("feat_full_report_plus"),
+        t("feat_brief_report"),
+        t("feat_basic_analysis"),
       ],
       extras: [
+        t("feat_full_report_plus"),
+        t("feat_deep_analysis"),
+        t("feat_export"),
         t("feat_priority_support"),
-        t("feat_api_access"),
       ],
-      includesFrom: t("pro"),
     },
   ];
 
@@ -97,7 +101,6 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
     <div className="grid items-start gap-5 md:grid-cols-3">
       {plans.map((plan) => {
         const state = getButtonState(plan.key);
-        const allFeatures = plan.features;
         const isLoading = loadingPlan === plan.key;
 
         return (
@@ -130,32 +133,24 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
               </div>
             </div>
 
-            {/* Features */}
+            {/* Features — base features first, then extras highlighted */}
             <div className="flex-1 px-6 py-5">
-              {/* "Includes X, plus:" label */}
-              {plan.includesFrom && (
-                <p className="mb-4 text-xs text-[#666462]">
-                  {t("includedIn", { plan: plan.includesFrom })}
-                </p>
-              )}
-
-              {/* Core features — these are the upgraded features for this tier */}
               <ul className="space-y-3">
-                {allFeatures.map((feature, i) => (
+                {plan.base.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#4ADE80]" />
-                    <span className="text-[#EAEAE8]">{feature}</span>
+                    <span className="text-[#9B9594]">{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              {/* Extra features (new in this tier) */}
+              {/* Extras: features new in this tier — visually "grow" out */}
               {plan.extras.length > 0 && (
-                <ul className="mt-3 space-y-3 border-t border-[#2A2A2A]/40 pt-3">
+                <ul className="mt-3 space-y-3 border-t border-[#C4A882]/20 pt-3">
                   {plan.extras.map((extra, i) => (
                     <li key={i} className="flex items-start gap-2.5 text-sm">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#C4A882]" />
-                      <span className="text-[#E2DDD5] font-medium">{extra}</span>
+                      <span className="text-[#EAEAE8] font-medium">{extra}</span>
                     </li>
                   ))}
                 </ul>

@@ -162,8 +162,7 @@
     "feat_basic_analysis": "基础共识分析",
     "feat_deep_analysis": "深度多角度分析",
     "feat_priority_support": "优先客服支持",
-    "feat_export": "导出 PDF 报告",
-    "feat_api_access": "API 接口访问"
+    "feat_export": "导出 PDF 报告"
   },
   "settings": {
     "title": "设置",

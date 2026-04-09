@@ -162,8 +162,7 @@
     "feat_basic_analysis": "Basic consensus analysis",
     "feat_deep_analysis": "Deep multi-angle analysis",
     "feat_priority_support": "Priority support",
-    "feat_export": "Export reports as PDF",
-    "feat_api_access": "API access"
+    "feat_export": "Export reports as PDF"
   },
   "settings": {
     "title": "Settings",
