@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ChevronDown, ChevronUp, Filter } from "lucide-react";
+import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2 } from "lucide-react";
 
 interface PersonaData {
   id: string;
@@ -163,7 +163,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           disabled={disabled || selectedIds.size === 0}
           className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] font-semibold"
         >
-          {t("startEvaluation")}
+          {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : t("startEvaluation")}
         </Button>
       </div>
 

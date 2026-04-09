@@ -116,7 +116,8 @@ export default function NewEvaluationPage() {
         </div>
       )}
 
-      {step === 1 && (
+      {/* Always mounted to preserve input state + file refs on back navigation */}
+      <div className={step === 1 ? "" : "hidden"}>
         <div className="flex flex-col items-center pt-8">
           <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em] mb-6">
             {t("step1")}
@@ -125,7 +126,7 @@ export default function NewEvaluationPage() {
             <ProjectInput onSubmit={handleProjectSubmit} />
           </div>
         </div>
-      )}
+      </div>
 
       {step === 2 && projectData && (
         <>

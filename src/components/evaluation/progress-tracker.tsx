@@ -33,8 +33,8 @@ function WaveDots() {
       ))}
       <style>{`
         @keyframes wave-bounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-          40% { transform: translateY(-6px); opacity: 1; }
+          0%, 80%, 100% { transform: translateY(3px); opacity: 0.4; }
+          40% { transform: translateY(-3px); opacity: 1; }
         }
       `}</style>
     </span>

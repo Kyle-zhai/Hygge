@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ReportTextView } from "@/components/evaluation/report-text-view";
 import { ReportScoresView } from "@/components/evaluation/report-scores-view";
 
@@ -36,6 +36,26 @@ interface ReportViewProps {
 
 export function ReportView({ report, reviews, personas, locale }: ReportViewProps) {
   const [showScores, setShowScores] = useState(false);
+  const savedScrollY = useRef(0);
+  const pendingScroll = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (pendingScroll.current !== null) {
+      window.scrollTo(0, pendingScroll.current);
+      pendingScroll.current = null;
+    }
+  }, [showScores]);
+
+  function handleViewScores() {
+    savedScrollY.current = window.scrollY;
+    pendingScroll.current = 0;
+    setShowScores(true);
+  }
+
+  function handleBack() {
+    pendingScroll.current = savedScrollY.current;
+    setShowScores(false);
+  }
 
   if (showScores) {
     return (
@@ -45,7 +65,7 @@ export function ReportView({ report, reviews, personas, locale }: ReportViewProp
           reviews={reviews}
           personas={personas}
           locale={locale}
-          onBack={() => setShowScores(false)}
+          onBack={handleBack}
         />
       </div>
     );
@@ -58,7 +78,7 @@ export function ReportView({ report, reviews, personas, locale }: ReportViewProp
         reviews={reviews}
         personas={personas}
         locale={locale}
-        onViewScores={() => setShowScores(true)}
+        onViewScores={handleViewScores}
       />
     </div>
   );
