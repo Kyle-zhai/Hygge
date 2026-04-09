@@ -92,12 +92,21 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     }
 
     // 5. Generate discussion summary report
+    console.log(`[${evaluationId}] Generating summary report...`);
     const summaryReport = await generateSummaryReport(llm, parsedData, reviews, rawInput);
+    console.log(`[${evaluationId}] Summary report generated`);
 
     // 6. Run social dynamics scenario simulation (Max plan only)
     if (planTier === "max") {
-      const simulation = await runScenarioSimulation(llm, personas as Persona[], reviews);
-      summaryReport.scenario_simulation = simulation;
+      console.log(`[${evaluationId}] Running scenario simulation...`);
+      try {
+        const simulation = await runScenarioSimulation(llm, personas as Persona[], reviews);
+        summaryReport.scenario_simulation = simulation;
+        console.log(`[${evaluationId}] Scenario simulation done`);
+      } catch (simError) {
+        console.error(`[${evaluationId}] Scenario simulation failed, skipping:`, simError);
+        summaryReport.scenario_simulation = null;
+      }
     }
 
     await job.updateProgress(95);

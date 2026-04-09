@@ -34,7 +34,13 @@ export class OpenAICompatibleLLM implements LLMAdapter {
     }
 
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content ?? "";
+    let text = data.choices?.[0]?.message?.content ?? "";
+
+    // Strip markdown code fences if present (e.g. ```json ... ```)
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      text = fenceMatch[1].trim();
+    }
 
     return {
       text,
