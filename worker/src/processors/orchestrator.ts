@@ -57,7 +57,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       throw new Error("No personas found for selected IDs");
     }
 
-    // 4. Generate individual persona perspectives (sequentially)
+    // 4. Generate individual persona perspectives (parallel with concurrency limit)
     const reviews: Array<{
       persona_id: string;
       persona_name: string;
@@ -68,27 +68,39 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       llm_model: string;
     }> = [];
 
-    for (const persona of personas as Persona[]) {
-      const review = await generatePersonaReview(llm, persona, parsedData, rawInput);
+    let completedCount = 0;
+    const CONCURRENCY = 3;
+    const personaList = personas as Persona[];
 
-      // Write review to DB immediately (for realtime updates)
-      await supabase.from("persona_reviews").insert({
-        evaluation_id: evaluationId,
-        persona_id: persona.id,
-        scores: review.scores,
-        review_text: review.review_text,
-        strengths: review.strengths,
-        weaknesses: review.weaknesses,
-        llm_model: review.llm_model,
-      });
+    // Process in batches of CONCURRENCY
+    for (let i = 0; i < personaList.length; i += CONCURRENCY) {
+      const batch = personaList.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(async (persona) => {
+          const review = await generatePersonaReview(llm, persona, parsedData, rawInput);
 
-      reviews.push({
-        persona_id: persona.id,
-        persona_name: persona.identity.name,
-        ...review,
-      });
+          // Write review to DB immediately (for realtime updates)
+          await supabase.from("persona_reviews").insert({
+            evaluation_id: evaluationId,
+            persona_id: persona.id,
+            scores: review.scores,
+            review_text: review.review_text,
+            strengths: review.strengths,
+            weaknesses: review.weaknesses,
+            llm_model: review.llm_model,
+          });
 
-      await job.updateProgress(Math.round((reviews.length / personas.length) * 80));
+          completedCount++;
+          await job.updateProgress(Math.round((completedCount / personaList.length) * 80));
+
+          return {
+            persona_id: persona.id,
+            persona_name: persona.identity.name,
+            ...review,
+          };
+        })
+      );
+      reviews.push(...batchResults);
     }
 
     // 5. Generate discussion summary report

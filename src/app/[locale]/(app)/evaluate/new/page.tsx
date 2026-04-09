@@ -58,7 +58,6 @@ export default function NewEvaluationPage() {
     setSubmitting(true);
     setError("");
     try {
-      // Upload files to Supabase Storage
       const attachments = await uploadFiles(projectData.files);
 
       const res = await fetch("/api/evaluations", {
@@ -83,23 +82,32 @@ export default function NewEvaluationPage() {
     }
   }
 
+  const stepLabels = [
+    t("step1"),
+    t("selectPersonas"),
+    locale === "zh" ? "讨论进行中" : "Discussion",
+  ];
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Step indicator */}
-      <div className="flex items-center gap-4">
-        <div className={`flex items-center gap-2 ${step === 1 ? "text-[#EAEAE8]" : "text-[#666462]"}`}>
-          <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${step === 1 ? "bg-[#E2DDD5] text-[#0C0C0C]" : "bg-[#1C1C1C] text-[#666462]"}`}>
-            1
-          </div>
-          <span className="text-sm font-medium">{t("step1")}</span>
-        </div>
-        <div className="h-px flex-1 bg-[#2A2A2A]" />
-        <div className={`flex items-center gap-2 ${step === 2 ? "text-[#EAEAE8]" : "text-[#666462]"}`}>
-          <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${step === 2 ? "bg-[#E2DDD5] text-[#0C0C0C]" : "bg-[#1C1C1C] text-[#666462]"}`}>
-            2
-          </div>
-          <span className="text-sm font-medium">{t("step2")}</span>
-        </div>
+      {/* 3-Step indicator */}
+      <div className="flex items-center gap-3">
+        {stepLabels.map((label, i) => {
+          const stepNum = i + 1;
+          const isActive = step === stepNum;
+          const isPast = step > stepNum;
+          return (
+            <div key={i} className="flex items-center gap-3 flex-1 last:flex-none">
+              <div className={`flex items-center gap-2 shrink-0 ${isActive ? "text-[#EAEAE8]" : isPast ? "text-[#9B9594]" : "text-[#666462]"}`}>
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${isActive ? "bg-[#E2DDD5] text-[#0C0C0C]" : isPast ? "bg-[#E2DDD5]/20 text-[#E2DDD5]" : "bg-[#1C1C1C] text-[#666462]"}`}>
+                  {stepNum}
+                </div>
+                <span className="text-sm font-medium hidden sm:inline">{label}</span>
+              </div>
+              {i < stepLabels.length - 1 && <div className="h-px flex-1 bg-[#2A2A2A]" />}
+            </div>
+          );
+        })}
       </div>
 
       {error && (
@@ -109,12 +117,14 @@ export default function NewEvaluationPage() {
       )}
 
       {step === 1 && (
-        <>
-          <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <div className="flex flex-col items-center pt-8">
+          <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em] mb-6">
             {t("step1")}
           </h1>
-          <ProjectInput onSubmit={handleProjectSubmit} />
-        </>
+          <div className="w-full max-w-2xl">
+            <ProjectInput onSubmit={handleProjectSubmit} />
+          </div>
+        </div>
       )}
 
       {step === 2 && projectData && (
