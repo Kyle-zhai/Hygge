@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { rawInput, url, selectedPersonaIds } = body;
+  const { rawInput, url, attachments, selectedPersonaIds } = body;
 
   if (!rawInput || !selectedPersonaIds?.length) {
     return NextResponse.json({ error: "rawInput and selectedPersonaIds are required" }, { status: 400 });
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   // Create project
   const { data: project, error: projectError } = await supabase
-    .from("projects").insert({ user_id: user.id, raw_input: rawInput, url: url || null, parsed_data: {} }).select().single();
+    .from("projects").insert({ user_id: user.id, raw_input: rawInput, url: url || null, attachments: attachments || [], parsed_data: {} }).select().single();
 
   if (projectError) {
     return NextResponse.json({ error: projectError.message }, { status: 500 });
@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       projectId: project.id,
       rawInput,
       url: url || undefined,
+      attachments: attachments || [],
       selectedPersonaIds,
       planTier: subscription.plan,
     });

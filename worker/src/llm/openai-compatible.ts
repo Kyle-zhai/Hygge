@@ -1,0 +1,47 @@
+import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
+
+export class OpenAICompatibleLLM implements LLMAdapter {
+  private apiKey: string;
+  private model: string;
+  private baseURL: string;
+
+  constructor(apiKey: string, model: string, baseURL: string) {
+    this.apiKey = apiKey;
+    this.model = model;
+    this.baseURL = baseURL;
+  }
+
+  async complete(request: LLMRequest): Promise<LLMResponse> {
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: request.maxTokens ?? 4096,
+        messages: [
+          { role: "system", content: request.system },
+          { role: "user", content: request.prompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`LLM API error (${response.status}): ${err}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content ?? "";
+
+    return {
+      text,
+      usage: {
+        inputTokens: data.usage?.prompt_tokens ?? 0,
+        outputTokens: data.usage?.completion_tokens ?? 0,
+      },
+    };
+  }
+}

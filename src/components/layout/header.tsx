@@ -1,53 +1,79 @@
 import Link from "next/link";
-import { useLocale } from "next-intl";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "./locale-switcher";
 import { UserMenu } from "./user-menu";
+import { ScrollHeader } from "./scroll-header";
 
 export async function Header() {
   const t = await getTranslations("common");
-  const locale = useLocale();
+  const locale = await getLocale();
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <ScrollHeader>
       <div className="container flex h-14 items-center justify-between">
-        <Link href={`/${locale}`} className="flex items-center gap-2">
-          <span className="text-xl font-bold">{t("appName")}</span>
+        <Link href={`/${locale}`} className="flex items-center gap-0.5">
+          <span className="text-xl font-semibold italic text-[#EAEAE8]">
+            Hygge
+          </span>
         </Link>
 
         <nav className="flex items-center gap-2">
           <LocaleSwitcher />
           {user ? (
             <>
-              <Button variant="ghost" size="sm" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+              >
                 <Link href={`/${locale}/dashboard`}>{t("dashboard")}</Link>
               </Button>
-              <Button variant="ghost" size="sm" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+              >
                 <Link href={`/${locale}/pricing`}>{t("pricing")}</Link>
               </Button>
               <UserMenu email={user.email ?? ""} />
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+              >
                 <Link href={`/${locale}/pricing`}>{t("pricing")}</Link>
               </Button>
-              <Button variant="ghost" size="sm" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+              >
                 <Link href={`/${locale}/auth/login`}>{t("login")}</Link>
               </Button>
-              <Button size="sm" asChild>
+              <Button
+                size="sm"
+                asChild
+                className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] rounded-lg font-semibold"
+              >
                 <Link href={`/${locale}/auth/register`}>{t("register")}</Link>
               </Button>
             </>
           )}
         </nav>
       </div>
-    </header>
+    </ScrollHeader>
   );
 }

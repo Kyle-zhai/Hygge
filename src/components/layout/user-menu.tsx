@@ -28,18 +28,26 @@ export function UserMenu({ email }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <Avatar className="h-8 w-8">
-          <AvatarFallback>{email[0].toUpperCase()}</AvatarFallback>
+        <Avatar className="h-8 w-8 border border-[#2A2A2A] bg-[#1C1C1C]">
+          <AvatarFallback className="bg-[#1C1C1C] text-[#E2DDD5] text-sm font-medium">
+            {email[0].toUpperCase()}
+          </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem className="text-sm text-muted-foreground" disabled>
+      <DropdownMenuContent align="end" className="border-[#2A2A2A] bg-[#141414]">
+        <DropdownMenuItem className="text-sm text-[#666462]" disabled>
           {email}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/settings")}>
+        <DropdownMenuItem
+          onClick={() => router.push("/settings")}
+          className="text-[#9B9594] hover:text-[#EAEAE8] focus:bg-[#1C1C1C] focus:text-[#EAEAE8]"
+        >
           {t("settings")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-[#9B9594] hover:text-[#EAEAE8] focus:bg-[#1C1C1C] focus:text-[#EAEAE8]"
+        >
           {t("logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>

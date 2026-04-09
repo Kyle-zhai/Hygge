@@ -1,7 +1,7 @@
 import { createWorker } from "./queue.js";
 import { processEvaluation } from "./processors/orchestrator.js";
 
-console.log("Starting Persona evaluation worker...");
+console.log("Starting Hygge discussion worker...");
 
 const worker = createWorker(processEvaluation);
 

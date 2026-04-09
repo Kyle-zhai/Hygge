@@ -10,6 +10,7 @@ export interface ReviewForSimulation {
   scores: EvaluationScores;
 }
 
+/** Simulate social dynamics among personas discussing the topic. */
 export async function runScenarioSimulation(
   llm: LLMAdapter,
   personas: Persona[],

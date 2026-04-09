@@ -50,31 +50,31 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   }
 
   return (
-    <div className="rounded-2xl border bg-card shadow-sm">
+    <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414] transition-all duration-300 focus-within:border-[#E2DDD5]/50 focus-within:ring-2 focus-within:ring-[#E2DDD5]/10">
       <div className="p-4">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t("inputPlaceholder")}
-          className="min-h-[120px] resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0"
+          className="min-h-[120px] resize-none border-0 bg-transparent p-0 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
           disabled={disabled}
         />
 
         {files.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-[#2A2A2A] pt-3">
             {files.map((file, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-xs"
+                className="flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-3 py-1.5 text-xs"
               >
                 {file.type.startsWith("image/") ? (
-                  <Image className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Image className="h-3.5 w-3.5 text-[#666462]" />
                 ) : (
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  <FileText className="h-3.5 w-3.5 text-[#666462]" />
                 )}
-                <span className="max-w-[120px] truncate">{file.name}</span>
-                <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-foreground">
+                <span className="max-w-[120px] truncate text-[#9B9594]">{file.name}</span>
+                <button onClick={() => removeFile(i)} className="text-[#666462] hover:text-[#EAEAE8] transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -83,7 +83,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t px-4 py-2.5">
+      <div className="flex items-center justify-between border-t border-[#2A2A2A] px-4 py-2.5">
         <div className="flex gap-1">
           <input
             ref={fileInputRef}
@@ -97,7 +97,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground"
+            className="h-8 w-8 text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
           >
@@ -106,7 +106,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
         </div>
         <Button
           size="icon"
-          className="h-8 w-8 rounded-lg"
+          className="h-8 w-8 rounded-lg bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C]"
           onClick={handleSubmit}
           disabled={disabled || (!text.trim() && files.length === 0)}
         >

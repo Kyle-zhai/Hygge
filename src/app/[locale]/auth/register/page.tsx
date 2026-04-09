@@ -53,25 +53,28 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-[80vh] items-center justify-center px-4">
+      <Card className="relative w-full max-w-md border-[#2A2A2A] bg-[#141414]">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">{t("registerTitle")}</CardTitle>
+          <CardTitle className="text-center text-2xl font-semibold text-[#EAEAE8]">
+            {t("registerTitle")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
+              <Label htmlFor="email" className="text-[#9B9594]">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8] placeholder:text-[#666462] focus-visible:ring-[#E2DDD5] focus-visible:border-[#E2DDD5]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t("password")}</Label>
+              <Label htmlFor="password" className="text-[#9B9594]">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -79,36 +82,49 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8] placeholder:text-[#666462] focus-visible:ring-[#E2DDD5] focus-visible:border-[#E2DDD5]"
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && <p className="text-sm text-[#F87171]">{error}</p>}
+            <Button
+              type="submit"
+              className="w-full bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] font-semibold btn-glow"
+              disabled={loading}
+            >
               {loading ? tc("loading") : tc("register")}
             </Button>
           </form>
 
-          <div className="relative my-4">
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-[#2A2A2A]" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">or</span>
+              <span className="bg-[#141414] px-2 text-[#666462]">or</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Button variant="outline" className="w-full" onClick={() => handleOAuth("google")}>
+            <Button
+              variant="outline"
+              className="w-full border-[#2A2A2A] bg-transparent text-[#EAEAE8] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+              onClick={() => handleOAuth("google")}
+            >
               {t("loginWith", { provider: "Google" })}
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => handleOAuth("github")}>
+            <Button
+              variant="outline"
+              className="w-full border-[#2A2A2A] bg-transparent text-[#EAEAE8] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+              onClick={() => handleOAuth("github")}
+            >
               {t("loginWith", { provider: "GitHub" })}
             </Button>
           </div>
         </CardContent>
         <CardFooter className="justify-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#666462]">
             {t("hasAccount")}{" "}
-            <Link href={`/${locale}/auth/login`} className="text-primary underline">
+            <Link href={`/${locale}/auth/login`} className="text-[#E2DDD5] hover:text-[#D4CFC7] underline">
               {tc("login")}
             </Link>
           </p>

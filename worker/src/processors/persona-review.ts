@@ -12,6 +12,7 @@ export interface PersonaReviewResult {
   llm_model: string;
 }
 
+/** Generate a single persona's perspective on the given topic. */
 export async function generatePersonaReview(
   llm: LLMAdapter,
   persona: Persona,
@@ -26,6 +27,6 @@ export async function generatePersonaReview(
     review_text: parsed.review_text,
     strengths: parsed.strengths,
     weaknesses: parsed.weaknesses,
-    llm_model: config.anthropic.model,
+    llm_model: config.llm.model,
   };
 }

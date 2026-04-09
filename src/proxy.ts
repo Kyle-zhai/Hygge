@@ -11,7 +11,7 @@ const protectedRoutes = ["/dashboard", "/evaluate", "/settings"];
 // Routes that should redirect to dashboard if already logged in
 const authRoutes = ["/auth/login", "/auth/register"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Run i18n middleware first to get locale-aware response
   const response = intlMiddleware(request);
 

@@ -28,29 +28,34 @@ export function ProfileForm({ email, plan, evaluationsUsed, evaluationsLimit }: 
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-[#2A2A2A] bg-[#141414]">
         <CardHeader>
-          <CardTitle>{t("profile")}</CardTitle>
+          <CardTitle className="text-[#EAEAE8]">{t("profile")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>{t("email")}</Label>
-            <Input value={email} disabled />
+            <Label className="text-[#9B9594]">{t("email")}</Label>
+            <Input
+              value={email}
+              disabled
+              className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8] disabled:opacity-60"
+            />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-[#2A2A2A] bg-[#141414]">
         <CardHeader>
-          <CardTitle>{t("language")}</CardTitle>
+          <CardTitle className="text-[#EAEAE8]">{t("language")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-muted-foreground">{t("languageDesc")}</p>
+          <p className="mb-3 text-sm text-[#9B9594]">{t("languageDesc")}</p>
           <div className="flex gap-2">
             <Button
               variant={locale === "zh" ? "default" : "outline"}
               size="sm"
               onClick={() => switchLocale("zh")}
+              className={locale === "zh" ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
             >
               中文
             </Button>
@@ -58,6 +63,7 @@ export function ProfileForm({ email, plan, evaluationsUsed, evaluationsLimit }: 
               variant={locale === "en" ? "default" : "outline"}
               size="sm"
               onClick={() => switchLocale("en")}
+              className={locale === "en" ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
             >
               English
             </Button>
@@ -65,13 +71,13 @@ export function ProfileForm({ email, plan, evaluationsUsed, evaluationsLimit }: 
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-[#2A2A2A] bg-[#141414]">
         <CardHeader>
-          <CardTitle>{t("subscription")}</CardTitle>
+          <CardTitle className="text-[#EAEAE8]">{t("subscription")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-sm">{td("plan", { plan: plan.toUpperCase() })}</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#EAEAE8]">{td("plan", { plan: plan.toUpperCase() })}</p>
+          <p className="text-sm text-[#9B9594]">
             {td("evaluationsUsed", { used: evaluationsUsed, limit: evaluationsLimit })}
           </p>
         </CardContent>

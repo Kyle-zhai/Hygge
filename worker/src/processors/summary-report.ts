@@ -12,6 +12,7 @@ export interface ReviewForSummary {
   weaknesses: string[];
 }
 
+/** Synthesize all persona perspectives into a comprehensive discussion summary. */
 export async function generateSummaryReport(
   llm: LLMAdapter,
   project: ProjectParsedData,

@@ -58,8 +58,12 @@ export default async function PricingPage() {
 
   return (
     <div className="mx-auto max-w-4xl py-8">
-      <h1 className="mb-8 text-center text-3xl font-bold">{t("title")}</h1>
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="mb-12 text-center">
+        <h1 className="text-3xl font-semibold text-[#EAEAE8] sm:text-4xl tracking-[-0.02em]">
+          {t("title")}
+        </h1>
+      </div>
+      <div className="grid items-start gap-6 md:grid-cols-3">
         {plans.map((plan) => (
           <PlanCard
             key={plan.key}

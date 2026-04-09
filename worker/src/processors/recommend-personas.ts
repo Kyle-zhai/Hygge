@@ -1,12 +1,13 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "@shared/types/persona.js";
 
-const RECOMMEND_SYSTEM = `You are a focus group coordinator. Given a project description and a list of available personas, recommend the most relevant personas for evaluating this project.
+const RECOMMEND_SYSTEM = `You are a discussion panel coordinator. Given a topic description and a list of available personas, recommend the most relevant personas for discussing this topic. The topic may be a product, idea, policy, event, design, creative work, business strategy, or any other subject.
 
 Consider:
-- The project's target users — include personas that match the target audience
-- Diverse perspectives — include technical, business, design, and end-user viewpoints
-- Relevant expertise — include personas whose expertise is relevant to the project domain
+- The topic's target audience or stakeholders — include personas that match or represent them
+- Diverse perspectives — include technical, business, creative, and end-user viewpoints as appropriate
+- Relevant expertise — include personas whose background and expertise are relevant to the topic domain
+- Constructive tension — include personas who may have differing viewpoints to enrich the discussion
 
 Respond ONLY with valid JSON:
 {
@@ -28,7 +29,7 @@ export async function recommendPersonas(
 
   const response = await llm.complete({
     system: RECOMMEND_SYSTEM,
-    prompt: `Project: ${projectDescription}\n\nAvailable personas:\n${personaList}`,
+    prompt: `Topic: ${projectDescription}\n\nAvailable personas:\n${personaList}`,
     maxTokens: 1024,
   });
 

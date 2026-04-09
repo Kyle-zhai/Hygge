@@ -23,7 +23,12 @@ export function ManageBillingButton({ label }: { label: string }) {
   }
 
   return (
-    <Button variant="outline" onClick={handleClick} disabled={loading}>
+    <Button
+      variant="outline"
+      onClick={handleClick}
+      disabled={loading}
+      className="border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+    >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : label}
     </Button>
   );

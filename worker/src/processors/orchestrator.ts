@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { supabase } from "../supabase.js";
 import { ClaudeLLM } from "../llm/claude.js";
+import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
 import { config } from "../config.js";
 import { parseProject } from "./parse-project.js";
 import { generatePersonaReview } from "./persona-review.js";
@@ -13,20 +14,41 @@ interface EvaluationJobData {
   projectId: string;
   rawInput: string;
   url?: string;
+  attachments?: string[];
   selectedPersonaIds: string[];
   planTier: "free" | "pro" | "max";
 }
 
 export async function processEvaluation(job: Job<EvaluationJobData>) {
-  const { evaluationId, projectId, rawInput, url, selectedPersonaIds, planTier } = job.data;
-  const llm = new ClaudeLLM(config.anthropic.apiKey, config.anthropic.model);
+  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier } = job.data;
+  const llm = config.llm.provider === "openai-compatible"
+    ? new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL)
+    : new ClaudeLLM(config.llm.apiKey, config.llm.model);
 
   try {
     // 1. Update status to processing
     await supabase.from("evaluations").update({ status: "processing" }).eq("id", evaluationId);
 
-    // 2. Parse project input
-    const parsedData = await parseProject(llm, rawInput, url);
+    // 2. Parse user submission (topic may be a product, idea, policy, event, etc.)
+    // Download attachment content for LLM context
+    let attachmentDescriptions: string[] = [];
+    if (attachments && attachments.length > 0) {
+      for (const path of attachments) {
+        const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(path);
+        if (isImage) {
+          attachmentDescriptions.push(`[Image attachment: ${path.split("/").pop()}]`);
+        } else {
+          // For PDFs, download and extract text (basic approach)
+          const { data } = await supabase.storage.from("attachments").download(path);
+          if (data) {
+            const text = await data.text();
+            attachmentDescriptions.push(`[PDF attachment: ${path.split("/").pop()}]\n${text.slice(0, 5000)}`);
+          }
+        }
+      }
+    }
+
+    const parsedData = await parseProject(llm, rawInput, url, attachmentDescriptions);
     await supabase.from("projects").update({ parsed_data: parsedData }).eq("id", projectId);
 
     // 3. Fetch selected personas
@@ -35,7 +57,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       throw new Error("No personas found for selected IDs");
     }
 
-    // 4. Generate individual persona reviews (sequentially)
+    // 4. Generate individual persona perspectives (sequentially)
     const reviews: Array<{
       persona_id: string;
       persona_name: string;
@@ -69,10 +91,10 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       await job.updateProgress(Math.round((reviews.length / personas.length) * 80));
     }
 
-    // 5. Generate summary report
+    // 5. Generate discussion summary report
     const summaryReport = await generateSummaryReport(llm, parsedData, reviews, rawInput);
 
-    // 6. Run scenario simulation (Max plan only)
+    // 6. Run social dynamics scenario simulation (Max plan only)
     if (planTier === "max") {
       const simulation = await runScenarioSimulation(llm, personas as Persona[], reviews);
       summaryReport.scenario_simulation = simulation;

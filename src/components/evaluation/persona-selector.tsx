@@ -32,11 +32,11 @@ interface PersonaSelectorProps {
 
 const categoryOrder = ["technical", "product", "design", "end_user", "business"];
 const categoryLabels: Record<string, Record<string, string>> = {
-  technical: { zh: "技术", en: "Technical" },
-  product: { zh: "产品", en: "Product" },
-  design: { zh: "设计", en: "Design" },
-  end_user: { zh: "用户", en: "End User" },
-  business: { zh: "商业", en: "Business" },
+  technical: { zh: "\u6280\u672F", en: "Technical" },
+  product: { zh: "\u4EA7\u54C1", en: "Product" },
+  design: { zh: "\u8BBE\u8BA1", en: "Design" },
+  end_user: { zh: "\u7528\u6237", en: "End User" },
+  business: { zh: "\u5546\u4E1A", en: "Business" },
 };
 
 const ageRanges = [
@@ -48,17 +48,17 @@ const ageRanges = [
 ];
 
 const genderLabels: Record<string, Record<string, string>> = {
-  M: { zh: "男", en: "Male" },
-  F: { zh: "女", en: "Female" },
-  NB: { zh: "非二元", en: "Non-binary" },
+  M: { zh: "\u7537", en: "Male" },
+  F: { zh: "\u5973", en: "Female" },
+  NB: { zh: "\u975E\u4E8C\u5143", en: "Non-binary" },
 };
 
 const incomeLabels: Record<string, Record<string, string>> = {
-  low: { zh: "低", en: "Low" },
-  medium: { zh: "中等", en: "Medium" },
-  medium_high: { zh: "中高", en: "Mid-High" },
-  high: { zh: "高", en: "High" },
-  very_high: { zh: "极高", en: "Very High" },
+  low: { zh: "\u4F4E", en: "Low" },
+  medium: { zh: "\u4E2D\u7B49", en: "Medium" },
+  medium_high: { zh: "\u4E2D\u9AD8", en: "Mid-High" },
+  high: { zh: "\u9AD8", en: "High" },
+  very_high: { zh: "\u6781\u9AD8", en: "Very High" },
 };
 
 export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, disabled }: PersonaSelectorProps) {
@@ -70,9 +70,9 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [activeCategory, setActiveCategory] = useState<string | null>(null); // null = all
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [ageFilters, setAgeFilters] = useState<Set<string>>(new Set()); // set of range labels
+  const [ageFilters, setAgeFilters] = useState<Set<string>>(new Set());
   const [genderFilters, setGenderFilters] = useState<Set<string>>(new Set());
   const [incomeFilters, setIncomeFilters] = useState<Set<string>>(new Set());
 
@@ -145,8 +145,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <Sparkles className="mb-3 h-6 w-6 animate-pulse text-primary" />
-        <p className="text-sm text-muted-foreground">{t("aiRecommending")}</p>
+        <Sparkles className="mb-3 h-6 w-6 animate-pulse text-[#E2DDD5]" />
+        <p className="text-sm text-[#9B9594]">{t("aiRecommending")}</p>
       </div>
     );
   }
@@ -155,10 +155,14 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
     <div className="space-y-4">
       {/* Top bar: count + confirm */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[#9B9594]">
           {t("personaLimit", { max: maxPersonas, count: selectedIds.size })}
         </p>
-        <Button onClick={() => onConfirm(Array.from(selectedIds))} disabled={disabled || selectedIds.size === 0}>
+        <Button
+          onClick={() => onConfirm(Array.from(selectedIds))}
+          disabled={disabled || selectedIds.size === 0}
+          className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] font-semibold"
+        >
           {t("startEvaluation")}
         </Button>
       </div>
@@ -169,6 +173,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           variant={activeCategory === null ? "default" : "outline"}
           size="sm"
           onClick={() => setActiveCategory(null)}
+          className={activeCategory === null ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
         >
           {t("allCategories")}
         </Button>
@@ -178,6 +183,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             variant={activeCategory === cat ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+            className={activeCategory === cat ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
           >
             {categoryLabels[cat]?.[locale] || cat}
           </Button>
@@ -186,7 +192,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           variant="ghost"
           size="sm"
           onClick={() => setShowFilters(!showFilters)}
-          className="ml-auto"
+          className="ml-auto text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
         >
           <Filter className="mr-1 h-3.5 w-3.5" />
           {t("filterByTrait")}
@@ -196,17 +202,17 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
       {/* Expandable filters */}
       {showFilters && (
-        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="rounded-lg border border-[#2A2A2A] bg-[#1C1C1C]/50 p-4 space-y-3">
           {/* Age */}
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase">{t("ageRange")}</span>
+            <span className="text-xs font-semibold text-[#666462] uppercase">{t("ageRange")}</span>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {ageRanges.map((range) => (
                 <Button
                   key={range.label}
                   variant={ageFilters.has(range.label) ? "default" : "outline"}
                   size="sm"
-                  className="h-7 text-xs"
+                  className={`h-7 text-xs ${ageFilters.has(range.label) ? "bg-[#E2DDD5] text-[#0C0C0C]" : "border-[#2A2A2A] text-[#9B9594]"}`}
                   onClick={() => toggleFilter(ageFilters, range.label, setAgeFilters)}
                 >
                   {range.label}
@@ -216,14 +222,14 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           </div>
           {/* Gender */}
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase">Gender</span>
+            <span className="text-xs font-semibold text-[#666462] uppercase">Gender</span>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {["M", "F", "NB"].map((g) => (
                 <Button
                   key={g}
                   variant={genderFilters.has(g) ? "default" : "outline"}
                   size="sm"
-                  className="h-7 text-xs"
+                  className={`h-7 text-xs ${genderFilters.has(g) ? "bg-[#E2DDD5] text-[#0C0C0C]" : "border-[#2A2A2A] text-[#9B9594]"}`}
                   onClick={() => toggleFilter(genderFilters, g, setGenderFilters)}
                 >
                   {genderLabels[g]?.[locale] || g}
@@ -233,14 +239,14 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           </div>
           {/* Income */}
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase">Income</span>
+            <span className="text-xs font-semibold text-[#666462] uppercase">Income</span>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {["low", "medium", "medium_high", "high", "very_high"].map((inc) => (
                 <Button
                   key={inc}
                   variant={incomeFilters.has(inc) ? "default" : "outline"}
                   size="sm"
-                  className="h-7 text-xs"
+                  className={`h-7 text-xs ${incomeFilters.has(inc) ? "bg-[#E2DDD5] text-[#0C0C0C]" : "border-[#2A2A2A] text-[#9B9594]"}`}
                   onClick={() => toggleFilter(incomeFilters, inc, setIncomeFilters)}
                 >
                   {incomeLabels[inc]?.[locale] || inc}
@@ -249,7 +255,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             </div>
           </div>
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="text-xs" onClick={clearAllFilters}>
+            <Button variant="ghost" size="sm" className="text-xs text-[#9B9594]" onClick={clearAllFilters}>
               {t("clearFilters")}
             </Button>
           )}
@@ -257,7 +263,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       )}
 
       {/* Persona count */}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-[#666462]">
         {t("personasFound", { count: filtered.length })}
       </p>
 
@@ -271,26 +277,26 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           return (
             <Card
               key={persona.id}
-              className={`cursor-pointer transition-all ${
-                isSelected ? "border-primary ring-2 ring-primary/20" : "hover:border-foreground/20"
+              className={`cursor-pointer transition-all border-[#2A2A2A] bg-[#141414] ${
+                isSelected ? "border-[#E2DDD5] ring-2 ring-[#E2DDD5]/20" : "hover:border-[#3A3A3A]"
               }`}
               onClick={() => togglePersona(persona.id)}
             >
               <CardContent className="flex items-start gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-lg">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-lg">
                   {persona.identity.avatar}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate">{localized.name}</span>
+                    <span className="font-medium text-sm truncate text-[#EAEAE8]">{localized.name}</span>
                     {isRecommended && (
-                      <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0">
+                      <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0 bg-[#E2DDD5]/10 text-[#E2DDD5] border-[#E2DDD5]/20">
                         {t("recommended")}
                       </Badge>
                     )}
-                    {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-primary" />}
+                    {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
                   </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground truncate">{localized.tagline}</p>
+                  <p className="mt-0.5 text-xs text-[#666462] truncate">{localized.tagline}</p>
                 </div>
               </CardContent>
             </Card>

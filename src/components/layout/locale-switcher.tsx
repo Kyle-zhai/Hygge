@@ -16,8 +16,13 @@ export function LocaleSwitcher() {
   }
 
   return (
-    <Button variant="ghost" size="sm" onClick={switchLocale}>
-      {locale === "zh" ? "EN" : "中文"}
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={switchLocale}
+      className="text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] text-xs font-medium"
+    >
+      {locale === "zh" ? "EN" : "\u4E2D\u6587"}
     </Button>
   );
 }

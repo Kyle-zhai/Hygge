@@ -2,14 +2,16 @@ import type { LLMAdapter } from "../llm/adapter.js";
 import type { ProjectParsedData } from "@shared/types/evaluation.js";
 import { PARSE_PROJECT_SYSTEM, buildParseProjectPrompt } from "../prompts/parse-project.js";
 
+/** Parse the user's submission to extract structured topic data for persona discussion. */
 export async function parseProject(
   llm: LLMAdapter,
   rawInput: string,
-  url?: string
+  url?: string,
+  attachmentDescriptions?: string[]
 ): Promise<ProjectParsedData> {
   const response = await llm.complete({
     system: PARSE_PROJECT_SYSTEM,
-    prompt: buildParseProjectPrompt(rawInput, url),
+    prompt: buildParseProjectPrompt(rawInput, url, attachmentDescriptions),
     maxTokens: 1024,
   });
   return JSON.parse(response.text) as ProjectParsedData;
