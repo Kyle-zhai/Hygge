@@ -16,8 +16,14 @@ export async function Header() {
 
   return (
     <ScrollHeader>
-      <div className="container flex h-14 items-center justify-between">
-        <Link href={`/${locale}`} className="flex items-center gap-0.5">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5 sm:px-8">
+        <Link href={`/${locale}`} className="flex items-center gap-2">
+          {/* Logo — three overlapping circles: multi-perspective warmth */}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+            <circle cx="10" cy="10" r="7" stroke="#C4A882" strokeWidth="1.5" opacity="0.5" />
+            <circle cx="14" cy="10" r="7" stroke="#E2DDD5" strokeWidth="1.5" opacity="0.7" />
+            <circle cx="12" cy="14" r="7" stroke="#E2DDD5" strokeWidth="1.5" opacity="0.9" />
+          </svg>
           <span className="text-xl font-semibold italic text-[#EAEAE8]">
             Hygge
           </span>
