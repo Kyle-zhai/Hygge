@@ -20,13 +20,31 @@ export interface Project {
   created_at: string;
 }
 
-export interface EvaluationScores {
+// Fixed scores for product mode (backwards compatible)
+export interface FixedEvaluationScores {
   usability: number;
   market_fit: number;
   design: number;
   tech_quality: number;
   innovation: number;
   pricing: number;
+}
+
+// Dynamic scores for topic mode
+export type EvaluationScores = FixedEvaluationScores | Record<string, number>;
+
+export type EvaluationMode = "product" | "topic";
+
+export interface TopicClassification {
+  topic_type: "product" | "policy" | "idea" | "creative" | "decision" | "strategy" | "other";
+  dimensions: Array<{
+    key: string;
+    label_en: string;
+    label_zh: string;
+    description: string;
+  }>;
+  readiness_label_en: string;
+  readiness_label_zh: string;
 }
 
 export interface PersonaReview {

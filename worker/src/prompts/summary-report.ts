@@ -1,14 +1,58 @@
-import type { ProjectParsedData } from "../types/evaluation.js";
+import type { ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type { ReviewForSummary } from "../processors/summary-report.js";
+
+const FIXED_DIMENSION_SCHEMA = `"multi_dimensional_analysis": [
+    {
+      "dimension": "<usability|market_fit|design|tech_quality|innovation|pricing>",
+      "score": <averaged score>,
+      "strengths": ["<specific strength>"],
+      "weaknesses": ["<specific weakness>"],
+      "analysis": "<100-200 word deep analysis for this dimension, adapted to the topic type>"
+    }
+  ]`;
+
+function buildDynamicDimensionSchema(dimensions: TopicClassification["dimensions"]): string {
+  const keys = dimensions.map(d => d.key).join("|");
+  return `"multi_dimensional_analysis": [
+    {
+      "dimension": "<${keys}>",
+      "label_en": "<English label for this dimension>",
+      "label_zh": "<Chinese label for this dimension>",
+      "score": <averaged score>,
+      "strengths": ["<specific strength>"],
+      "weaknesses": ["<specific weakness>"],
+      "analysis": "<100-200 word deep analysis for this dimension>"
+    }
+  ]`;
+}
+
+function buildScoresLine(review: ReviewForSummary, dimensions?: TopicClassification["dimensions"]): string {
+  if (dimensions) {
+    return "Scores: " + dimensions.map(d => `${d.key}=${(review.scores as Record<string, number>)[d.key] ?? "N/A"}`).join(", ");
+  }
+  const s = review.scores as Record<string, number>;
+  return `Scores: usability=${s.usability}, market_fit=${s.market_fit}, design=${s.design}, tech_quality=${s.tech_quality}, innovation=${s.innovation}, pricing=${s.pricing}`;
+}
 
 export function buildSummaryReportPrompt(
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
-  rawInput: string
+  rawInput: string,
+  dimensions?: TopicClassification["dimensions"]
 ): { system: string; prompt: string } {
+  const dimensionSchema = dimensions
+    ? buildDynamicDimensionSchema(dimensions)
+    : FIXED_DIMENSION_SCHEMA;
+
+  const readinessNote = dimensions
+    ? `The "market_readiness" field should reflect overall readiness/feasibility for this topic type (low/medium/high). Also include "readiness_label_en" and "readiness_label_zh" fields with a contextually appropriate label.`
+    : `The "market_readiness" field reflects market readiness (low/medium/high).`;
+
   const system = `You are a senior consultant generating a comprehensive discussion synthesis report. You are synthesizing perspectives from multiple AI personas into an actionable analysis. The topic may be a product, idea, policy, event, design, creative work, business strategy, or any other subject.
 
-Your report must be EXTREMELY specific and actionable. Not vague platitudes — concrete, detailed analysis that the user can immediately act on. Adapt your language and framing to suit the topic type (e.g., for products talk about market readiness; for policies talk about implementation readiness; for creative works talk about audience readiness).
+Your report must be EXTREMELY specific and actionable. Not vague platitudes — concrete, detailed analysis that the user can immediately act on. Adapt your language and framing to suit the topic type.
+
+${readinessNote}
 
 Respond ONLY with valid JSON matching this structure:
 {
@@ -35,15 +79,7 @@ Respond ONLY with valid JSON matching this structure:
       }
     ]
   },
-  "multi_dimensional_analysis": [
-    {
-      "dimension": "<usability|market_fit|design|tech_quality|innovation|pricing>",
-      "score": <averaged score>,
-      "strengths": ["<specific strength>"],
-      "weaknesses": ["<specific weakness>"],
-      "analysis": "<100-200 word deep analysis for this dimension, adapted to the topic type>"
-    }
-  ],
+  ${dimensionSchema},
   "goal_assessment": [
     {
       "goal": "<user's stated goal>",
@@ -71,14 +107,16 @@ Respond ONLY with valid JSON matching this structure:
       "difficulty": "<easy|medium|hard>"
     }
   ],
-  "market_readiness": "<low|medium|high>"
+  "market_readiness": "<low|medium|high>"${dimensions ? `,
+  "readiness_label_en": "<contextual readiness label in English>",
+  "readiness_label_zh": "<contextual readiness label in Chinese>"` : ""}
 }`;
 
   const reviewsSummary = reviews
     .map(
       (r) =>
         `### ${r.persona_name} (ID: ${r.persona_id})
-Scores: usability=${r.scores.usability}, market_fit=${r.scores.market_fit}, design=${r.scores.design}, tech_quality=${r.scores.tech_quality}, innovation=${r.scores.innovation}, pricing=${r.scores.pricing}
+${buildScoresLine(r, dimensions)}
 Review: ${r.review_text}
 Strengths: ${r.strengths.join(", ")}
 Weaknesses: ${r.weaknesses.join(", ")}`

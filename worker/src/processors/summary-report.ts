@@ -1,5 +1,5 @@
 import type { LLMAdapter } from "../llm/adapter.js";
-import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
+import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type { SummaryReport } from "../types/report.js";
 import { buildSummaryReportPrompt } from "../prompts/summary-report.js";
 
@@ -17,9 +17,10 @@ export async function generateSummaryReport(
   llm: LLMAdapter,
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
-  rawInput: string
+  rawInput: string,
+  dimensions?: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
-  const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput);
+  const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions);
   const response = await llm.complete({ system, prompt, maxTokens: 8192 });
   const parsed = JSON.parse(response.text);
   return {
@@ -31,6 +32,8 @@ export async function generateSummaryReport(
     if_feasible: parsed.if_feasible,
     action_items: parsed.action_items,
     market_readiness: parsed.market_readiness,
+    readiness_label_en: parsed.readiness_label_en,
+    readiness_label_zh: parsed.readiness_label_zh,
     scenario_simulation: null,
   };
 }

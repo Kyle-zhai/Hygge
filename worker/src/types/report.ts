@@ -1,5 +1,3 @@
-import type { EvaluationScores } from "./evaluation";
-
 export type MarketReadiness = "low" | "medium" | "high";
 export type Priority = "critical" | "high" | "medium" | "low";
 
@@ -22,7 +20,9 @@ export interface DisagreementPoint {
 }
 
 export interface DimensionAnalysis {
-  dimension: keyof EvaluationScores;
+  dimension: string;
+  label_en?: string;
+  label_zh?: string;
   score: number;
   strengths: string[];
   weaknesses: string[];
@@ -75,5 +75,7 @@ export interface SummaryReport {
   };
   action_items: ActionItem[];
   market_readiness: MarketReadiness;
+  readiness_label_en?: string;
+  readiness_label_zh?: string;
   scenario_simulation: ScenarioSimulationResult | null;
 }

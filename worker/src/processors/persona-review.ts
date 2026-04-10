@@ -1,6 +1,6 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
-import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
+import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
 import { config } from "../config.js";
 
@@ -17,9 +17,10 @@ export async function generatePersonaReview(
   llm: LLMAdapter,
   persona: Persona,
   project: ProjectParsedData,
-  rawInput: string
+  rawInput: string,
+  dimensions?: TopicClassification["dimensions"]
 ): Promise<PersonaReviewResult> {
-  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput);
+  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions);
   const response = await llm.complete({ system, prompt, maxTokens: 2048 });
   const parsed = JSON.parse(response.text);
   return {

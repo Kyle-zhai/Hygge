@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { rawInput, url, attachments, selectedPersonaIds } = body;
+  const { rawInput, url, attachments, selectedPersonaIds, mode } = body;
 
   if (!rawInput || !selectedPersonaIds?.length) {
     return NextResponse.json({ error: "rawInput and selectedPersonaIds are required" }, { status: 400 });
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
   // Create evaluation
   const { data: evaluation, error: evalError } = await supabase
-    .from("evaluations").insert({ project_id: project.id, selected_persona_ids: selectedPersonaIds, status: "pending" }).select().single();
+    .from("evaluations").insert({ project_id: project.id, selected_persona_ids: selectedPersonaIds, status: "pending", mode: mode || "product" }).select().single();
 
   if (evalError) {
     return NextResponse.json({ error: evalError.message }, { status: 500 });
@@ -97,6 +97,7 @@ export async function POST(request: Request) {
       attachments: attachments || [],
       selectedPersonaIds,
       planTier: subscription.plan,
+      mode: mode || "product",
     });
   } catch (queueError) {
     console.error("Failed to push to queue:", queueError);

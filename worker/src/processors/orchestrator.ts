@@ -4,10 +4,12 @@ import { ClaudeLLM } from "../llm/claude.js";
 import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
 import { config } from "../config.js";
 import { parseProject } from "./parse-project.js";
+import { classifyTopic } from "./classify-topic.js";
 import { generatePersonaReview } from "./persona-review.js";
 import { generateSummaryReport } from "./summary-report.js";
 import { runScenarioSimulation } from "./scenario-simulation.js";
 import type { Persona } from "../types/persona.js";
+import type { TopicClassification } from "../types/evaluation.js";
 
 interface EvaluationJobData {
   evaluationId: string;
@@ -17,10 +19,11 @@ interface EvaluationJobData {
   attachments?: string[];
   selectedPersonaIds: string[];
   planTier: "free" | "pro" | "max";
+  mode: "product" | "topic";
 }
 
 export async function processEvaluation(job: Job<EvaluationJobData>) {
-  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier } = job.data;
+  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode } = job.data;
   const llm = config.llm.provider === "openai-compatible"
     ? new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL)
     : new ClaudeLLM(config.llm.apiKey, config.llm.model);
@@ -29,8 +32,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     // 1. Update status to processing
     await supabase.from("evaluations").update({ status: "processing" }).eq("id", evaluationId);
 
-    // 2. Parse user submission (topic may be a product, idea, policy, event, etc.)
-    // Download attachment content for LLM context
+    // 2. Parse user submission
     let attachmentDescriptions: string[] = [];
     if (attachments && attachments.length > 0) {
       for (const path of attachments) {
@@ -38,7 +40,6 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         if (isImage) {
           attachmentDescriptions.push(`[Image attachment: ${path.split("/").pop()}]`);
         } else {
-          // For PDFs, download and extract text (basic approach)
           const { data } = await supabase.storage.from("attachments").download(path);
           if (data) {
             const text = await data.text();
@@ -51,13 +52,24 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     const parsedData = await parseProject(llm, rawInput, url, attachmentDescriptions);
     await supabase.from("projects").update({ parsed_data: parsedData }).eq("id", projectId);
 
-    // 3. Fetch selected personas
+    // 3. Topic mode: classify topic and generate dynamic dimensions
+    let dimensions: TopicClassification["dimensions"] | undefined;
+
+    if (mode === "topic") {
+      console.log(`[${evaluationId}] Topic mode — classifying topic...`);
+      const classification = await classifyTopic(llm, rawInput);
+      dimensions = classification.dimensions;
+      console.log(`[${evaluationId}] Topic type: ${classification.topic_type}, dimensions: ${dimensions.map(d => d.key).join(", ")}`);
+      await supabase.from("evaluations").update({ topic_classification: classification }).eq("id", evaluationId);
+    }
+
+    // 4. Fetch selected personas
     const { data: personas } = await supabase.from("personas").select("*").in("id", selectedPersonaIds);
     if (!personas || personas.length === 0) {
       throw new Error("No personas found for selected IDs");
     }
 
-    // 4. Generate individual persona perspectives (parallel with concurrency limit)
+    // 5. Generate individual persona perspectives (parallel with concurrency limit)
     const reviews: Array<{
       persona_id: string;
       persona_name: string;
@@ -72,14 +84,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     const CONCURRENCY = 3;
     const personaList = personas as Persona[];
 
-    // Process in batches of CONCURRENCY
     for (let i = 0; i < personaList.length; i += CONCURRENCY) {
       const batch = personaList.slice(i, i + CONCURRENCY);
       const batchResults = await Promise.all(
         batch.map(async (persona) => {
-          const review = await generatePersonaReview(llm, persona, parsedData, rawInput);
+          const review = await generatePersonaReview(llm, persona, parsedData, rawInput, dimensions);
 
-          // Write review to DB immediately (for realtime updates)
           await supabase.from("persona_reviews").insert({
             evaluation_id: evaluationId,
             persona_id: persona.id,
@@ -103,12 +113,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       reviews.push(...batchResults);
     }
 
-    // 5. Generate discussion summary report
+    // 6. Generate discussion summary report
     console.log(`[${evaluationId}] Generating summary report...`);
-    const summaryReport = await generateSummaryReport(llm, parsedData, reviews, rawInput);
+    const summaryReport = await generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
     console.log(`[${evaluationId}] Summary report generated`);
 
-    // 6. Run social dynamics scenario simulation (Max plan only)
+    // 7. Run social dynamics scenario simulation (Max plan only)
     if (planTier === "max") {
       console.log(`[${evaluationId}] Running scenario simulation...`);
       try {
@@ -123,13 +133,13 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     await job.updateProgress(95);
 
-    // 7. Write summary report to DB
+    // 8. Write summary report to DB
     await supabase.from("summary_reports").insert({
       evaluation_id: evaluationId,
       ...summaryReport,
     });
 
-    // 8. Mark evaluation as completed
+    // 9. Mark evaluation as completed
     await supabase.from("evaluations").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", evaluationId);
 
     await job.updateProgress(100);
