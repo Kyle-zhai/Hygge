@@ -88,7 +88,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
             <Paperclip className="h-4 w-4" />
             <input
               type="file"
-              className="hidden"
+              className="absolute h-0 w-0 overflow-hidden opacity-0"
               accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
               multiple
               onChange={handleFileChange}
