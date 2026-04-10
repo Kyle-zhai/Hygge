@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -9,7 +9,7 @@ import { PersonaSelector } from "@/components/evaluation/persona-selector";
 
 const personaLimits: Record<string, number> = { free: 3, pro: 10, max: 20 };
 
-export default function NewEvaluationPage() {
+function NewEvaluationContent() {
   const t = useTranslations("evaluation");
   const locale = useLocale();
   const router = useRouter();
@@ -94,10 +94,9 @@ export default function NewEvaluationPage() {
         </div>
       )}
 
-      {/* Step 1: Topic input — centered like Okara */}
+      {/* Step 1: Topic input */}
       <div className={step === 1 ? "flex flex-1 flex-col" : "hidden"}>
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8">
-          {/* Logo + branding */}
           <div className="mb-8 flex flex-col items-center">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4">
               <circle cx="10" cy="10" r="7" stroke="#C4A882" strokeWidth="1.2" opacity="0.4" />
@@ -112,7 +111,6 @@ export default function NewEvaluationPage() {
             </p>
           </div>
 
-          {/* Input box — full width with max constraint */}
           <div className="w-full max-w-2xl">
             <ProjectInput onSubmit={handleProjectSubmit} />
           </div>
@@ -142,5 +140,13 @@ export default function NewEvaluationPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewEvaluationPage() {
+  return (
+    <Suspense>
+      <NewEvaluationContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type KeyboardEvent } from "react";
+import { useState, useId, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   const t = useTranslations("evaluation");
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId() + "-file";
 
   function handleSubmit() {
     if (!text.trim() && files.length === 0) return;
@@ -47,6 +47,11 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
 
   function removeFile(index: number) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function triggerFileInput() {
+    const el = document.getElementById(inputId) as HTMLInputElement | null;
+    el?.click();
   }
 
   return (
@@ -86,7 +91,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
       <div className="flex items-center justify-between border-t border-[#2A2A2A] px-5 py-3">
         <div className="flex gap-1">
           <input
-            ref={fileInputRef}
+            id={inputId}
             type="file"
             accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
             multiple
@@ -96,7 +101,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           <button
             type="button"
             disabled={disabled}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={triggerFileInput}
             className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}
           >
             <Paperclip className="h-4 w-4" />
