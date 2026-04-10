@@ -88,7 +88,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           <input
             ref={fileInputRef}
             type="file"
-            className="hidden"
+            style={{ position: "fixed", left: "-9999px", top: "-9999px", opacity: 0 }}
             accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
             multiple
             onChange={handleFileChange}
@@ -97,7 +97,16 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           <button
             type="button"
             disabled={disabled}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Blur textarea first to avoid focus conflicts
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+              // Small delay to ensure blur completes
+              setTimeout(() => fileInputRef.current?.click(), 50);
+            }}
             className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}
           >
             <Paperclip className="h-4 w-4" />
