@@ -39,10 +39,11 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-    }
+    const newFiles = Array.from(e.target.files ?? []);
     e.target.value = "";
+    if (newFiles.length > 0) {
+      setFiles((prev) => [...prev, ...newFiles]);
+    }
   }
 
   function removeFile(index: number) {
