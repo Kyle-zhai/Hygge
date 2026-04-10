@@ -10,6 +10,8 @@ First, identify what TYPE of topic the user is submitting (e.g., product, idea, 
 
 Extract the following fields. If a field cannot be determined from the input, use "Not specified" as the value.
 
+IMPORTANT: Always respond in English regardless of the input language. If the user's input is in another language, translate and analyze it but produce all output in English.
+
 Respond ONLY with valid JSON in this exact format:
 {
   "name": "Topic name or title",

@@ -334,38 +334,6 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
             </div>
           </ReportSection>
 
-          {/* Scenario Simulation (Max plan only) */}
-          {report.scenario_simulation && (
-            <ReportSection title={t("scenarioSimulation")} borderColor="border-l-[#E2DDD5]">
-              <div className="space-y-4">
-                <p className="text-sm text-[#EAEAE8]">{report.scenario_simulation.summary}</p>
-                <div className="flex items-center gap-2 rounded-lg bg-[#1C1C1C]/50 p-3">
-                  <span className="text-sm font-medium text-[#EAEAE8]">{t("adoptionShift")}:</span>
-                  <span className={`text-lg font-bold ${report.scenario_simulation.adoption_rate_shift >= 0 ? "text-[#4ADE80]" : "text-[#F87171]"}`}>
-                    {report.scenario_simulation.adoption_rate_shift >= 0 ? "+" : ""}{report.scenario_simulation.adoption_rate_shift}%
-                  </span>
-                </div>
-                {report.scenario_simulation.influence_events && report.scenario_simulation.influence_events.length > 0 && (
-                  <div className="space-y-2">
-                    {report.scenario_simulation.influence_events.map((event, i) => {
-                      const influencer = personaMap.get(event.influencer_id);
-                      const influenced = personaMap.get(event.influenced_id);
-                      const getName = (p: PersonaData | undefined) =>
-                        p?.identity?.locale_variants?.[locale]?.name || p?.identity?.name || "?";
-                      return (
-                        <div key={i} className="rounded bg-[#1C1C1C]/50 p-2 text-xs">
-                          <span className="font-medium text-[#EAEAE8]">{getName(influencer)}</span>
-                          {" \u2192 "}
-                          <span className="font-medium text-[#EAEAE8]">{getName(influenced)}</span>
-                          : {event.shift}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </ReportSection>
-          )}
         </>
       )}
     </motion.div>

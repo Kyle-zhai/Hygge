@@ -112,6 +112,7 @@ interface ReportTextViewProps {
   personas: PersonaData[];
   locale: string;
   onViewScores?: () => void;
+  onViewSimulation?: () => void;
   topicClassification?: TopicClassification | null;
 }
 
@@ -505,6 +506,7 @@ export function ReportTextView({
   personas,
   locale,
   onViewScores,
+  onViewSimulation,
   topicClassification,
 }: ReportTextViewProps) {
   const t = useTranslations("evaluation");
@@ -560,9 +562,6 @@ export function ReportTextView({
     items.push({ id: "recommendations", label: t("recommendations") });
     if (report.action_items?.length > 0) {
       items.push({ id: "action-items", label: t("actionItems") });
-    }
-    if (report.scenario_simulation) {
-      items.push({ id: "scenario-simulation", label: t("scenarioSimulation") });
     }
     return items;
   }, [report, t]);
@@ -625,7 +624,6 @@ export function ReportTextView({
   const actionItems = report.action_items ?? [];
   const ifFeasible = report.if_feasible;
   const ifNotFeasible = report.if_not_feasible;
-  const scenario = report.scenario_simulation;
   const keyTakeaways = consensusPoints.slice(0, 3);
 
   return (
@@ -1511,69 +1509,26 @@ export function ReportTextView({
         )}
 
         {/* ════════════════════════════════════════════════════════════
-            SCENARIO SIMULATION
+            SCENARIO SIMULATION CTA
         ════════════════════════════════════════════════════════════ */}
-        {scenario && (
-          <AnimatedSection id="scenario-simulation">
-            <SectionTitle icon={TrendingUp}>
-              {t("scenarioSimulation")}
-            </SectionTitle>
-
-            {/* Summary callout */}
-            {scenario.summary && (
-              <Callout variant="info">{scenario.summary}</Callout>
-            )}
-
-            {/* Adoption rate shift */}
-            {scenario.adoption_rate_shift != null && (
-              <div className="mt-4 flex items-center gap-3">
-                <span className="text-sm text-[#666462]">
-                  {t("adoptionShift")}:
-                </span>
-                <Badge
-                  className={`border text-xs font-mono font-medium ${
-                    scenario.adoption_rate_shift > 0
-                      ? "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]"
-                      : scenario.adoption_rate_shift < 0
-                      ? "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]"
-                      : "border-[#666462]/30 bg-[#666462]/10 text-[#666462]"
-                  }`}
-                >
-                  {scenario.adoption_rate_shift > 0 ? "+" : ""}
-                  {scenario.adoption_rate_shift}%
-                </Badge>
-              </div>
-            )}
-
-            {/* Influence events timeline */}
-            {scenario.influence_events &&
-              scenario.influence_events.length > 0 && (
-                <div className="mt-6 space-y-0">
-                  {scenario.influence_events.map((event: any, i: number) => (
-                    <div key={i} className="flex gap-4">
-                      {/* Timeline dot & connector */}
-                      <div className="flex flex-col items-center">
-                        <div className="h-3 w-3 rounded-full border-2 border-[#C4A882] bg-[#0C0C0C]" />
-                        {i < (scenario.influence_events?.length ?? 0) - 1 && (
-                          <div className="w-px flex-1 bg-[#2A2A2A]" />
-                        )}
-                      </div>
-
-                      <div className="pb-5 flex-1 min-w-0">
-                        <p className="text-sm text-[#EAEAE8] leading-relaxed">
-                          {typeof event === "string"
-                            ? event
-                            : event.description ??
-                              event.event ??
-                              event.shift ??
-                              JSON.stringify(event)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+        {report.scenario_simulation && onViewSimulation && (
+          <div className="mt-10 flex justify-center">
+            <button
+              onClick={onViewSimulation}
+              className="group inline-flex items-center gap-3 rounded-xl border border-[#C4A882]/30 bg-[#C4A882]/5 px-6 py-4 transition-all duration-200 hover:border-[#C4A882]/50 hover:bg-[#C4A882]/10"
+            >
+              <TrendingUp className="h-5 w-5 text-[#C4A882]" />
+              <div className="text-left">
+                <div className="text-sm font-semibold text-[#EAEAE8]">
+                  {t("scenarioSimulation")}
                 </div>
-              )}
-          </AnimatedSection>
+                <div className="text-xs text-[#9B9594]">
+                  See how personas influence each other in a real-world scenario
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-[#C4A882] transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
         )}
       </div>
     </div>

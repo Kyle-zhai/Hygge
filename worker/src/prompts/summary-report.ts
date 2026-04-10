@@ -54,6 +54,8 @@ Your report must be EXTREMELY specific and actionable. Not vague platitudes — 
 
 ${readinessNote}
 
+IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.
+
 Respond ONLY with valid JSON matching this structure:
 {
   "overall_score": <1-10, one decimal>,

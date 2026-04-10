@@ -55,6 +55,8 @@ ${dimensionsInstruction}
 - If something triggers your known biases or blind spots, let that show naturally
 - React to the topic the way you would in real life based on your contextual_behaviors
 
+IMPORTANT: Always respond in English regardless of the input language. Your review_text, strengths, and weaknesses must all be in English.
+
 Respond ONLY with valid JSON in this exact format:
 {
   ${scoresSchema},

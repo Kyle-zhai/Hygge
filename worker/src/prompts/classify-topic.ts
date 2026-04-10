@@ -5,6 +5,8 @@ Each dimension should be:
 - Measurable on a 1-10 scale
 - Distinct from other dimensions (no overlap)
 
+IMPORTANT: Always respond in English regardless of the input language.
+
 Respond ONLY with valid JSON matching this structure:
 {
   "topic_type": "<product|policy|idea|creative|decision|strategy|other>",
@@ -12,12 +14,10 @@ Respond ONLY with valid JSON matching this structure:
     {
       "key": "<snake_case_key>",
       "label_en": "<English label>",
-      "label_zh": "<Chinese label>",
       "description": "<What this dimension measures in context of this specific topic, 1 sentence>"
     }
   ],
-  "readiness_label_en": "<Contextual readiness label, e.g. 'Market Readiness' for products, 'Implementation Readiness' for policies, 'Feasibility' for ideas>",
-  "readiness_label_zh": "<Chinese version of readiness label>"
+  "readiness_label_en": "<Contextual readiness label, e.g. 'Market Readiness' for products, 'Implementation Readiness' for policies, 'Feasibility' for ideas>"
 }
 
 Examples of good dimension generation:

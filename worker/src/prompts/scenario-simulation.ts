@@ -29,6 +29,8 @@ Simulate the social dynamics:
 4. Consider that influential skeptics can dampen enthusiasm
 5. End with final stances
 
+IMPORTANT: Always respond in English regardless of the input language. All text fields (summary, shift descriptions, reasons) must be in English.
+
 Respond ONLY with valid JSON:
 {
   "initial_adoption": [

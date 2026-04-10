@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ReportTextView } from "@/components/evaluation/report-text-view";
 import { ReportScoresView } from "@/components/evaluation/report-scores-view";
+import { ScenarioSimulationView } from "@/components/evaluation/scenario-simulation-view";
 
 interface PersonaData {
   id: string;
@@ -27,6 +28,8 @@ interface TopicClassification {
   readiness_label_zh: string;
 }
 
+type ViewMode = "report" | "scores" | "simulation";
+
 interface ReportViewProps {
   report: any;
   reviews: ReviewData[];
@@ -36,7 +39,7 @@ interface ReportViewProps {
 }
 
 export function ReportView({ report, reviews, personas, locale, topicClassification }: ReportViewProps) {
-  const [showScores, setShowScores] = useState(false);
+  const [view, setView] = useState<ViewMode>("report");
   const savedScrollY = useRef(0);
   const pendingScroll = useRef<number | null>(null);
 
@@ -45,25 +48,30 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
       const target = pendingScroll.current;
       pendingScroll.current = null;
       window.scrollTo(0, target);
-      // Override browser scroll restoration after layout settles
       const t1 = setTimeout(() => window.scrollTo(0, target), 50);
       const t2 = setTimeout(() => window.scrollTo(0, target), 150);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
-  }, [showScores]);
+  }, [view]);
 
   function handleViewScores() {
     savedScrollY.current = window.scrollY;
     pendingScroll.current = 0;
-    setShowScores(true);
+    setView("scores");
   }
 
-  function handleBack() {
+  function handleViewSimulation() {
+    savedScrollY.current = window.scrollY;
+    pendingScroll.current = 0;
+    setView("simulation");
+  }
+
+  function handleBackToReport() {
     pendingScroll.current = savedScrollY.current;
-    setShowScores(false);
+    setView("report");
   }
 
-  if (showScores) {
+  if (view === "scores") {
     return (
       <div className="mx-auto max-w-4xl pb-16">
         <ReportScoresView
@@ -71,8 +79,21 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
           reviews={reviews}
           personas={personas}
           locale={locale}
-          onBack={handleBack}
+          onBack={handleBackToReport}
           topicClassification={topicClassification}
+        />
+      </div>
+    );
+  }
+
+  if (view === "simulation" && report?.scenario_simulation) {
+    return (
+      <div className="mx-auto max-w-4xl pb-16">
+        <ScenarioSimulationView
+          simulation={report.scenario_simulation}
+          personas={personas}
+          locale={locale}
+          onBack={handleBackToReport}
         />
       </div>
     );
@@ -86,6 +107,7 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
         personas={personas}
         locale={locale}
         onViewScores={handleViewScores}
+        onViewSimulation={report?.scenario_simulation ? handleViewSimulation : undefined}
         topicClassification={topicClassification}
       />
     </div>
