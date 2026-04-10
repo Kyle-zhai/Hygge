@@ -31,22 +31,24 @@ interface PersonaData {
 interface ReviewData {
   id: string;
   persona_id: string;
-  scores: {
-    usability: number;
-    market_fit: number;
-    design: number;
-    tech_quality: number;
-    innovation: number;
-    pricing: number;
-  };
+  scores: Record<string, number>;
   review_text: string;
   strengths: string[];
   weaknesses: string[];
 }
 
+interface TopicClassification {
+  topic_type: string;
+  dimensions: Array<{ key: string; label_en: string; label_zh: string; description: string }>;
+  readiness_label_en: string;
+  readiness_label_zh: string;
+}
+
 interface ReportData {
   overall_score: number;
   market_readiness: string;
+  readiness_label_en?: string;
+  readiness_label_zh?: string;
   persona_analysis: {
     entries?: Array<{
       persona_id: string;
@@ -58,6 +60,8 @@ interface ReportData {
   };
   multi_dimensional_analysis: Array<{
     dimension: string;
+    label_en?: string;
+    label_zh?: string;
     score: number;
     analysis: string;
     strengths?: string[];
@@ -101,9 +105,10 @@ interface ReportScoresViewProps {
   personas: PersonaData[];
   locale: string;
   onBack?: () => void;
+  topicClassification?: TopicClassification | null;
 }
 
-export function ReportScoresView({ report, reviews, personas, locale, onBack }: ReportScoresViewProps) {
+export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification }: ReportScoresViewProps) {
   const t = useTranslations("evaluation");
 
   const personaMap = new Map(personas.map((p) => [p.id, p]));
@@ -135,7 +140,9 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack }: 
           </div>
           <p className="text-sm text-[#9B9594]">{t("overallScore")}</p>
           <Badge className={readinessColors[report.market_readiness] || ""}>
-            {t("marketReadiness")}: {t(report.market_readiness as "low" | "medium" | "high")}
+            {report.readiness_label_en
+              ? (locale === "zh" ? (report.readiness_label_zh || report.readiness_label_en) : report.readiness_label_en)
+              : t("marketReadiness")}: {t(report.market_readiness as "low" | "medium" | "high")}
           </Badge>
         </div>
       )}
@@ -162,6 +169,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack }: 
                 reviewText={review.review_text}
                 strengths={review.strengths}
                 weaknesses={review.weaknesses}
+                topicDimensions={topicClassification?.dimensions}
+                locale={locale}
               />
             );
           })}
@@ -204,7 +213,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack }: 
               {report.multi_dimensional_analysis?.map((dim, i) => (
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[#EAEAE8]">{t(dim.dimension)}</h3>
+                    <h3 className="text-sm font-semibold text-[#EAEAE8]">{(locale === "zh" ? dim.label_zh : dim.label_en) || t(dim.dimension as any)}</h3>
                     <span className="text-sm font-bold text-[#EAEAE8]">{dim.score}</span>
                   </div>
                   <p className="text-sm text-[#9B9594]">{dim.analysis}</p>

@@ -35,14 +35,7 @@ interface PersonaData {
 interface ReviewData {
   id: string;
   persona_id: string;
-  scores: {
-    usability: number;
-    market_fit: number;
-    design: number;
-    tech_quality: number;
-    innovation: number;
-    pricing: number;
-  };
+  scores: Record<string, number>;
   review_text: string;
   strengths: string[];
   weaknesses: string[];
@@ -67,11 +60,15 @@ interface ReportData {
   };
   multi_dimensional_analysis: Array<{
     dimension: string;
+    label_en?: string;
+    label_zh?: string;
     score: number;
     analysis: string;
     strengths?: string[];
     weaknesses?: string[];
   }>;
+  readiness_label_en?: string;
+  readiness_label_zh?: string;
   goal_assessment: Array<{
     goal: string;
     achievable: boolean;
@@ -102,12 +99,20 @@ interface ReportData {
   };
 }
 
+interface TopicClassification {
+  topic_type: string;
+  dimensions: Array<{ key: string; label_en: string; label_zh: string; description: string }>;
+  readiness_label_en: string;
+  readiness_label_zh: string;
+}
+
 interface ReportTextViewProps {
   report: ReportData | null;
   reviews: ReviewData[];
   personas: PersonaData[];
   locale: string;
   onViewScores?: () => void;
+  topicClassification?: TopicClassification | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -500,6 +505,7 @@ export function ReportTextView({
   personas,
   locale,
   onViewScores,
+  topicClassification,
 }: ReportTextViewProps) {
   const t = useTranslations("evaluation");
   const [activeSection, setActiveSection] = useState("executive-summary");
@@ -670,7 +676,9 @@ export function ReportTextView({
                 {report.market_readiness && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-[#666462]">
-                      {t("marketReadiness")}:
+                      {report.readiness_label_en
+                        ? (locale === "zh" ? (report.readiness_label_zh || report.readiness_label_en) : report.readiness_label_en)
+                        : t("marketReadiness")}:
                     </span>
                     <Badge
                       className={`border text-xs font-medium ${
@@ -910,13 +918,17 @@ export function ReportTextView({
                                   <div className="space-y-2 pt-1">
                                     {Object.entries(
                                       review.scores as Record<string, number>
-                                    ).map(([dim, score]) => (
+                                    ).map(([dim, score]) => {
+                                      const dimLabel = topicClassification
+                                        ? topicClassification.dimensions.find(d => d.key === dim)
+                                        : null;
+                                      return (
                                       <div
                                         key={dim}
                                         className="flex items-center gap-2"
                                       >
                                         <span className="w-20 text-[11px] text-[#666462] truncate">
-                                          {t(dim as any)}
+                                          {dimLabel ? (locale === "zh" ? dimLabel.label_zh : dimLabel.label_en) : t(dim as any)}
                                         </span>
                                         <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
                                           <motion.div
@@ -946,7 +958,8 @@ export function ReportTextView({
                                           {score}
                                         </span>
                                       </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -1126,7 +1139,7 @@ export function ReportTextView({
                     {/* Dimension header with inline score */}
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-base font-semibold text-[#EAEAE8]">
-                        {dim.dimension}
+                        {(locale === "zh" ? dim.label_zh : dim.label_en) || dim.dimension}
                       </h3>
                       <Badge
                         className={`border text-[10px] font-mono font-medium ${colors.text} bg-transparent`}

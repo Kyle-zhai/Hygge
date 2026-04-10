@@ -8,21 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { ScoreBar } from "./score-radar";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
+interface TopicDimension {
+  key: string;
+  label_en: string;
+  label_zh: string;
+  description: string;
+}
+
 interface PersonaReviewCardProps {
   personaName: string;
   personaAvatar: string;
   personaOccupation: string;
-  scores: {
-    usability: number;
-    market_fit: number;
-    design: number;
-    tech_quality: number;
-    innovation: number;
-    pricing: number;
-  };
+  scores: Record<string, number>;
   reviewText: string;
   strengths: string[];
   weaknesses: string[];
+  topicDimensions?: TopicDimension[];
+  locale?: string;
 }
 
 export function PersonaReviewCard({
@@ -33,10 +35,13 @@ export function PersonaReviewCard({
   reviewText,
   strengths,
   weaknesses,
+  topicDimensions,
+  locale,
 }: PersonaReviewCardProps) {
   const t = useTranslations("evaluation");
   const [expanded, setExpanded] = useState(false);
-  const avgScore = Object.values(scores).reduce((a, b) => a + b, 0) / 6;
+  const scoreValues = Object.values(scores);
+  const avgScore = scoreValues.length > 0 ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length : 0;
 
   const scoreBadgeColor =
     avgScore >= 7
@@ -70,7 +75,7 @@ export function PersonaReviewCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ScoreBar scores={scores} compact />
+        <ScoreBar scores={scores} compact topicDimensions={topicDimensions} locale={locale} />
 
         <AnimatePresence>
           {expanded && (

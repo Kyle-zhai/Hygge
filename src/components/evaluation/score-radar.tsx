@@ -3,19 +3,21 @@
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 
-interface ScoreBarProps {
-  scores: {
-    usability: number;
-    market_fit: number;
-    design: number;
-    tech_quality: number;
-    innovation: number;
-    pricing: number;
-  };
-  compact?: boolean;
+interface TopicDimension {
+  key: string;
+  label_en: string;
+  label_zh: string;
+  description: string;
 }
 
-const dimensions = ["usability", "market_fit", "design", "tech_quality", "innovation", "pricing"] as const;
+interface ScoreBarProps {
+  scores: Record<string, number>;
+  compact?: boolean;
+  topicDimensions?: TopicDimension[];
+  locale?: string;
+}
+
+const FIXED_DIMENSIONS = ["usability", "market_fit", "design", "tech_quality", "innovation", "pricing"] as const;
 
 function scoreGradient(score: number): string {
   if (score >= 8) return "linear-gradient(90deg, #4ADE80, #34D399)";
@@ -31,17 +33,25 @@ function scoreTextColor(score: number): string {
   return "text-[#F87171]";
 }
 
-export function ScoreBar({ scores, compact }: ScoreBarProps) {
+export function ScoreBar({ scores, compact, topicDimensions, locale }: ScoreBarProps) {
   const t = useTranslations("evaluation");
+
+  const dimKeys = topicDimensions
+    ? topicDimensions.map(d => d.key)
+    : FIXED_DIMENSIONS as unknown as string[];
+
+  const dimLabelMap = topicDimensions
+    ? new Map(topicDimensions.map(d => [d.key, locale === "zh" ? d.label_zh : d.label_en]))
+    : null;
 
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>
-      {dimensions.map((dim, i) => {
-        const score = scores[dim];
+      {dimKeys.map((dim, i) => {
+        const score = scores[dim] ?? 0;
         return (
           <div key={dim} className="flex items-center gap-2">
             <span className={`${compact ? "w-16 text-[11px]" : "w-24 text-xs"} text-[#666462] truncate`}>
-              {t(dim)}
+              {dimLabelMap ? dimLabelMap.get(dim) ?? dim : t(dim as any)}
             </span>
             <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
               <motion.div

@@ -15,7 +15,7 @@ export default async function EvaluationResultPage({
 
   const { data: evaluation } = await supabase
     .from("evaluations")
-    .select(`id, status, selected_persona_ids, created_at, completed_at,
+    .select(`id, status, mode, topic_classification, selected_persona_ids, created_at, completed_at,
       persona_reviews (id, persona_id, scores, review_text, strengths, weaknesses, llm_model, created_at),
       summary_reports (*)`)
     .eq("id", id)
@@ -32,6 +32,7 @@ export default async function EvaluationResultPage({
 
   const reviews = (evaluation as any).persona_reviews || [];
   const report = (evaluation as any).summary_reports || null;
+  const topicClassification = (evaluation as any).topic_classification || null;
 
   return (
     <ReportView
@@ -39,6 +40,7 @@ export default async function EvaluationResultPage({
       reviews={reviews}
       personas={personas || []}
       locale={locale}
+      topicClassification={topicClassification}
     />
   );
 }

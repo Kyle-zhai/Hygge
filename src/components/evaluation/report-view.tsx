@@ -14,17 +14,17 @@ interface PersonaData {
 interface ReviewData {
   id: string;
   persona_id: string;
-  scores: {
-    usability: number;
-    market_fit: number;
-    design: number;
-    tech_quality: number;
-    innovation: number;
-    pricing: number;
-  };
+  scores: Record<string, number>;
   review_text: string;
   strengths: string[];
   weaknesses: string[];
+}
+
+interface TopicClassification {
+  topic_type: string;
+  dimensions: Array<{ key: string; label_en: string; label_zh: string; description: string }>;
+  readiness_label_en: string;
+  readiness_label_zh: string;
 }
 
 interface ReportViewProps {
@@ -32,9 +32,10 @@ interface ReportViewProps {
   reviews: ReviewData[];
   personas: PersonaData[];
   locale: string;
+  topicClassification?: TopicClassification | null;
 }
 
-export function ReportView({ report, reviews, personas, locale }: ReportViewProps) {
+export function ReportView({ report, reviews, personas, locale, topicClassification }: ReportViewProps) {
   const [showScores, setShowScores] = useState(false);
   const savedScrollY = useRef(0);
   const pendingScroll = useRef<number | null>(null);
@@ -71,6 +72,7 @@ export function ReportView({ report, reviews, personas, locale }: ReportViewProp
           personas={personas}
           locale={locale}
           onBack={handleBack}
+          topicClassification={topicClassification}
         />
       </div>
     );
@@ -84,6 +86,7 @@ export function ReportView({ report, reviews, personas, locale }: ReportViewProp
         personas={personas}
         locale={locale}
         onViewScores={handleViewScores}
+        topicClassification={topicClassification}
       />
     </div>
   );
