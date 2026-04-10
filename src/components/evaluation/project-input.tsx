@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useState, useRef, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   const t = useTranslations("evaluation");
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleSubmit() {
     if (!text.trim() && files.length === 0) return;
@@ -84,16 +85,23 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
 
       <div className="flex items-center justify-between border-t border-[#2A2A2A] px-5 py-3">
         <div className="flex gap-1">
-          <label className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
+            multiple
+            onChange={handleFileChange}
+            tabIndex={-1}
+          />
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => fileInputRef.current?.click()}
+            className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}
+          >
             <Paperclip className="h-4 w-4" />
-            <input
-              type="file"
-              className="absolute h-0 w-0 overflow-hidden opacity-0"
-              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
-              multiple
-              onChange={handleFileChange}
-            />
-          </label>
+          </button>
         </div>
         <Button
           size="icon"
