@@ -52,6 +52,8 @@ export function buildSummaryReportPrompt(
 
 Your report must be EXTREMELY specific and actionable. Not vague platitudes — concrete, detailed analysis that the user can immediately act on. Adapt your language and framing to suit the topic type.
 
+CRITICAL: Every claim in your report must reference SPECIFIC details from the personas' reviews and the original submission. Do NOT produce generic advice like "improve your marketing" — instead say exactly WHAT to improve, WHY (citing persona feedback), and HOW. If personas referenced specific features, data points, or content from the submission, carry those references into your synthesis.
+
 ${readinessNote}
 
 IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.

@@ -141,7 +141,7 @@ export function ProgressTracker({
   ];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-10">
       {/* 3-Step indicator — step 3 active */}
       <div className="flex items-center gap-3">
         {stepLabels.map((label, i) => {
