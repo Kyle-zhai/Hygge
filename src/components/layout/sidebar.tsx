@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   PanelLeft,
@@ -31,8 +31,11 @@ interface SidebarProps {
 
 export function Sidebar({ userEmail, history }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isNewPage = pathname.includes("/evaluate/new");
+  const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
 
   async function handleLogout() {
@@ -72,7 +75,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
           href="/en/evaluate/new?mode=topic"
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            pathname.includes("/evaluate/new") && !pathname.includes("mode=product")
+            isNewPage && currentMode === "topic"
               ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
               : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
           }`}
@@ -84,7 +87,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
           href="/en/evaluate/new?mode=product"
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            pathname.includes("/evaluate/new") && pathname.includes("mode=product")
+            isNewPage && currentMode === "product"
               ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
               : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
           }`}
