@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -42,6 +42,17 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const isNewPage = pathname.includes("/evaluate/new");
   const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (!main) return;
+    if (collapsed) {
+      main.style.marginLeft = "0px";
+    } else {
+      main.style.removeProperty("margin-left");
+    }
+  }, [collapsed]);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -87,12 +98,20 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
           </svg>
           <span className="text-lg font-semibold italic text-[#EAEAE8]">Hygge</span>
         </Link>
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:hidden"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center">
+          <button
+            onClick={() => setCollapsed(true)}
+            className="hidden h-8 w-8 items-center justify-center rounded-lg text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:flex"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* General Discussion + Product Evaluation */}
@@ -271,8 +290,22 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
         <PanelLeft className="h-5 w-5" />
       </button>
 
+      {/* Desktop expand button (shown when sidebar is collapsed) */}
+      {collapsed && (
+        <button
+          onClick={() => setCollapsed(false)}
+          className="fixed left-3 top-3 z-40 hidden h-9 w-9 items-center justify-center rounded-lg bg-[#0C0C0C]/80 text-[#9B9594] backdrop-blur transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:flex"
+        >
+          <PanelLeft className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Desktop sidebar — fixed */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] md:flex md:flex-col">
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:flex md:flex-col ${
+          collapsed ? "-translate-x-full" : "translate-x-0"
+        }`}
+      >
         {sidebarContent}
       </aside>
 

@@ -41,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-[#0C0C0C]">
       <Sidebar userEmail={user?.email ?? null} history={history} />
-      <main className="min-w-0 flex-1 pl-12 md:ml-[260px] md:pl-0">
+      <main className="min-w-0 flex-1 md:ml-[260px] transition-[margin-left] duration-300">
         {children}
       </main>
     </div>
