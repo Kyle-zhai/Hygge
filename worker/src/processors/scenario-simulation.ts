@@ -18,5 +18,15 @@ export async function runScenarioSimulation(
 ): Promise<ScenarioSimulationResult> {
   const { system, prompt } = buildScenarioSimulationPrompt(personas, reviews);
   const response = await llm.complete({ system, prompt, maxTokens: 4096 });
-  return JSON.parse(response.text) as ScenarioSimulationResult;
+  const result = JSON.parse(response.text) as ScenarioSimulationResult;
+
+  // Compute adoption_rate_shift from actual stance data instead of trusting LLM
+  if (result.initial_adoption?.length && result.final_adoption?.length) {
+    const total = result.initial_adoption.length;
+    const initialPositive = result.initial_adoption.filter((a) => a.stance === "positive").length;
+    const finalPositive = result.final_adoption.filter((a) => a.stance === "positive").length;
+    result.adoption_rate_shift = Math.round(((finalPositive - initialPositive) / total) * 100);
+  }
+
+  return result;
 }
