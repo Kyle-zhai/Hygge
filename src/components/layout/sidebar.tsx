@@ -71,10 +71,10 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
         <Link
           href="/en/evaluate/new?mode=topic"
           onClick={() => setMobileOpen(false)}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
             pathname.includes("/evaluate/new") && !pathname.includes("mode=product")
-              ? "bg-[#1C1C1C] text-[#EAEAE8]"
-              : "text-[#EAEAE8] hover:bg-[#1C1C1C]/60"
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
+              : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
           }`}
         >
           <MessageCircle className="h-4 w-4" />
@@ -83,9 +83,9 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
         <Link
           href="/en/evaluate/new?mode=product"
           onClick={() => setMobileOpen(false)}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-            pathname.includes("mode=product")
-              ? "bg-[#1C1C1C] text-[#EAEAE8]"
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.includes("/evaluate/new") && pathname.includes("mode=product")
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
               : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
           }`}
         >
