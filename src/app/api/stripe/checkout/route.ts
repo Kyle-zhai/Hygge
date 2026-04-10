@@ -30,8 +30,8 @@ export async function POST(request: Request) {
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: PLANS[plan].stripePriceId, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/zh/pricing?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/zh/pricing?canceled=true`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/pricing?success=true`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/pricing?canceled=true`,
     metadata: { user_id: user.id, plan },
   };
 

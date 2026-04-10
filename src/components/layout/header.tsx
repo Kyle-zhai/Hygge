@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { LocaleSwitcher } from "./locale-switcher";
 import { UserMenu } from "./user-menu";
 import { ScrollHeader } from "./scroll-header";
 
@@ -30,7 +29,6 @@ export async function Header() {
         </Link>
 
         <nav className="flex items-center gap-2">
-          <LocaleSwitcher />
           {user ? (
             <>
               <Button

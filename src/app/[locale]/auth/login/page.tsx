@@ -41,7 +41,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/${locale}/auth/callback`,
+        redirectTo: `${window.location.origin}/en/auth/callback`,
       },
     });
   }

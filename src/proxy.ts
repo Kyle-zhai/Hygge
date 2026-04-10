@@ -20,16 +20,15 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   // Strip locale prefix for route matching
-  const pathnameWithoutLocale = pathname.replace(/^\/(zh|en)/, "") || "/";
+  const pathnameWithoutLocale = pathname.replace(/^\/en/, "") || "/";
 
   // Redirect unauthenticated users away from protected routes
   const isProtected = protectedRoutes.some((route) =>
     pathnameWithoutLocale.startsWith(route)
   );
   if (isProtected && !user) {
-    const locale = pathname.startsWith("/en") ? "en" : "zh";
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/auth/login`;
+    url.pathname = `/en/auth/login`;
     return NextResponse.redirect(url);
   }
 
@@ -38,9 +37,8 @@ export async function proxy(request: NextRequest) {
     pathnameWithoutLocale.startsWith(route)
   );
   if (isAuthRoute && user) {
-    const locale = pathname.startsWith("/en") ? "en" : "zh";
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/dashboard`;
+    url.pathname = `/en/dashboard`;
     return NextResponse.redirect(url);
   }
 
@@ -48,5 +46,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/(zh|en)/:path*"],
+  matcher: ["/", "/(en)/:path*"],
 };
