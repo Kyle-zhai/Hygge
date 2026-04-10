@@ -13,6 +13,9 @@ import {
   Zap,
   Loader2,
   X,
+  MoreHorizontal,
+  Share2,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -34,6 +37,8 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const isNewPage = pathname.includes("/evaluate/new");
   const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +48,27 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
     await supabase.auth.signOut();
     router.push("/en/auth/login");
     router.refresh();
+  }
+
+  async function handleDelete(projectId: string) {
+    setDeleting(projectId);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+      if (res.ok) {
+        setMenuOpenId(null);
+        router.refresh();
+      }
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function handleShare(item: HistoryItem) {
+    const url = item.evaluationId
+      ? `${window.location.origin}/en/evaluate/${item.evaluationId}/result`
+      : window.location.href;
+    navigator.clipboard.writeText(url);
+    setMenuOpenId(null);
   }
 
   const filteredHistory = searchQuery
@@ -133,24 +159,68 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
               : "#";
             const active = item.evaluationId && pathname.includes(item.evaluationId);
             const ModeIcon = item.mode === "product" ? Package : MessageCircle;
+            const menuOpen = menuOpenId === item.id;
             return (
-              <Link
-                key={item.id}
-                href={href}
-                onClick={() => setMobileOpen(false)}
-                className={`group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  active
-                    ? "bg-[#1C1C1C] text-[#EAEAE8]"
-                    : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
-                }`}
-              >
-                {item.status === "processing" || item.status === "pending" ? (
-                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#C4A882]" />
-                ) : (
-                  <ModeIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
+              <div key={item.id} className="group relative">
+                <Link
+                  href={href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    active
+                      ? "bg-[#1C1C1C] text-[#EAEAE8]"
+                      : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
+                  }`}
+                >
+                  {item.status === "processing" || item.status === "pending" ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#C4A882]" />
+                  ) : (
+                    <ModeIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                  )}
+                  <span className="truncate pr-5">{item.name}</span>
+                </Link>
+
+                {/* Three-dot menu — visible on hover */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenuOpenId(menuOpen ? null : item.id);
+                  }}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md text-[#666462] transition-all hover:bg-[#2A2A2A] hover:text-[#EAEAE8] ${
+                    menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Dropdown menu */}
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />
+                    <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-[#2A2A2A] bg-[#141414] py-1 shadow-lg">
+                      <button
+                        onClick={() => handleShare(item)}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        <span>Share</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        disabled={deleting === item.id}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[#F87171] transition-colors hover:bg-[#F87171]/10"
+                      >
+                        {deleting === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </>
                 )}
-                <span className="truncate">{item.name}</span>
-              </Link>
+              </div>
             );
           })}
         </div>
