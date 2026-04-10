@@ -88,24 +88,21 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           <input
             ref={fileInputRef}
             type="file"
-            style={{ position: "fixed", left: "-9999px", top: "-9999px", opacity: 0 }}
             accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
             multiple
             onChange={handleFileChange}
             tabIndex={-1}
+            aria-hidden="true"
+            style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}
           />
           <button
             type="button"
             disabled={disabled}
-            onClick={(e) => {
+            onMouseDown={(e) => {
+              // Use mousedown instead of click — fires before blur
+              // and stays within user gesture for Chrome file input policy
               e.preventDefault();
-              e.stopPropagation();
-              // Blur textarea first to avoid focus conflicts
-              if (document.activeElement instanceof HTMLElement) {
-                document.activeElement.blur();
-              }
-              // Small delay to ensure blur completes
-              setTimeout(() => fileInputRef.current?.click(), 50);
+              fileInputRef.current?.click();
             }}
             className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}
           >
