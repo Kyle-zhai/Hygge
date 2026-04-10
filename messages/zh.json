@@ -139,7 +139,11 @@
     "gaps": "差距",
     "feasibilityPaths": "可行性路径",
     "expandDetails": "展开详细评审",
-    "collapseDetails": "收起详细评审"
+    "collapseDetails": "收起详细评审",
+    "modeProduct": "产品评估",
+    "modeTopic": "通用讨论",
+    "modeProductDesc": "使用固定维度评估产品",
+    "modeTopicDesc": "使用AI生成维度讨论任何话题"
   },
   "pricing": {
     "title": "只需一次升级，让你的问题活起来",

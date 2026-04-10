@@ -139,7 +139,11 @@
     "gaps": "Gaps",
     "feasibilityPaths": "Feasibility Paths",
     "expandDetails": "Show detailed review",
-    "collapseDetails": "Hide detailed review"
+    "collapseDetails": "Hide detailed review",
+    "modeProduct": "Product Evaluation",
+    "modeTopic": "General Discussion",
+    "modeProductDesc": "Evaluate a product with fixed dimensions",
+    "modeTopicDesc": "Discuss any topic with AI-generated dimensions"
   },
   "pricing": {
     "title": "One upgrade away from bringing your questions to life",
