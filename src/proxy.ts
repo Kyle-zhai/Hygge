@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
   );
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = `/en/dashboard`;
+    url.pathname = `/en/evaluate/new`;
     return NextResponse.redirect(url);
   }
 

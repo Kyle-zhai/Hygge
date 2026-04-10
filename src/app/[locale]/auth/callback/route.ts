@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       const supabase = await createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) {
-        return NextResponse.redirect(`${origin}/en/dashboard`);
+        return NextResponse.redirect(`${origin}/en/evaluate/new`);
       }
       console.error("[auth/callback] Code exchange error:", error.message);
     } catch (err) {
