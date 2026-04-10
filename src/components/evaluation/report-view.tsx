@@ -57,12 +57,14 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
   function handleViewScores() {
     savedScrollY.current = window.scrollY;
     pendingScroll.current = 0;
+    window.scrollTo(0, 0);
     setView("scores");
   }
 
   function handleViewSimulation() {
     savedScrollY.current = window.scrollY;
     pendingScroll.current = 0;
+    window.scrollTo(0, 0);
     setView("simulation");
   }
 

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PricingComparison } from "@/components/pricing/pricing-comparison";
 import { ManageBillingButton } from "./manage-billing-button";
+import { PricingBackButton } from "./back-button";
 
 export default async function PricingPage() {
   const t = await getTranslations("pricing");
@@ -23,23 +24,32 @@ export default async function PricingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl py-8">
-      <div className="mb-14 text-center">
-        <h1 className="text-3xl font-semibold text-[#EAEAE8] sm:text-4xl tracking-[-0.02em] leading-tight max-w-2xl mx-auto">
-          {t("title")}
-        </h1>
-        <p className="mt-3 text-[#9B9594] text-base">
-          {t("subtitle")}
-        </p>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0C0C0C]">
+      {/* Back button */}
+      <div className="sticky top-0 z-10 border-b border-[#1C1C1C] bg-[#0C0C0C]/90 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
+          <PricingBackButton />
+        </div>
       </div>
 
-      <PricingComparison currentPlan={currentPlan} />
-
-      {hasStripeSubscription && (
-        <div className="mt-10 text-center">
-          <ManageBillingButton label={t("manageBilling")} />
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="mb-14 text-center">
+          <h1 className="text-3xl font-semibold text-[#EAEAE8] sm:text-4xl tracking-[-0.02em] leading-tight max-w-2xl mx-auto">
+            {t("title")}
+          </h1>
+          <p className="mt-3 text-[#9B9594] text-base">
+            {t("subtitle")}
+          </p>
         </div>
-      )}
+
+        <PricingComparison currentPlan={currentPlan} />
+
+        {hasStripeSubscription && (
+          <div className="mt-10 text-center">
+            <ManageBillingButton label={t("manageBilling")} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

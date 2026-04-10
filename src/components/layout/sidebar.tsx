@@ -3,10 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Plus,
   PanelLeft,
   Package,
   MessageCircle,
@@ -14,7 +12,6 @@ import {
   LogOut,
   Zap,
   Loader2,
-  FileText,
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +21,7 @@ interface HistoryItem {
   name: string;
   evaluationId: string | null;
   status: string | null;
+  mode: string;
 }
 
 interface SidebarProps {
@@ -32,7 +30,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({ userEmail, history }: SidebarProps) {
-  const t = useTranslations("common");
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -51,7 +48,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      {/* Header: Logo + collapse */}
+      {/* Header: Logo */}
       <div className="flex h-14 items-center justify-between px-4">
         <Link href="/en" className="flex items-center gap-2.5">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
@@ -69,21 +66,23 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
         </button>
       </div>
 
-      {/* New Discussion + Product Evaluation */}
+      {/* General Discussion + Product Evaluation */}
       <div className="space-y-1 px-3 pt-2 pb-3">
         <Link
           href="/en/evaluate/new?mode=topic"
+          onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
             pathname.includes("/evaluate/new") && !pathname.includes("mode=product")
               ? "bg-[#1C1C1C] text-[#EAEAE8]"
               : "text-[#EAEAE8] hover:bg-[#1C1C1C]/60"
           }`}
         >
-          <Plus className="h-4 w-4" />
-          <span>New Discussion</span>
+          <MessageCircle className="h-4 w-4" />
+          <span>General Discussion</span>
         </Link>
         <Link
           href="/en/evaluate/new?mode=product"
+          onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
             pathname.includes("mode=product")
               ? "bg-[#1C1C1C] text-[#EAEAE8]"
@@ -130,6 +129,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
                 : `/en/evaluate/${item.evaluationId}/progress`
               : "#";
             const active = item.evaluationId && pathname.includes(item.evaluationId);
+            const ModeIcon = item.mode === "product" ? Package : MessageCircle;
             return (
               <Link
                 key={item.id}
@@ -144,7 +144,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
                 {item.status === "processing" || item.status === "pending" ? (
                   <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#C4A882]" />
                 ) : (
-                  <FileText className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                  <ModeIcon className="h-3.5 w-3.5 shrink-0 opacity-40" />
                 )}
                 <span className="truncate">{item.name}</span>
               </Link>
@@ -161,7 +161,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
         >
           <Zap className="h-4 w-4" />
-          <span>{t("pricing")}</span>
+          <span>Upgrade</span>
         </Link>
 
         {/* User */}
@@ -178,7 +178,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
             <button
               onClick={handleLogout}
               className="flex h-7 w-7 items-center justify-center rounded-lg text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
-              title={t("logout")}
+              title="Log Out"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>

@@ -5,7 +5,7 @@ interface ProjectRow {
   id: string;
   parsed_data: { name?: string } | null;
   raw_input: string;
-  evaluations: { id: string; status: string }[];
+  evaluations: { id: string; status: string; mode: string }[];
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -14,12 +14,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
-  let history: { id: string; name: string; evaluationId: string | null; status: string | null }[] = [];
+  let history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string }[] = [];
 
   if (user) {
     const { data: projects } = await supabase
       .from("projects")
-      .select("id, raw_input, parsed_data, evaluations (id, status)")
+      .select("id, raw_input, parsed_data, evaluations (id, status, mode)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           name: p.parsed_data?.name || p.raw_input.slice(0, 40),
           evaluationId: eval0?.id ?? null,
           status: eval0?.status ?? null,
+          mode: eval0?.mode ?? "topic",
         };
       });
     }
