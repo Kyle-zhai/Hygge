@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
           {t("title")}

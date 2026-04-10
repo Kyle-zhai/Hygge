@@ -73,7 +73,7 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
 
   if (view === "scores") {
     return (
-      <div className="mx-auto max-w-4xl pb-16">
+      <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
         <ReportScoresView
           report={report}
           reviews={reviews}
@@ -88,7 +88,7 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
 
   if (view === "simulation" && report?.scenario_simulation) {
     return (
-      <div className="mx-auto max-w-4xl pb-16">
+      <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
         <ScenarioSimulationView
           simulation={report.scenario_simulation}
           personas={personas}
@@ -100,7 +100,7 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
   }
 
   return (
-    <div className="mx-auto max-w-5xl pb-16">
+    <div className="mx-auto max-w-5xl px-4 py-8 pb-16">
       <ReportTextView
         report={report}
         reviews={reviews}

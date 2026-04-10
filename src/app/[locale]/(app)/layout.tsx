@@ -38,12 +38,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen bg-[#0C0C0C]">
+    <div className="flex min-h-screen bg-[#0C0C0C]">
       <Sidebar userEmail={user?.email ?? null} history={history} />
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl px-4 py-8 pl-14 sm:px-6 md:pl-6 lg:px-8">
-          {children}
-        </div>
+      <main className="min-w-0 flex-1 pl-12 md:ml-[260px] md:pl-0">
+        {children}
       </main>
     </div>
   );

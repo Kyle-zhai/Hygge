@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectInput } from "@/components/evaluation/project-input";
 import { PersonaSelector } from "@/components/evaluation/persona-selector";
-import { Package, MessageCircle } from "lucide-react";
 
 const personaLimits: Record<string, number> = { free: 3, pro: 10, max: 20 };
 
@@ -14,8 +13,10 @@ export default function NewEvaluationPage() {
   const t = useTranslations("evaluation");
   const locale = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode") === "product" ? "product" : "topic";
+
   const [step, setStep] = useState<1 | 2>(1);
-  const [mode, setMode] = useState<"product" | "topic">("product");
   const [projectData, setProjectData] = useState<{
     rawInput: string;
     url: string | null;
@@ -85,92 +86,43 @@ export default function NewEvaluationPage() {
     }
   }
 
-  const stepLabels = [
-    t("step1"),
-    t("selectPersonas"),
-    locale === "zh" ? "讨论进行中" : "Discussion",
-  ];
-
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {/* 3-Step indicator */}
-      <div className="flex items-center gap-3">
-        {stepLabels.map((label, i) => {
-          const stepNum = i + 1;
-          const isActive = step === stepNum;
-          const isPast = step > stepNum;
-          return (
-            <div key={i} className="flex items-center gap-3 flex-1 last:flex-none">
-              <div className={`flex items-center gap-2 shrink-0 ${isActive ? "text-[#EAEAE8]" : isPast ? "text-[#9B9594]" : "text-[#666462]"}`}>
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${isActive ? "bg-[#E2DDD5] text-[#0C0C0C]" : isPast ? "bg-[#E2DDD5]/20 text-[#E2DDD5]" : "bg-[#1C1C1C] text-[#666462]"}`}>
-                  {stepNum}
-                </div>
-                <span className="text-sm font-medium hidden sm:inline">{label}</span>
-              </div>
-              {i < stepLabels.length - 1 && <div className="h-px flex-1 bg-[#2A2A2A]" />}
-            </div>
-          );
-        })}
-      </div>
-
+    <div className="flex min-h-screen flex-col">
       {error && (
-        <div className="rounded-lg border border-[#F87171]/30 bg-[#F87171]/10 p-3 text-sm text-[#F87171]">
+        <div className="mx-auto mt-4 max-w-2xl rounded-lg border border-[#F87171]/30 bg-[#F87171]/10 px-4 py-3 text-sm text-[#F87171]">
           {error}
         </div>
       )}
 
-      {/* Always mounted to preserve input state + file refs on back navigation */}
-      <div className={step === 1 ? "" : "hidden"}>
-        <div className="flex flex-col items-center pt-8">
-          <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em] mb-6">
-            {t("step1")}
-          </h1>
-
-          {/* Mode selector */}
-          <div className="flex gap-3 mb-6 w-full max-w-2xl">
-            <button
-              onClick={() => setMode("product")}
-              className={`flex-1 flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 ${
-                mode === "product"
-                  ? "border-[#E2DDD5]/40 bg-[#E2DDD5]/5"
-                  : "border-[#2A2A2A] bg-transparent hover:border-[#3A3A3A]"
-              }`}
-            >
-              <Package className={`h-5 w-5 shrink-0 ${mode === "product" ? "text-[#E2DDD5]" : "text-[#666462]"}`} />
-              <div className="text-left">
-                <div className={`text-sm font-medium ${mode === "product" ? "text-[#EAEAE8]" : "text-[#9B9594]"}`}>
-                  {t("modeProduct")}
-                </div>
-                <div className="text-xs text-[#666462] mt-0.5">{t("modeProductDesc")}</div>
-              </div>
-            </button>
-            <button
-              onClick={() => setMode("topic")}
-              className={`flex-1 flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 ${
-                mode === "topic"
-                  ? "border-[#E2DDD5]/40 bg-[#E2DDD5]/5"
-                  : "border-[#2A2A2A] bg-transparent hover:border-[#3A3A3A]"
-              }`}
-            >
-              <MessageCircle className={`h-5 w-5 shrink-0 ${mode === "topic" ? "text-[#E2DDD5]" : "text-[#666462]"}`} />
-              <div className="text-left">
-                <div className={`text-sm font-medium ${mode === "topic" ? "text-[#EAEAE8]" : "text-[#9B9594]"}`}>
-                  {t("modeTopic")}
-                </div>
-                <div className="text-xs text-[#666462] mt-0.5">{t("modeTopicDesc")}</div>
-              </div>
-            </button>
+      {/* Step 1: Topic input — centered like Okara */}
+      <div className={step === 1 ? "flex flex-1 flex-col" : "hidden"}>
+        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8">
+          {/* Logo + branding */}
+          <div className="mb-8 flex flex-col items-center">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4">
+              <circle cx="10" cy="10" r="7" stroke="#C4A882" strokeWidth="1.2" opacity="0.4" />
+              <circle cx="14" cy="10" r="7" stroke="#E2DDD5" strokeWidth="1.2" opacity="0.6" />
+              <circle cx="12" cy="14" r="7" stroke="#E2DDD5" strokeWidth="1.2" opacity="0.8" />
+            </svg>
+            <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+              {mode === "product" ? t("modeProduct") : t("modeTopic")}
+            </h1>
+            <p className="mt-2 text-sm text-[#666462]">
+              {mode === "product" ? t("modeProductDesc") : t("modeTopicDesc")}
+            </p>
           </div>
 
+          {/* Input box — full width with max constraint */}
           <div className="w-full max-w-2xl">
             <ProjectInput onSubmit={handleProjectSubmit} />
           </div>
         </div>
       </div>
 
+      {/* Step 2: Persona selection */}
       {step === 2 && projectData && (
-        <>
-          <div className="flex items-center justify-between">
+        <div className="mx-auto w-full max-w-3xl px-4 py-8">
+          <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
               {t("selectPersonas")}
             </h1>
@@ -187,7 +139,7 @@ export default function NewEvaluationPage() {
             onConfirm={handleConfirm}
             disabled={submitting}
           />
-        </>
+        </div>
       )}
     </div>
   );
