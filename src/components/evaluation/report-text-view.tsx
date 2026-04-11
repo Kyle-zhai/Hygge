@@ -838,15 +838,28 @@ export function ReportTextView({
                 const avatar = getPersonaAvatar(persona);
                 const occupation = getPersonaOccupation(persona);
 
-                // Average score
-                const avgScore = review?.scores
-                  ? Object.values(
-                      review.scores as Record<string, number>
-                    ).reduce((a, b) => a + b, 0) /
-                    Object.values(
-                      review.scores as Record<string, number>
-                    ).length
+                // Average score (product mode) or overall stance (topic mode)
+                const scoreValues = review?.scores ? Object.values(review.scores) : [];
+                const isStance = scoreValues.length > 0 && typeof scoreValues[0] === "string";
+                const avgScore = !isStance && scoreValues.length > 0
+                  ? (scoreValues as number[]).reduce((a, b) => a + b, 0) / scoreValues.length
                   : null;
+
+                const stanceOrder = ["strongly_oppose", "oppose", "neutral", "support", "strongly_support"];
+                const stanceLabels: Record<string, { text: string; color: string; hex: string }> = {
+                  strongly_support: { text: "text-[#34D399]", color: "Strongly Support", hex: "#34D399" },
+                  support: { text: "text-[#4ADE80]", color: "Support", hex: "#4ADE80" },
+                  neutral: { text: "text-[#FBBF24]", color: "Neutral", hex: "#FBBF24" },
+                  oppose: { text: "text-[#F97316]", color: "Oppose", hex: "#F97316" },
+                  strongly_oppose: { text: "text-[#F87171]", color: "Strongly Oppose", hex: "#F87171" },
+                };
+                let overallStance: string | null = null;
+                if (isStance) {
+                  const nums = (scoreValues as string[]).map(v => stanceOrder.indexOf(v)).filter(v => v >= 0);
+                  if (nums.length > 0) {
+                    overallStance = stanceOrder[Math.round(nums.reduce((a, b) => a + b, 0) / nums.length)];
+                  }
+                }
 
                 return (
                   <motion.div
@@ -872,7 +885,17 @@ export function ReportTextView({
                             <span className="font-semibold text-[#EAEAE8]">
                               {name}
                             </span>
-                            {avgScore != null && (
+                            {overallStance ? (
+                              <Badge
+                                className="border text-[10px] font-medium bg-transparent"
+                                style={{
+                                  color: stanceLabels[overallStance]?.hex ?? "#FBBF24",
+                                  borderColor: `${stanceLabels[overallStance]?.hex ?? "#FBBF24"}30`,
+                                }}
+                              >
+                                {stanceLabels[overallStance]?.color ?? overallStance}
+                              </Badge>
+                            ) : avgScore != null && (
                               <Badge
                                 className={`border text-[10px] font-mono font-medium ${
                                   scoreColor(avgScore).text
