@@ -134,10 +134,13 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     await job.updateProgress(95);
 
     // 8. Write summary report to DB
-    await supabase.from("summary_reports").insert({
+    const { error: reportInsertError } = await supabase.from("summary_reports").insert({
       evaluation_id: evaluationId,
       ...summaryReport,
     });
+    if (reportInsertError) {
+      throw new Error(`Failed to save summary report: ${reportInsertError.message}`);
+    }
 
     // 9. Mark evaluation as completed
     await supabase.from("evaluations").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", evaluationId);
