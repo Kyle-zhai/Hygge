@@ -88,8 +88,8 @@ Respond ONLY with valid JSON matching this structure:
     }
   ],
   "market_readiness": "<low|medium|high>",
-  "readiness_label_en": "<contextual readiness/feasibility label in English>",
-  "readiness_label_zh": "<contextual readiness/feasibility label in Chinese>"
+  "readiness_label_en": "<contextual label that fits the topic type — e.g. 'Implementation Readiness' for policies, 'Feasibility' for ideas, 'Decision Clarity' for decisions, 'Creative Potential' for creative works. NEVER use 'Market Readiness' unless the topic is actually about a product/market.>",
+  "readiness_label_zh": "<Chinese translation of the contextual label above>"
 }
 
 IMPORTANT for debate_highlights:

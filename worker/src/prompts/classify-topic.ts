@@ -14,10 +14,12 @@ Respond ONLY with valid JSON matching this structure:
     {
       "key": "<snake_case_key>",
       "label_en": "<English label>",
+      "label_zh": "<Chinese label>",
       "description": "<What this dimension measures in context of this specific topic, 1 sentence>"
     }
   ],
-  "readiness_label_en": "<Contextual readiness label, e.g. 'Market Readiness' for products, 'Implementation Readiness' for policies, 'Feasibility' for ideas>"
+  "readiness_label_en": "<Contextual readiness label, e.g. 'Market Readiness' for products, 'Implementation Readiness' for policies, 'Feasibility' for ideas>",
+  "readiness_label_zh": "<Chinese translation of readiness label, e.g. '市场准备度' for products, '实施准备度' for policies, '可行性' for ideas>"
 }
 
 Examples of good dimension generation:
