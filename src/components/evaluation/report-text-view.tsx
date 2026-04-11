@@ -1333,7 +1333,6 @@ export function ReportTextView({
                         )}
                       </div>
                     )}
-                    </div>
 
                     {/* Separator */}
                     {i < dimensions.length - 1 && (
