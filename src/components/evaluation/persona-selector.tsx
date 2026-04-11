@@ -300,21 +300,22 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                     {persona.identity.avatar}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate text-[#EAEAE8]">{localized.name}</span>
-                      {tags && tags.length > 0 && (
-                        <span className="shrink-0 text-[10px] text-[#666462]">{tags.slice(0, 2).join(" · ")}</span>
-                      )}
-                      {isRecommended && (
-                        <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0 bg-[#E2DDD5]/10 text-[#E2DDD5] border-[#E2DDD5]/20">
-                          {t("recommended")}
-                        </Badge>
-                      )}
-                      {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-[#EAEAE8]">{localized.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {isRecommended && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-[#E2DDD5]/10 text-[#E2DDD5] border-[#E2DDD5]/20">
+                            {t("recommended")}
+                          </Badge>
+                        )}
+                        {isSelected && <Check className="h-4 w-4 text-[#E2DDD5]" />}
+                      </div>
                     </div>
-                    {(!tags || tags.length === 0) && (
-                      <p className="mt-0.5 text-xs text-[#666462] truncate">{localized.tagline}</p>
-                    )}
+                    <p className="mt-0.5 text-xs text-[#666462]">
+                      {tags && tags.length > 0
+                        ? tags.slice(0, 2).join(" · ")
+                        : localized.tagline}
+                    </p>
                   </div>
                 </CardContent>
               </Card>

@@ -25,7 +25,6 @@ export class OpenAICompatibleLLM implements LLMAdapter {
       body: JSON.stringify({
         model: this.model,
         max_tokens: request.maxTokens ?? 4096,
-        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: request.system },
           { role: "user", content: request.prompt },
