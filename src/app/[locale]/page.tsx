@@ -102,8 +102,8 @@ export default async function LandingPage() {
     },
     {
       iconName: "Zap" as const,
-      title: locale === "zh" ? "实时进度" : "Real-time Progress",
-      desc: locale === "zh" ? "实时追踪评估进度，每个角色的反馈即时呈现" : "Track evaluation progress in real-time as each persona delivers their feedback.",
+      title: locale === "zh" ? "实时圆桌" : "Live Round Table",
+      desc: locale === "zh" ? "围观讨论现场展开：每个角色依次发言，即时看到观点碰撞" : "Watch the discussion unfold live: each voice speaks in turn, and you see opinions collide in real time.",
     },
     {
       iconName: "Layers" as const,
@@ -117,7 +117,7 @@ export default async function LandingPage() {
       <Header />
       <main className="flex-1">
         <HeroSection
-          overline={locale === "zh" ? "AI 多视角讨论" : "AI-POWERED DISCUSSIONS"}
+          overline={locale === "zh" ? "AI 圆桌推演" : "ROUND TABLE DELIBERATION"}
           headline={t("hero")}
           subtitle={t("subtitle")}
           ctaText={t("cta")}

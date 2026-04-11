@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { PLANS } from "@/lib/stripe/plans";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 
@@ -61,10 +62,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Monthly evaluation limit reached" }, { status: 429 });
   }
 
-  const personaLimits = { free: 3, pro: 10, max: 20 };
-  const maxPersonas = personaLimits[subscription.plan as keyof typeof personaLimits];
-  if (selectedPersonaIds.length > maxPersonas) {
-    return NextResponse.json({ error: `Maximum ${maxPersonas} personas allowed on ${subscription.plan} plan` }, { status: 400 });
+  const planConfig = PLANS[subscription.plan as keyof typeof PLANS];
+  if (!planConfig) {
+    return NextResponse.json({ error: `Unknown plan: ${subscription.plan}` }, { status: 500 });
+  }
+  if (selectedPersonaIds.length > planConfig.maxPersonas) {
+    return NextResponse.json({ error: `Maximum ${planConfig.maxPersonas} personas allowed on ${subscription.plan} plan` }, { status: 400 });
   }
 
   // Create project

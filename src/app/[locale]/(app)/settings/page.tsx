@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "@/components/settings/profile-form";
+import { PLANS } from "@/lib/stripe/plans";
 
 export default async function SettingsPage() {
   const t = await getTranslations("settings");
@@ -22,7 +23,7 @@ export default async function SettingsPage() {
         email={user!.email ?? ""}
         plan={subscription?.plan ?? "free"}
         evaluationsUsed={subscription?.evaluations_used ?? 0}
-        evaluationsLimit={subscription?.evaluations_limit ?? 1}
+        evaluationsLimit={subscription?.evaluations_limit ?? PLANS.free.evaluationsLimit}
       />
     </div>
   );

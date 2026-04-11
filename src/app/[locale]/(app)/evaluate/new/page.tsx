@@ -6,8 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectInput } from "@/components/evaluation/project-input";
 import { PersonaSelector } from "@/components/evaluation/persona-selector";
-
-const personaLimits: Record<string, number> = { free: 3, pro: 10, max: 20 };
+import { PLANS } from "@/lib/stripe/plans";
 
 function NewEvaluationContent() {
   const t = useTranslations("evaluation");
@@ -22,7 +21,7 @@ function NewEvaluationContent() {
     url: string | null;
     files: File[];
   } | null>(null);
-  const [maxPersonas, setMaxPersonas] = useState(3);
+  const [maxPersonas, setMaxPersonas] = useState(PLANS.free.maxPersonas);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,7 +32,8 @@ function NewEvaluationContent() {
     if (user) {
       const { data: sub } = await supabase.from("subscriptions").select("plan").eq("user_id", user.id).single();
       if (sub) {
-        setMaxPersonas(personaLimits[sub.plan] || 3);
+        const planConfig = PLANS[sub.plan as keyof typeof PLANS];
+        setMaxPersonas(planConfig?.maxPersonas ?? PLANS.free.maxPersonas);
       }
     }
     setStep(2);

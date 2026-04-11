@@ -11,22 +11,22 @@ export const PLANS: Record<string, PlanConfig> = {
     name: "free",
     stripePriceId: null,
     price: 0,
-    evaluationsLimit: 1,
-    maxPersonas: 3,
+    evaluationsLimit: 3,
+    maxPersonas: 5,
   },
   pro: {
     name: "pro",
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID || "",
     price: 2000,
-    evaluationsLimit: 10,
-    maxPersonas: 10,
+    evaluationsLimit: 15,
+    maxPersonas: 12,
   },
   max: {
     name: "max",
     stripePriceId: process.env.STRIPE_MAX_PRICE_ID || "",
     price: 10000,
-    evaluationsLimit: 40,
-    maxPersonas: 20,
+    evaluationsLimit: 60,
+    maxPersonas: 25,
   },
 };
 
