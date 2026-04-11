@@ -42,6 +42,12 @@ export class OpenAICompatibleLLM implements LLMAdapter {
       text = fenceMatch[1].trim();
     }
 
+    // Sanitize control characters that break JSON.parse
+    text = text.replace(/[\x00-\x1F\x7F]/g, (ch) => {
+      if (ch === "\n" || ch === "\r" || ch === "\t") return " ";
+      return "";
+    });
+
     return {
       text,
       usage: {
