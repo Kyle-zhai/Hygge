@@ -146,7 +146,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       <div className="shrink-0 mx-4 border-t border-[#1C1C1C]" />
 
       {/* Your Discussions */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3">
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3">
         <p className="mb-2 px-3 text-xs font-medium text-[#666462]">Your Discussions</p>
 
         {/* Search */}

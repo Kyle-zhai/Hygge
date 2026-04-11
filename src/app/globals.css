@@ -152,6 +152,31 @@ body::after {
   background-clip: text;
 }
 
+/* Sidebar-style thin scrollbar: hidden by default, visible on hover */
+.scrollbar-thin {
+  scrollbar-width: none; /* Firefox: hide by default */
+}
+.scrollbar-thin:hover {
+  scrollbar-width: thin; /* Firefox: show thin on hover */
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
