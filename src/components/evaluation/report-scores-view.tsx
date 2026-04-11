@@ -31,7 +31,7 @@ interface PersonaData {
 interface ReviewData {
   id: string;
   persona_id: string;
-  scores: Record<string, number>;
+  scores: Record<string, number | string>;
   review_text: string;
   strengths: string[];
   weaknesses: string[];
@@ -62,10 +62,15 @@ interface ReportData {
     dimension: string;
     label_en?: string;
     label_zh?: string;
-    score: number;
+    score?: number;
     analysis: string;
     strengths?: string[];
     weaknesses?: string[];
+    overall_leaning?: string;
+    support_count?: number;
+    oppose_count?: number;
+    neutral_count?: number;
+    key_arguments?: { for: string; against: string };
   }>;
   goal_assessment: Array<{
     goal: string;
@@ -108,6 +113,40 @@ interface ReportScoresViewProps {
   onBack?: () => void;
   topicClassification?: TopicClassification | null;
   mode?: "topic" | "product";
+}
+
+const leaningConfig: Record<string, { color: string; label: string; labelZh: string }> = {
+  strongly_support: { color: "bg-[#34D399]/10 text-[#34D399]", label: "Strongly Support", labelZh: "强烈支持" },
+  support: { color: "bg-[#4ADE80]/10 text-[#4ADE80]", label: "Support", labelZh: "支持" },
+  neutral: { color: "bg-[#FBBF24]/10 text-[#FBBF24]", label: "Neutral", labelZh: "中立" },
+  oppose: { color: "bg-[#F97316]/10 text-[#F97316]", label: "Oppose", labelZh: "反对" },
+  strongly_oppose: { color: "bg-[#F87171]/10 text-[#F87171]", label: "Strongly Oppose", labelZh: "强烈反对" },
+};
+
+function StanceBadge({ leaning, locale }: { leaning: string; locale: string }) {
+  const cfg = leaningConfig[leaning] || leaningConfig.neutral;
+  return (
+    <Badge className={`text-[10px] font-medium ${cfg.color}`}>
+      {locale === "zh" ? cfg.labelZh : cfg.label}
+    </Badge>
+  );
+}
+
+function StanceDistribution({ support, oppose, neutral, locale }: { support: number; oppose: number; neutral: number; locale: string }) {
+  const total = support + oppose + neutral;
+  if (total === 0) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[#1C1C1C]">
+        {oppose > 0 && <div className="bg-[#F87171]" style={{ width: `${(oppose / total) * 100}%` }} />}
+        {neutral > 0 && <div className="bg-[#FBBF24]" style={{ width: `${(neutral / total) * 100}%` }} />}
+        {support > 0 && <div className="bg-[#4ADE80]" style={{ width: `${(support / total) * 100}%` }} />}
+      </div>
+      <span className="text-[10px] text-[#666462] shrink-0">
+        {support}{locale === "zh" ? "支持" : "S"} · {neutral}{locale === "zh" ? "中立" : "N"} · {oppose}{locale === "zh" ? "反对" : "O"}
+      </span>
+    </div>
+  );
 }
 
 export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification, mode = "product" }: ReportScoresViewProps) {
@@ -176,6 +215,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 weaknesses={review.weaknesses}
                 topicDimensions={topicClassification?.dimensions}
                 locale={locale}
+                stanceMode={isTopicMode}
               />
             );
           })}
@@ -219,27 +259,53 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-[#EAEAE8]">{(locale === "zh" ? dim.label_zh : dim.label_en) || t(dim.dimension as any)}</h3>
-                    <span className="text-sm font-bold text-[#EAEAE8]">{dim.score}</span>
+                    {isTopicMode && dim.overall_leaning ? (
+                      <StanceBadge leaning={dim.overall_leaning} locale={locale} />
+                    ) : (
+                      <span className="text-sm font-bold text-[#EAEAE8]">{dim.score}</span>
+                    )}
                   </div>
+                  {/* Stance distribution bar for topic mode */}
+                  {isTopicMode && dim.support_count != null && (
+                    <StanceDistribution support={dim.support_count} oppose={dim.oppose_count ?? 0} neutral={dim.neutral_count ?? 0} locale={locale} />
+                  )}
                   <p className="text-sm text-[#9B9594]">{dim.analysis}</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <span className="text-xs font-medium text-[#4ADE80]">{t("strengths")}:</span>
-                      <ul className="mt-1 space-y-0.5">
-                        {dim.strengths?.map((s, j) => (
-                          <li key={j} className="text-xs text-[#9B9594]">+ {s}</li>
-                        ))}
-                      </ul>
+                  {/* Key arguments for topic mode */}
+                  {isTopicMode && dim.key_arguments ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {dim.key_arguments.for && (
+                        <div className="rounded-lg bg-[#4ADE80]/5 border border-[#4ADE80]/10 p-2.5">
+                          <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "支持论点" : "For"}</span>
+                          <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.for}</p>
+                        </div>
+                      )}
+                      {dim.key_arguments.against && (
+                        <div className="rounded-lg bg-[#F87171]/5 border border-[#F87171]/10 p-2.5">
+                          <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "反对论点" : "Against"}</span>
+                          <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.against}</p>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-xs font-medium text-[#F87171]">{t("weaknesses")}:</span>
-                      <ul className="mt-1 space-y-0.5">
-                        {dim.weaknesses?.map((w, j) => (
-                          <li key={j} className="text-xs text-[#9B9594]">- {w}</li>
-                        ))}
-                      </ul>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <span className="text-xs font-medium text-[#4ADE80]">{t("strengths")}:</span>
+                        <ul className="mt-1 space-y-0.5">
+                          {dim.strengths?.map((s, j) => (
+                            <li key={j} className="text-xs text-[#9B9594]">+ {s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-[#F87171]">{t("weaknesses")}:</span>
+                        <ul className="mt-1 space-y-0.5">
+                          {dim.weaknesses?.map((w, j) => (
+                            <li key={j} className="text-xs text-[#9B9594]">- {w}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

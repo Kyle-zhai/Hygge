@@ -18,9 +18,14 @@ function buildDynamicDimensionSchema(dimensions: TopicClassification["dimensions
       "dimension": "<${keys}>",
       "label_en": "<English label for this dimension>",
       "label_zh": "<Chinese label for this dimension>",
-      "score": <averaged score>,
-      "strengths": ["<specific strength>"],
-      "weaknesses": ["<specific weakness>"],
+      "overall_leaning": "<strongly_support|support|neutral|oppose|strongly_oppose>",
+      "support_count": <number of personas with support or strongly_support>,
+      "oppose_count": <number of personas with oppose or strongly_oppose>,
+      "neutral_count": <number of personas with neutral>,
+      "key_arguments": {
+        "for": "<main arguments from supporting personas>",
+        "against": "<main arguments from opposing personas>"
+      },
       "analysis": "<100-200 word deep analysis for this dimension>"
     }
   ]`;
@@ -102,7 +107,7 @@ IMPORTANT for debate_highlights:
     .map(
       (r) =>
         `### ${r.persona_name} (ID: ${r.persona_id})
-Scores: ${dimensions.map(d => `${d.key}=${(r.scores as Record<string, number>)[d.key] ?? "N/A"}`).join(", ")}
+Stances: ${dimensions.map(d => `${d.key}=${(r.scores as Record<string, string>)[d.key] ?? "N/A"}`).join(", ")}
 Review: ${r.review_text}
 Strengths: ${r.strengths.join(", ")}
 Weaknesses: ${r.weaknesses.join(", ")}`

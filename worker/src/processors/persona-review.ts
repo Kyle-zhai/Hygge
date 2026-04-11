@@ -23,8 +23,10 @@ export async function generatePersonaReview(
   const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions);
   const response = await llm.complete({ system, prompt, maxTokens: 2048 });
   const parsed = JSON.parse(response.text);
+  // Topic mode returns stances, product mode returns numerical scores
+  const scores = dimensions ? (parsed.stances ?? parsed.scores) : parsed.scores;
   return {
-    scores: parsed.scores,
+    scores,
     review_text: parsed.review_text,
     strengths: parsed.strengths,
     weaknesses: parsed.weaknesses,

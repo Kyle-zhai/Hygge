@@ -21,12 +21,13 @@ const FIXED_SCORES_SCHEMA = `"scores": {
 
 function buildDynamicDimensionsInstruction(dimensions: TopicClassification["dimensions"]): string {
   const lines = dimensions.map(d => `  * ${d.key}: ${d.description}`);
-  return `- Score each of the following dimensions from 1-10 (integers only):\n${lines.join("\n")}`;
+  return `- For each dimension, express your STANCE (not a numerical score). Use one of: strongly_support, support, neutral, oppose, strongly_oppose
+- Your stance reflects your character's position on that aspect of the topic:\n${lines.join("\n")}`;
 }
 
 function buildDynamicScoresSchema(dimensions: TopicClassification["dimensions"]): string {
-  const fields = dimensions.map(d => `    "${d.key}": <1-10>`).join(",\n");
-  return `"scores": {\n${fields}\n  }`;
+  const fields = dimensions.map(d => `    "${d.key}": "<strongly_support|support|neutral|oppose|strongly_oppose>"`).join(",\n");
+  return `"stances": {\n${fields}\n  }`;
 }
 
 export function buildPersonaReviewPrompt(

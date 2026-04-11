@@ -21,7 +21,7 @@ export async function generateTopicSummaryReport(
   dimensions: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions);
-  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  const response = await llm.complete({ system, prompt, maxTokens: 4096 });
   const parsed = JSON.parse(response.text);
   return {
     overall_score: 0,
@@ -50,7 +50,7 @@ export async function generateSummaryReport(
   dimensions?: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions);
-  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  const response = await llm.complete({ system, prompt, maxTokens: 4096 });
   const parsed = JSON.parse(response.text);
   return {
     overall_score: parsed.overall_score,

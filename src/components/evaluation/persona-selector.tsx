@@ -13,6 +13,7 @@ interface PersonaData {
     name: string;
     avatar: string;
     tagline: string;
+    tags?: string[];
     locale_variants: {
       zh: { name: string; tagline: string };
       en: { name: string; tagline: string };
@@ -284,6 +285,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           const isSelected = selectedIds.has(persona.id);
           const isRecommended = recommendedIds.has(persona.id);
           const localized = persona.identity.locale_variants[locale as "zh" | "en"] || persona.identity.locale_variants.en;
+          const tags = persona.identity.tags;
 
           return (
             <Card
@@ -307,7 +309,17 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                     )}
                     {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
                   </div>
-                  <p className="mt-0.5 text-xs text-[#666462] truncate">{localized.tagline}</p>
+                  {tags && tags.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {tags.map((tag) => (
+                        <span key={tag} className="inline-block rounded-full bg-[#1C1C1C] px-2 py-0.5 text-[10px] text-[#9B9594]">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 text-xs text-[#666462] truncate">{localized.tagline}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

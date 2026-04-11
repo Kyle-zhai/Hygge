@@ -23,9 +23,16 @@ export interface DimensionAnalysis {
   dimension: string;
   label_en?: string;
   label_zh?: string;
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
+  // Product mode: numerical score
+  score?: number;
+  strengths?: string[];
+  weaknesses?: string[];
+  // Topic mode: stance-based
+  overall_leaning?: string;
+  support_count?: number;
+  oppose_count?: number;
+  neutral_count?: number;
+  key_arguments?: { for: string; against: string };
   analysis: string;
 }
 

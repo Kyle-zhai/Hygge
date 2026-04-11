@@ -30,8 +30,8 @@ export interface FixedEvaluationScores {
   pricing: number;
 }
 
-// Dynamic scores for topic mode
-export type EvaluationScores = FixedEvaluationScores | Record<string, number>;
+// Dynamic scores for topic mode (numbers) or stances (strings like "support", "oppose")
+export type EvaluationScores = FixedEvaluationScores | Record<string, number> | Record<string, string>;
 
 export type EvaluationMode = "product" | "topic";
 

@@ -37,7 +37,7 @@ interface PersonaData {
 interface ReviewData {
   id: string;
   persona_id: string;
-  scores: Record<string, number>;
+  scores: Record<string, number | string>;
   review_text: string;
   strengths: string[];
   weaknesses: string[];
@@ -64,10 +64,15 @@ interface ReportData {
     dimension: string;
     label_en?: string;
     label_zh?: string;
-    score: number;
+    score?: number;
     analysis: string;
     strengths?: string[];
     weaknesses?: string[];
+    overall_leaning?: string;
+    support_count?: number;
+    oppose_count?: number;
+    neutral_count?: number;
+    key_arguments?: { for: string; against: string };
   }>;
   readiness_label_en?: string;
   readiness_label_zh?: string;
@@ -1211,8 +1216,18 @@ export function ReportTextView({
 
             <div className="space-y-8">
               {dimensions.map((dim, i) => {
+                const isStanceMode = isTopicMode && dim.overall_leaning;
                 const dimScore = dim.score ?? 0;
                 const colors = scoreColor(dimScore);
+
+                const leaningStyles: Record<string, { color: string; label: string; labelZh: string }> = {
+                  strongly_support: { color: "#34D399", label: "Strongly Support", labelZh: "强烈支持" },
+                  support: { color: "#4ADE80", label: "Support", labelZh: "支持" },
+                  neutral: { color: "#FBBF24", label: "Neutral", labelZh: "中立" },
+                  oppose: { color: "#F97316", label: "Oppose", labelZh: "反对" },
+                  strongly_oppose: { color: "#F87171", label: "Strongly Oppose", labelZh: "强烈反对" },
+                };
+                const leaning = leaningStyles[dim.overall_leaning ?? ""] || leaningStyles.neutral;
 
                 return (
                   <motion.div
@@ -1221,18 +1236,45 @@ export function ReportTextView({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06 }}
                   >
-                    {/* Dimension header with inline score */}
+                    {/* Dimension header */}
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-base font-semibold text-[#EAEAE8]">
                         {(locale === "zh" ? dim.label_zh : dim.label_en) || dim.dimension}
                       </h3>
-                      <Badge
-                        className={`border text-[10px] font-mono font-medium ${colors.text} bg-transparent`}
-                        style={{ borderColor: `${colors.hex}30` }}
-                      >
-                        {dimScore.toFixed(1)}
-                      </Badge>
+                      {isStanceMode ? (
+                        <Badge
+                          className="border text-[10px] font-medium bg-transparent"
+                          style={{ borderColor: `${leaning.color}30`, color: leaning.color }}
+                        >
+                          {locale === "zh" ? leaning.labelZh : leaning.label}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          className={`border text-[10px] font-mono font-medium ${colors.text} bg-transparent`}
+                          style={{ borderColor: `${colors.hex}30` }}
+                        >
+                          {dimScore.toFixed(1)}
+                        </Badge>
+                      )}
                     </div>
+
+                    {/* Stance distribution bar */}
+                    {isStanceMode && dim.support_count != null && (() => {
+                      const total = (dim.support_count ?? 0) + (dim.oppose_count ?? 0) + (dim.neutral_count ?? 0);
+                      if (total === 0) return null;
+                      return (
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[#1C1C1C]">
+                            {(dim.oppose_count ?? 0) > 0 && <div className="bg-[#F87171]" style={{ width: `${((dim.oppose_count ?? 0) / total) * 100}%` }} />}
+                            {(dim.neutral_count ?? 0) > 0 && <div className="bg-[#FBBF24]" style={{ width: `${((dim.neutral_count ?? 0) / total) * 100}%` }} />}
+                            {(dim.support_count ?? 0) > 0 && <div className="bg-[#4ADE80]" style={{ width: `${((dim.support_count ?? 0) / total) * 100}%` }} />}
+                          </div>
+                          <span className="text-[10px] text-[#666462] shrink-0">
+                            {dim.support_count}{locale === "zh" ? "支持" : "S"} · {dim.neutral_count ?? 0}{locale === "zh" ? "中立" : "N"} · {dim.oppose_count ?? 0}{locale === "zh" ? "反对" : "O"}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Analysis paragraph */}
                     {dim.analysis && (
@@ -1241,38 +1283,56 @@ export function ReportTextView({
                       </p>
                     )}
 
-                    {/* Strengths & Weaknesses inline */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      {dim.strengths && dim.strengths.length > 0 && (
-                        <div className="flex-1">
-                          <ul className="space-y-1">
-                            {dim.strengths.map((s, si) => (
-                              <li
-                                key={si}
-                                className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
-                              >
-                                <Circle className="h-1.5 w-1.5 mt-1.5 shrink-0 fill-[#4ADE80] text-[#4ADE80]" />
-                                {s}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {dim.weaknesses && dim.weaknesses.length > 0 && (
-                        <div className="flex-1">
-                          <ul className="space-y-1">
-                            {dim.weaknesses.map((w, wi) => (
-                              <li
-                                key={wi}
-                                className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
-                              >
-                                <Circle className="h-1.5 w-1.5 mt-1.5 shrink-0 fill-[#F87171] text-[#F87171]" />
-                                {w}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                    {/* Key arguments (topic) or Strengths & Weaknesses (product) */}
+                    {isStanceMode && dim.key_arguments ? (
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {dim.key_arguments.for && (
+                          <div className="flex-1 rounded-lg bg-[#4ADE80]/5 border border-[#4ADE80]/10 p-3">
+                            <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "支持论点" : "For"}</span>
+                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.for}</p>
+                          </div>
+                        )}
+                        {dim.key_arguments.against && (
+                          <div className="flex-1 rounded-lg bg-[#F87171]/5 border border-[#F87171]/10 p-3">
+                            <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "反对论点" : "Against"}</span>
+                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.against}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {dim.strengths && dim.strengths.length > 0 && (
+                          <div className="flex-1">
+                            <ul className="space-y-1">
+                              {dim.strengths.map((s, si) => (
+                                <li
+                                  key={si}
+                                  className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                                >
+                                  <Circle className="h-1.5 w-1.5 mt-1.5 shrink-0 fill-[#4ADE80] text-[#4ADE80]" />
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {dim.weaknesses && dim.weaknesses.length > 0 && (
+                          <div className="flex-1">
+                            <ul className="space-y-1">
+                              {dim.weaknesses.map((w, wi) => (
+                                <li
+                                  key={wi}
+                                  className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                                >
+                                  <Circle className="h-1.5 w-1.5 mt-1.5 shrink-0 fill-[#F87171] text-[#F87171]" />
+                                  {w}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     </div>
 
                     {/* Separator */}

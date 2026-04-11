@@ -19,12 +19,30 @@ interface PersonaReviewCardProps {
   personaName: string;
   personaAvatar: string;
   personaOccupation: string;
-  scores: Record<string, number>;
+  scores: Record<string, number | string>;
   reviewText: string;
   strengths: string[];
   weaknesses: string[];
   topicDimensions?: TopicDimension[];
   locale?: string;
+  stanceMode?: boolean;
+}
+
+const stanceBadgeConfig: Record<string, { color: string; label: string; labelZh: string }> = {
+  strongly_support: { color: "border-[#34D399]/30 bg-[#34D399]/10 text-[#34D399]", label: "Strongly Supportive", labelZh: "强烈支持" },
+  support: { color: "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]", label: "Supportive", labelZh: "支持" },
+  neutral: { color: "border-[#FBBF24]/30 bg-[#FBBF24]/10 text-[#FBBF24]", label: "Neutral", labelZh: "中立" },
+  oppose: { color: "border-[#F97316]/30 bg-[#F97316]/10 text-[#F97316]", label: "Opposed", labelZh: "反对" },
+  strongly_oppose: { color: "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]", label: "Strongly Opposed", labelZh: "强烈反对" },
+};
+
+function getOverallStance(scores: Record<string, number | string>): string {
+  const values = Object.values(scores).map(String);
+  const order = ["strongly_oppose", "oppose", "neutral", "support", "strongly_support"];
+  const numericValues = values.map(v => order.indexOf(v)).filter(v => v >= 0);
+  if (numericValues.length === 0) return "neutral";
+  const avg = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+  return order[Math.round(avg)];
 }
 
 export function PersonaReviewCard({
@@ -37,18 +55,27 @@ export function PersonaReviewCard({
   weaknesses,
   topicDimensions,
   locale,
+  stanceMode,
 }: PersonaReviewCardProps) {
   const t = useTranslations("evaluation");
   const [expanded, setExpanded] = useState(false);
-  const scoreValues = Object.values(scores);
-  const avgScore = scoreValues.length > 0 ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length : 0;
 
-  const scoreBadgeColor =
-    avgScore >= 7
-      ? "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]"
-      : avgScore >= 5
-      ? "border-[#FBBF24]/30 bg-[#FBBF24]/10 text-[#FBBF24]"
-      : "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]";
+  let headerBadge: { className: string; label: string };
+  if (stanceMode) {
+    const overall = getOverallStance(scores);
+    const cfg = stanceBadgeConfig[overall] || stanceBadgeConfig.neutral;
+    headerBadge = { className: `border ${cfg.color}`, label: locale === "zh" ? cfg.labelZh : cfg.label };
+  } else {
+    const scoreValues = Object.values(scores).map(Number);
+    const avgScore = scoreValues.length > 0 ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length : 0;
+    const scoreBadgeColor =
+      avgScore >= 7
+        ? "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]"
+        : avgScore >= 5
+        ? "border-[#FBBF24]/30 bg-[#FBBF24]/10 text-[#FBBF24]"
+        : "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]";
+    headerBadge = { className: `border ${scoreBadgeColor}`, label: avgScore.toFixed(1) };
+  }
 
   return (
     <Card className="card-glow border-[#2A2A2A] bg-[#141414] transition-all duration-300 hover:border-[#3A3A3A]">
@@ -60,8 +87,8 @@ export function PersonaReviewCard({
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-[#EAEAE8]">{personaName}</span>
-              <Badge variant="secondary" className={`border text-xs font-medium ${scoreBadgeColor}`}>
-                {avgScore.toFixed(1)}
+              <Badge variant="secondary" className={`text-xs font-medium ${headerBadge.className}`}>
+                {headerBadge.label}
               </Badge>
             </div>
             <p className="text-xs text-[#666462]">{personaOccupation}</p>
@@ -75,7 +102,7 @@ export function PersonaReviewCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ScoreBar scores={scores} compact topicDimensions={topicDimensions} locale={locale} />
+        <ScoreBar scores={scores} compact topicDimensions={topicDimensions} locale={locale} stanceMode={stanceMode} />
 
         <AnimatePresence>
           {expanded && (

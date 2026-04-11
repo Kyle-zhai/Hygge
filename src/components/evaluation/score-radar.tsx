@@ -11,10 +11,11 @@ interface TopicDimension {
 }
 
 interface ScoreBarProps {
-  scores: Record<string, number>;
+  scores: Record<string, number | string>;
   compact?: boolean;
   topicDimensions?: TopicDimension[];
   locale?: string;
+  stanceMode?: boolean;
 }
 
 const FIXED_DIMENSIONS = ["usability", "market_fit", "design", "tech_quality", "innovation", "pricing"] as const;
@@ -33,7 +34,17 @@ function scoreTextColor(score: number): string {
   return "text-[#F87171]";
 }
 
-export function ScoreBar({ scores, compact, topicDimensions, locale }: ScoreBarProps) {
+const STANCE_ORDER = ["strongly_oppose", "oppose", "neutral", "support", "strongly_support"] as const;
+
+const stanceConfig: Record<string, { position: number; color: string; label: string; labelZh: string }> = {
+  strongly_oppose: { position: 5, color: "#F87171", label: "Strongly Oppose", labelZh: "强烈反对" },
+  oppose: { position: 25, color: "#F97316", label: "Oppose", labelZh: "反对" },
+  neutral: { position: 50, color: "#FBBF24", label: "Neutral", labelZh: "中立" },
+  support: { position: 75, color: "#4ADE80", label: "Support", labelZh: "支持" },
+  strongly_support: { position: 95, color: "#34D399", label: "Strongly Support", labelZh: "强烈支持" },
+};
+
+export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode }: ScoreBarProps) {
   const t = useTranslations("evaluation");
 
   const dimKeys = topicDimensions
@@ -44,10 +55,45 @@ export function ScoreBar({ scores, compact, topicDimensions, locale }: ScoreBarP
     ? new Map(topicDimensions.map(d => [d.key, locale === "zh" ? d.label_zh : d.label_en]))
     : null;
 
+  // Stance mode: show spectrum indicator
+  if (stanceMode) {
+    return (
+      <div className={compact ? "space-y-2.5" : "space-y-3.5"}>
+        {dimKeys.map((dim, i) => {
+          const stance = String(scores[dim] ?? "neutral");
+          const config = stanceConfig[stance] || stanceConfig.neutral;
+
+          return (
+            <div key={dim}>
+              <div className="flex items-center justify-between mb-1">
+                <span className={`${compact ? "text-[11px]" : "text-xs"} text-[#666462]`}>
+                  {dimLabelMap ? dimLabelMap.get(dim) ?? dim : t(dim as any)}
+                </span>
+                <span className="text-[10px] font-medium" style={{ color: config.color }}>
+                  {locale === "zh" ? config.labelZh : config.label}
+                </span>
+              </div>
+              <div className="relative h-1.5 rounded-full bg-gradient-to-r from-[#F87171]/20 via-[#FBBF24]/20 to-[#4ADE80]/20">
+                <motion.div
+                  className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full border-2 border-[#0C0C0C]"
+                  style={{ backgroundColor: config.color }}
+                  initial={{ left: "50%" }}
+                  animate={{ left: `${config.position}%` }}
+                  transition={{ duration: 0.5, delay: i * 0.06, ease: "easeOut" }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Score mode: original bar chart
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>
       {dimKeys.map((dim, i) => {
-        const score = scores[dim] ?? 0;
+        const score = Number(scores[dim]) || 0;
         return (
           <div key={dim} className="flex items-center gap-2">
             <span className={`${compact ? "w-16 text-[11px]" : "w-24 text-xs"} text-[#666462] truncate`}>
