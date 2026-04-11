@@ -195,3 +195,21 @@ body::after {
     @apply font-sans;
   }
 }
+
+/* Streaming light border for thinking state */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-rotate {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+@keyframes wave-bounce {
+  0%, 80%, 100% { transform: translateY(3px); opacity: 0.4; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}

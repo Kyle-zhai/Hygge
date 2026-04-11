@@ -1,11 +1,19 @@
 import { createClient } from "./client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
+export interface ReviewPayload {
+  persona_id: string;
+  review_text: string;
+  scores: Record<string, number | string>;
+  strengths: string[];
+  weaknesses: string[];
+}
+
 export function subscribeToEvaluation(
   evaluationId: string,
   callbacks: {
     onStatusChange: (status: string) => void;
-    onNewReview: (review: { persona_id: string }) => void;
+    onNewReview: (review: ReviewPayload) => void;
   }
 ): RealtimeChannel {
   const supabase = createClient();
@@ -32,8 +40,32 @@ export function subscribeToEvaluation(
         table: "persona_reviews",
         filter: `evaluation_id=eq.${evaluationId}`,
       },
-      (payload) => {
-        callbacks.onNewReview({ persona_id: payload.new.persona_id });
+      async (payload) => {
+        const personaId = payload.new.persona_id;
+        try {
+          const { data, error } = await supabase
+            .from("persona_reviews")
+            .select("persona_id, review_text, scores, strengths, weaknesses")
+            .eq("evaluation_id", evaluationId)
+            .eq("persona_id", personaId)
+            .maybeSingle();
+
+          if (error) {
+            console.error(
+              "[realtime] failed to fetch review row",
+              { evaluationId, personaId, error: error.message },
+            );
+            return;
+          }
+          if (data) {
+            callbacks.onNewReview(data as ReviewPayload);
+          }
+        } catch (err) {
+          console.error(
+            "[realtime] unexpected error in review fetch",
+            { evaluationId, personaId, err },
+          );
+        }
       }
     )
     .subscribe();

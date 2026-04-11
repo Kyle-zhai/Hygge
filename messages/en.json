@@ -143,7 +143,22 @@
     "modeProduct": "Product Evaluation",
     "modeTopic": "General Discussion",
     "modeProductDesc": "Evaluate a product with fixed dimensions",
-    "modeTopicDesc": "Discuss any topic with AI-generated dimensions"
+    "modeTopicDesc": "Discuss any topic with AI-generated dimensions",
+    "roundTable": "Round Table",
+    "perspectives": "{count} perspectives",
+    "thinking": "Thinking",
+    "waiting": "Waiting...",
+    "waitingFor": "{name} is waiting for a turn",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "discussionSummary": "Discussion Summary",
+    "consensusBadge": "Consensus {score}%",
+    "generatingSummary": "Generating discussion summary",
+    "discussionFailed": "Discussion failed. Please try again.",
+    "reportReady": "Report ready.",
+    "stanceSupportive": "Supportive",
+    "stanceOpposed": "Opposed",
+    "stanceNeutral": "Neutral"
   },
   "pricing": {
     "title": "One upgrade away from bringing your questions to life",

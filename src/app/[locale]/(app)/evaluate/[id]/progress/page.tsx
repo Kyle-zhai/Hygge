@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ProgressTracker } from "@/components/evaluation/progress-tracker";
+import { DiscussionFeed } from "@/components/evaluation/discussion-feed";
 
 export default async function EvaluationProgressPage({
   params,
@@ -15,7 +15,9 @@ export default async function EvaluationProgressPage({
 
   const { data: evaluation } = await supabase
     .from("evaluations")
-    .select(`id, status, selected_persona_ids, persona_reviews (persona_id)`)
+    .select(`id, status, mode, selected_persona_ids,
+      persona_reviews (persona_id, review_text, scores, strengths, weaknesses),
+      projects (parsed_data)`)
     .eq("id", id)
     .single();
 
@@ -25,6 +27,9 @@ export default async function EvaluationProgressPage({
     redirect(`/${locale}/evaluate/${id}/result`);
   }
 
+  const topicTitle =
+    (evaluation as any).projects?.parsed_data?.name || "Discussion";
+
   const { data: personas } = await supabase
     .from("personas")
     .select("id, identity")
@@ -32,18 +37,29 @@ export default async function EvaluationProgressPage({
 
   const personaInfos = (personas || []).map((p: any) => ({
     id: p.id,
-    name: p.identity.locale_variants?.[locale]?.name || p.identity.name,
+    name: p.identity.locale_variants?.en?.name || p.identity.name,
     avatar: p.identity.avatar,
   }));
 
-  const completedIds = ((evaluation as any).persona_reviews || []).map((r: any) => r.persona_id);
+  const initialReviews = ((evaluation as any).persona_reviews || []).map(
+    (r: any) => ({
+      persona_id: r.persona_id,
+      review_text: r.review_text,
+      scores: r.scores,
+      strengths: r.strengths,
+      weaknesses: r.weaknesses,
+    })
+  );
 
   return (
-    <ProgressTracker
+    <DiscussionFeed
       evaluationId={id}
       personas={personaInfos}
-      initialCompletedIds={completedIds}
+      initialCompletedReviews={initialReviews}
       initialStatus={evaluation.status}
+      topicTitle={topicTitle}
+      mode={evaluation.mode === "topic" ? "topic" : "product"}
+      locale={locale}
     />
   );
 }
