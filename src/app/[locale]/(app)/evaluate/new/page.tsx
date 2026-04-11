@@ -136,6 +136,7 @@ function NewEvaluationContent() {
             maxPersonas={maxPersonas}
             onConfirm={handleConfirm}
             disabled={submitting}
+            mode={mode}
           />
         </div>
       )}

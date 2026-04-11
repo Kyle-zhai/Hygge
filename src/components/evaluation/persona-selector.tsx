@@ -28,15 +28,19 @@ interface PersonaSelectorProps {
   maxPersonas: number;
   onConfirm: (selectedIds: string[]) => void;
   disabled?: boolean;
+  mode?: "topic" | "product";
 }
 
-const categoryOrder = ["technical", "product", "design", "end_user", "business"];
+const productCategoryOrder = ["technical", "product", "design", "end_user", "business"];
+const generalCategoryOrder = ["general"];
+
 const categoryLabels: Record<string, Record<string, string>> = {
   technical: { zh: "\u6280\u672F", en: "Technical" },
   product: { zh: "\u4EA7\u54C1", en: "Product" },
   design: { zh: "\u8BBE\u8BA1", en: "Design" },
   end_user: { zh: "\u7528\u6237", en: "End User" },
   business: { zh: "\u5546\u4E1A", en: "Business" },
+  general: { zh: "\u901A\u7528", en: "General" },
 };
 
 const ageRanges = [
@@ -61,7 +65,8 @@ const incomeLabels: Record<string, Record<string, string>> = {
   very_high: { zh: "\u6781\u9AD8", en: "Very High" },
 };
 
-export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, disabled }: PersonaSelectorProps) {
+export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, disabled, mode = "product" }: PersonaSelectorProps) {
+  const categoryOrder = mode === "topic" ? generalCategoryOrder : productCategoryOrder;
   const t = useTranslations("evaluation");
   const locale = useLocale();
   const [personas, setPersonas] = useState<PersonaData[]>([]);
@@ -86,9 +91,11 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           body: JSON.stringify({ projectDescription }),
         }),
       ]);
-      const { personas: allPersonas } = await personasRes.json();
+      const { personas: rawPersonas } = await personasRes.json();
       const { recommended_ids } = await recommendRes.json();
-      setPersonas(allPersonas || []);
+      const validCategories = mode === "topic" ? ["general"] : ["technical", "product", "design", "end_user", "business"];
+      const allPersonas = (rawPersonas || []).filter((p: PersonaData) => validCategories.includes(p.category));
+      setPersonas(allPersonas);
       const recSet = new Set<string>(recommended_ids || []);
       setRecommendedIds(recSet);
       setSelectedIds(new Set((recommended_ids || []).slice(0, maxPersonas)));
@@ -169,25 +176,29 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={activeCategory === null ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveCategory(null)}
-          className={activeCategory === null ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
-        >
-          {t("allCategories")}
-        </Button>
-        {categoryOrder.map((cat) => (
-          <Button
-            key={cat}
-            variant={activeCategory === cat ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-            className={activeCategory === cat ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
-          >
-            {categoryLabels[cat]?.[locale] || cat}
-          </Button>
-        ))}
+        {categoryOrder.length > 1 && (
+          <>
+            <Button
+              variant={activeCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveCategory(null)}
+              className={activeCategory === null ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
+            >
+              {t("allCategories")}
+            </Button>
+            {categoryOrder.map((cat) => (
+              <Button
+                key={cat}
+                variant={activeCategory === cat ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                className={activeCategory === cat ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
+              >
+                {categoryLabels[cat]?.[locale] || cat}
+              </Button>
+            ))}
+          </>
+        )}
         <Button
           variant="ghost"
           size="sm"
