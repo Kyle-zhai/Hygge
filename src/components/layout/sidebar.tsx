@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -43,6 +43,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const discussionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const main = document.querySelector("main");
@@ -146,7 +147,17 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       <div className="shrink-0 mx-4 border-t border-[#1C1C1C]" />
 
       {/* Your Discussions */}
-      <div className="scrollbar-sidebar min-h-0 flex-1 overscroll-contain px-3 pt-3">
+      <div
+        ref={discussionRef}
+        className="scrollbar-sidebar min-h-0 flex-1 overflow-y-scroll overscroll-contain px-3 pt-3"
+        onWheel={(e) => {
+          const el = discussionRef.current;
+          if (!el) return;
+          el.scrollTop += e.deltaY;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
         <p className="mb-2 px-3 text-xs font-medium text-[#666462]">Your Discussions</p>
 
         {/* Search */}
