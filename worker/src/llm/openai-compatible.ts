@@ -12,16 +12,12 @@ export class OpenAICompatibleLLM implements LLMAdapter {
   }
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 180_000);
-
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
       },
-      signal: controller.signal,
       body: JSON.stringify({
         model: this.model,
         max_tokens: request.maxTokens ?? 4096,
@@ -30,7 +26,7 @@ export class OpenAICompatibleLLM implements LLMAdapter {
           { role: "user", content: request.prompt },
         ],
       }),
-    }).finally(() => clearTimeout(timeout));
+    });
 
     if (!response.ok) {
       const err = await response.text();

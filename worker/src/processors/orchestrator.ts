@@ -49,20 +49,15 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       }
     }
 
-    // Run parseProject and classifyTopic in parallel (both only need rawInput)
-    const classifyPromise = mode === "topic"
-      ? classifyTopic(llm, rawInput)
-      : Promise.resolve(undefined);
-
-    const [parsedData, classification] = await Promise.all([
-      parseProject(llm, rawInput, url, attachmentDescriptions),
-      classifyPromise,
-    ]);
-
+    const parsedData = await parseProject(llm, rawInput, url, attachmentDescriptions);
     await supabase.from("projects").update({ parsed_data: parsedData }).eq("id", projectId);
 
+    // 3. Topic mode: classify topic and generate dynamic dimensions
     let dimensions: TopicClassification["dimensions"] | undefined;
-    if (classification) {
+
+    if (mode === "topic") {
+      console.log(`[${evaluationId}] Topic mode — classifying topic...`);
+      const classification = await classifyTopic(llm, rawInput);
       dimensions = classification.dimensions;
       console.log(`[${evaluationId}] Topic type: ${classification.topic_type}, dimensions: ${dimensions.map(d => d.key).join(", ")}`);
       await supabase.from("evaluations").update({ topic_classification: classification }).eq("id", evaluationId);
@@ -86,7 +81,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     }> = [];
 
     let completedCount = 0;
-    const CONCURRENCY = 5;
+    const CONCURRENCY = 3;
     const personaList = personas as Persona[];
 
     for (let i = 0; i < personaList.length; i += CONCURRENCY) {
@@ -154,7 +149,9 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     await job.updateProgress(100);
     return { success: true, evaluationId };
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`[${evaluationId}] EVALUATION FAILED:`, error?.message || error);
+    console.error(`[${evaluationId}] Stack:`, error?.stack);
     await supabase.from("evaluations").update({ status: "failed" }).eq("id", evaluationId);
     throw error;
   }
