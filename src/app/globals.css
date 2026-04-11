@@ -152,29 +152,36 @@ body::after {
   background-clip: text;
 }
 
-/* Sidebar-style thin scrollbar: hidden by default, visible on hover */
-.scrollbar-thin {
-  scrollbar-width: none; /* Firefox: hide by default */
+/* Sidebar-style thin scrollbar: invisible by default, visible on hover */
+.scrollbar-sidebar {
+  overflow-y: scroll;
 }
-.scrollbar-thin:hover {
-  scrollbar-width: thin; /* Firefox: show thin on hover */
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+.scrollbar-sidebar::-webkit-scrollbar {
+  width: 6px;
 }
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
+.scrollbar-sidebar::-webkit-scrollbar-track {
   background: transparent;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb {
+.scrollbar-sidebar::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 4px;
+  border-radius: 3px;
+  transition: background 0.2s;
 }
-.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+.scrollbar-sidebar:hover::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
 }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+.scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+/* Firefox */
+@supports (scrollbar-width: thin) {
+  .scrollbar-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .scrollbar-sidebar:hover {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
 }
 
 @layer base {
