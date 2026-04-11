@@ -87,9 +87,9 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
     : history;
 
   const sidebarContent = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Header: Logo */}
-      <div className="flex h-14 items-center justify-between px-4">
+      <div className="flex h-14 shrink-0 items-center justify-between px-4">
         <Link href="/en" className="flex items-center gap-2.5">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
             <circle cx="10" cy="10" r="7" stroke="#C4A882" strokeWidth="1.5" opacity="0.5" />
@@ -115,7 +115,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       </div>
 
       {/* General Discussion + Product Evaluation */}
-      <div className="space-y-1 px-3 pt-2 pb-3">
+      <div className="shrink-0 space-y-1 px-3 pt-2 pb-3">
         <Link
           href="/en/evaluate/new?mode=topic"
           onClick={() => setMobileOpen(false)}
@@ -143,10 +143,10 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       </div>
 
       {/* Divider */}
-      <div className="mx-4 border-t border-[#1C1C1C]" />
+      <div className="shrink-0 mx-4 border-t border-[#1C1C1C]" />
 
       {/* Your Discussions */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3">
         <p className="mb-2 px-3 text-xs font-medium text-[#666462]">Your Discussions</p>
 
         {/* Search */}
@@ -246,7 +246,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       </div>
 
       {/* Bottom section */}
-      <div className="border-t border-[#1C1C1C] px-3 py-3 space-y-1">
+      <div className="shrink-0 border-t border-[#1C1C1C] px-3 py-3 space-y-1">
         {/* Upgrade */}
         <Link
           href="/en/pricing"
