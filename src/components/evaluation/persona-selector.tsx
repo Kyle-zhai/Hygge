@@ -288,41 +288,60 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           const tags = persona.identity.tags;
 
           return (
-            <Card
-              key={persona.id}
-              className={`cursor-pointer transition-all border-[#2A2A2A] bg-[#141414] ${
-                isSelected ? "border-[#E2DDD5] ring-2 ring-[#E2DDD5]/20" : "hover:border-[#3A3A3A]"
-              }`}
-              onClick={() => togglePersona(persona.id)}
-            >
-              <CardContent className="flex items-start gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-lg">
-                  {persona.identity.avatar}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate text-[#EAEAE8]">{localized.name}</span>
-                    {isRecommended && (
-                      <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0 bg-[#E2DDD5]/10 text-[#E2DDD5] border-[#E2DDD5]/20">
-                        {t("recommended")}
-                      </Badge>
-                    )}
-                    {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
+            <div key={persona.id} className="relative group">
+              <Card
+                className={`cursor-pointer transition-all border-[#2A2A2A] bg-[#141414] ${
+                  isSelected ? "border-[#E2DDD5] ring-2 ring-[#E2DDD5]/20" : "hover:border-[#3A3A3A]"
+                }`}
+                onClick={() => togglePersona(persona.id)}
+              >
+                <CardContent className="flex items-start gap-3 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-lg">
+                    {persona.identity.avatar}
                   </div>
-                  {tags && tags.length > 0 ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {tags.map((tag) => (
-                        <span key={tag} className="inline-block rounded-full bg-[#1C1C1C] px-2 py-0.5 text-[10px] text-[#9B9594]">
-                          {tag}
-                        </span>
-                      ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate text-[#EAEAE8]">{localized.name}</span>
+                      {tags && tags.length > 0 && (
+                        <span className="shrink-0 text-[10px] text-[#666462]">{tags.slice(0, 2).join(" · ")}</span>
+                      )}
+                      {isRecommended && (
+                        <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5 py-0 bg-[#E2DDD5]/10 text-[#E2DDD5] border-[#E2DDD5]/20">
+                          {t("recommended")}
+                        </Badge>
+                      )}
+                      {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
                     </div>
-                  ) : (
-                    <p className="mt-0.5 text-xs text-[#666462] truncate">{localized.tagline}</p>
-                  )}
+                    {(!tags || tags.length === 0) && (
+                      <p className="mt-0.5 text-xs text-[#666462] truncate">{localized.tagline}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Hover profile card */}
+              <div className="pointer-events-none absolute left-0 right-0 bottom-full mb-2 z-50 opacity-0 scale-95 translate-y-1 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0">
+                <div className="rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] p-4 shadow-xl shadow-black/40">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#141414] text-lg">
+                      {persona.identity.avatar}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-[#EAEAE8]">{localized.name}</p>
+                      <p className="text-[11px] text-[#666462]">{persona.demographics.occupation}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[#9B9594] italic mb-2">"{localized.tagline}"</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#666462]">
+                    <span>{persona.demographics.age}{locale === "zh" ? "岁" : "y/o"} · {genderLabels[persona.demographics.gender]?.[locale] || persona.demographics.gender}</span>
+                    <span>{persona.demographics.occupation}</span>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[#9B9594] leading-relaxed line-clamp-2">
+                    {persona.evaluation_lens.primary_question}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>
