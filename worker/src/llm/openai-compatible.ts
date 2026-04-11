@@ -43,7 +43,7 @@ export class OpenAICompatibleLLM implements LLMAdapter {
     }
 
     // Sanitize control characters that break JSON.parse
-    text = text.replace(/[\x00-\x1F\x7F]/g, (ch) => {
+    text = text.replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
       if (ch === "\n" || ch === "\r" || ch === "\t") return " ";
       return "";
     });
