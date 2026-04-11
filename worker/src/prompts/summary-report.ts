@@ -47,7 +47,7 @@ export function buildTopicSummaryReportPrompt(
 CRITICAL RULES:
 - Every claim must reference SPECIFIC details from the personas' reviews. No generic platitudes.
 - The synthesis should directly answer the user's topic/question with a substantive, well-reasoned conclusion.
-- The consensus_score (0-100) measures how much the personas agree: 0 = completely divergent views, 100 = total agreement. Evaluate based on their actual positions, not just their scores.
+- The consensus_score (0-100) measures how much the personas agree: 0 = completely divergent views, 100 = total agreement. Evaluate based on their actual positions, not just their scores. If there is only ONE persona, consensus_score MUST be 100 since there is no disagreement possible.
 
 IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.
 
