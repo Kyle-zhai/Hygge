@@ -43,6 +43,12 @@ export interface ActionItem {
   difficulty: "easy" | "medium" | "hard";
 }
 
+export interface DebateHighlight {
+  topic: string;
+  perspectives: { persona_name: string; stance: string }[];
+  significance: string;
+}
+
 export interface ScenarioSimulationResult {
   initial_adoption: { persona_id: string; stance: "positive" | "neutral" | "negative" }[];
   influence_events: { influencer_id: string; influenced_id: string; shift: string; reason: string }[];
@@ -78,4 +84,8 @@ export interface SummaryReport {
   readiness_label_en?: string;
   readiness_label_zh?: string;
   scenario_simulation: ScenarioSimulationResult | null;
+  // Topic mode only
+  consensus_score?: number | null;
+  synthesis?: string | null;
+  debate_highlights?: DebateHighlight[] | null;
 }

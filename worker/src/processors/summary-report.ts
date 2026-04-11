@@ -1,7 +1,7 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type { SummaryReport } from "../types/report.js";
-import { buildSummaryReportPrompt } from "../prompts/summary-report.js";
+import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
 
 export interface ReviewForSummary {
   persona_id: string;
@@ -10,6 +10,35 @@ export interface ReviewForSummary {
   review_text: string;
   strengths: string[];
   weaknesses: string[];
+}
+
+/** Generate topic-mode synthesis report with consensus_score, synthesis, debate_highlights. */
+export async function generateTopicSummaryReport(
+  llm: LLMAdapter,
+  project: ProjectParsedData,
+  reviews: ReviewForSummary[],
+  rawInput: string,
+  dimensions: TopicClassification["dimensions"]
+): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
+  const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions);
+  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  const parsed = JSON.parse(response.text);
+  return {
+    overall_score: 0,
+    persona_analysis: parsed.persona_analysis,
+    multi_dimensional_analysis: parsed.multi_dimensional_analysis,
+    goal_assessment: [],
+    if_not_feasible: { modifications: [], direction: "", priorities: [], reference_cases: [] },
+    if_feasible: { next_steps: [], optimizations: [], risks: [] },
+    action_items: [],
+    market_readiness: parsed.market_readiness,
+    readiness_label_en: parsed.readiness_label_en,
+    readiness_label_zh: parsed.readiness_label_zh,
+    scenario_simulation: null,
+    consensus_score: parsed.consensus_score,
+    synthesis: parsed.synthesis,
+    debate_highlights: parsed.debate_highlights,
+  };
 }
 
 /** Synthesize all persona perspectives into a comprehensive discussion summary. */

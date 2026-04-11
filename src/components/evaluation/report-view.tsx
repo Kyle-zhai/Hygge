@@ -36,9 +36,10 @@ interface ReportViewProps {
   personas: PersonaData[];
   locale: string;
   topicClassification?: TopicClassification | null;
+  mode?: "topic" | "product";
 }
 
-export function ReportView({ report, reviews, personas, locale, topicClassification }: ReportViewProps) {
+export function ReportView({ report, reviews, personas, locale, topicClassification, mode = "product" }: ReportViewProps) {
   const [view, setView] = useState<ViewMode>("report");
   const savedScrollY = useRef(0);
   const pendingScroll = useRef<number | null>(null);
@@ -83,6 +84,7 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
           locale={locale}
           onBack={handleBackToReport}
           topicClassification={topicClassification}
+          mode={mode}
         />
       </div>
     );
@@ -111,6 +113,7 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
         onViewScores={handleViewScores}
         onViewSimulation={report?.scenario_simulation ? handleViewSimulation : undefined}
         topicClassification={topicClassification}
+        mode={mode}
       />
     </div>
   );

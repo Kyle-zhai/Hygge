@@ -34,6 +34,102 @@ function buildScoresLine(review: ReviewForSummary, dimensions?: TopicClassificat
   return `Scores: usability=${s.usability}, market_fit=${s.market_fit}, design=${s.design}, tech_quality=${s.tech_quality}, innovation=${s.innovation}, pricing=${s.pricing}`;
 }
 
+export function buildTopicSummaryReportPrompt(
+  project: ProjectParsedData,
+  reviews: ReviewForSummary[],
+  rawInput: string,
+  dimensions: TopicClassification["dimensions"]
+): { system: string; prompt: string } {
+  const dimensionSchema = buildDynamicDimensionSchema(dimensions);
+
+  const system = `You are synthesizing a multi-perspective discussion on a topic. Multiple AI personas with different backgrounds have independently shared their views. Your job is to produce a comprehensive synthesis report.
+
+CRITICAL RULES:
+- Every claim must reference SPECIFIC details from the personas' reviews. No generic platitudes.
+- The synthesis should directly answer the user's topic/question with a substantive, well-reasoned conclusion.
+- The consensus_score (0-100) measures how much the personas agree: 0 = completely divergent views, 100 = total agreement. Evaluate based on their actual positions, not just their scores.
+
+IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.
+
+Respond ONLY with valid JSON matching this structure:
+{
+  "consensus_score": <0-100 integer>,
+  "persona_analysis": {
+    "entries": [
+      {
+        "persona_id": "<id>",
+        "persona_name": "<name>",
+        "core_viewpoint": "<2-3 sentence summary of this persona's key takeaway>",
+        "scoring_rationale": "<why they scored the way they did>"
+      }
+    ],
+    "consensus": [
+      { "point": "<what they agree on>", "supporting_personas": ["<name1>", "<name2>"] }
+    ],
+    "disagreements": [
+      {
+        "point": "<what they disagree on>",
+        "sides": [
+          { "persona_ids": ["<id>"], "position": "<their stance>" }
+        ],
+        "reason": "<why they disagree>"
+      }
+    ]
+  },
+  ${dimensionSchema},
+  "synthesis": "<500-800 word substantive conclusion that directly answers the user's topic. Synthesize all persona perspectives into a cohesive, actionable answer. Write like a senior consultant delivering a final verdict after hearing all sides.>",
+  "debate_highlights": [
+    {
+      "topic": "<the discussion point>",
+      "perspectives": [
+        { "persona_name": "<name>", "stance": "<their specific position on this point>" }
+      ],
+      "significance": "<why this point matters and what insight it reveals>"
+    }
+  ],
+  "market_readiness": "<low|medium|high>",
+  "readiness_label_en": "<contextual readiness/feasibility label in English>",
+  "readiness_label_zh": "<contextual readiness/feasibility label in Chinese>"
+}
+
+IMPORTANT for debate_highlights:
+- Include 2-4 highlights
+- Perspectives are NOT limited to pro/con — they can be multiple distinct angles on the same point
+- If all personas agree on a point, still include it as a highlight and explain the consensus and its significance
+- Each persona's stance should capture their unique angle, not just "agrees" or "disagrees"`;
+
+  const reviewsSummary = reviews
+    .map(
+      (r) =>
+        `### ${r.persona_name} (ID: ${r.persona_id})
+Scores: ${dimensions.map(d => `${d.key}=${(r.scores as Record<string, number>)[d.key] ?? "N/A"}`).join(", ")}
+Review: ${r.review_text}
+Strengths: ${r.strengths.join(", ")}
+Weaknesses: ${r.weaknesses.join(", ")}`
+    )
+    .join("\n\n");
+
+  const prompt = `Generate a comprehensive discussion synthesis report for this topic.
+
+## Topic Information
+**Name:** ${project.name}
+**Description:** ${project.description}
+**Target Audience / Stakeholders:** ${project.target_users}
+**Alternatives / Comparables:** ${project.competitors}
+**Goals:** ${project.goals}
+**Success Metrics:** ${project.success_metrics}
+
+**Original description:** ${rawInput}
+
+## Individual Persona Perspectives
+
+${reviewsSummary}
+
+Generate the synthesis report. Be EXTREMELY specific — cite persona names and their exact points.`;
+
+  return { system, prompt };
+}
+
 export function buildSummaryReportPrompt(
   project: ProjectParsedData,
   reviews: ReviewForSummary[],

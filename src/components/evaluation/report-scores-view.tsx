@@ -97,6 +97,7 @@ interface ReportData {
       shift: string;
     }>;
   };
+  consensus_score?: number | null;
 }
 
 interface ReportScoresViewProps {
@@ -106,9 +107,11 @@ interface ReportScoresViewProps {
   locale: string;
   onBack?: () => void;
   topicClassification?: TopicClassification | null;
+  mode?: "topic" | "product";
 }
 
-export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification }: ReportScoresViewProps) {
+export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification, mode = "product" }: ReportScoresViewProps) {
+  const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
 
   const personaMap = new Map(personas.map((p) => [p.id, p]));
@@ -132,13 +135,15 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
         </Button>
       )}
 
-      {/* Header: Overall Score + Market Readiness */}
+      {/* Header: Overall Score / Consensus Score + Market Readiness */}
       {report && (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <div className="text-5xl font-semibold text-[#EAEAE8]">
-            {report.overall_score}
+            {isTopicMode ? `${report.consensus_score ?? 0}%` : report.overall_score}
           </div>
-          <p className="text-sm text-[#9B9594]">{t("overallScore")}</p>
+          <p className="text-sm text-[#9B9594]">
+            {isTopicMode ? (locale === "zh" ? "观点统一度" : "Consensus") : t("overallScore")}
+          </p>
           <Badge className={readinessColors[report.market_readiness] || ""}>
             {report.readiness_label_en
               ? (locale === "zh" ? (report.readiness_label_zh || report.readiness_label_en) : report.readiness_label_en)
@@ -240,8 +245,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
             </div>
           </ReportSection>
 
-          {/* Goal Assessment */}
-          <ReportSection title={t("goalAssessment")} borderColor="border-l-[#FBBF24]">
+          {/* Goal Assessment (product mode only) */}
+          {!isTopicMode && <ReportSection title={t("goalAssessment")} borderColor="border-l-[#FBBF24]">
             <div className="space-y-3">
               {report.goal_assessment?.map((goal, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg bg-[#1C1C1C]/50 p-3">
@@ -262,10 +267,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 </div>
               ))}
             </div>
-          </ReportSection>
+          </ReportSection>}
 
-          {/* If Not Feasible */}
-          <ReportSection title={t("ifNotFeasible")} borderColor="border-l-[#F87171]">
+          {/* If Not Feasible (product mode only) */}
+          {!isTopicMode && <ReportSection title={t("ifNotFeasible")} borderColor="border-l-[#F87171]">
             <div className="space-y-3">
               <div>
                 <h4 className="text-sm font-semibold text-[#EAEAE8]">{t("direction")}</h4>
@@ -290,10 +295,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 </div>
               )}
             </div>
-          </ReportSection>
+          </ReportSection>}
 
-          {/* If Feasible */}
-          <ReportSection title={t("ifFeasible")} borderColor="border-l-[#4ADE80]">
+          {/* If Feasible (product mode only) */}
+          {!isTopicMode && <ReportSection title={t("ifFeasible")} borderColor="border-l-[#4ADE80]">
             <div className="space-y-3">
               <div>
                 <h4 className="text-sm font-semibold text-[#EAEAE8]">{t("nextSteps")}</h4>
@@ -312,10 +317,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 </ul>
               </div>
             </div>
-          </ReportSection>
+          </ReportSection>}
 
-          {/* Action Items */}
-          <ReportSection title={t("actionItems")} borderColor="border-l-[#E2DDD5]">
+          {/* Action Items (product mode only) */}
+          {!isTopicMode && <ReportSection title={t("actionItems")} borderColor="border-l-[#E2DDD5]">
             <div className="space-y-2">
               {report.action_items?.map((item, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg bg-[#1C1C1C]/50 p-3">
@@ -332,7 +337,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 </div>
               ))}
             </div>
-          </ReportSection>
+          </ReportSection>}
 
         </>
       )}

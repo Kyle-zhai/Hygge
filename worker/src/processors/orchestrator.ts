@@ -6,7 +6,7 @@ import { config } from "../config.js";
 import { parseProject } from "./parse-project.js";
 import { classifyTopic } from "./classify-topic.js";
 import { generatePersonaReview } from "./persona-review.js";
-import { generateSummaryReport } from "./summary-report.js";
+import { generateSummaryReport, generateTopicSummaryReport } from "./summary-report.js";
 import { runScenarioSimulation } from "./scenario-simulation.js";
 import type { Persona } from "../types/persona.js";
 import type { TopicClassification } from "../types/evaluation.js";
@@ -115,11 +115,13 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     // 6. Generate discussion summary report
     console.log(`[${evaluationId}] Generating summary report...`);
-    const summaryReport = await generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
+    const summaryReport = mode === "topic" && dimensions
+      ? await generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
+      : await generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
     console.log(`[${evaluationId}] Summary report generated`);
 
-    // 7. Run social dynamics scenario simulation (Max plan only)
-    if (planTier === "max") {
+    // 7. Run social dynamics scenario simulation (Max plan only, product mode only)
+    if (planTier === "max" && mode === "product") {
       console.log(`[${evaluationId}] Running scenario simulation...`);
       try {
         const simulation = await runScenarioSimulation(llm, personas as Persona[], reviews);

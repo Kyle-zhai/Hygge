@@ -42,6 +42,7 @@ export default async function EvaluationResultPage({
       personas={personas || []}
       locale={locale}
       topicClassification={topicClassification}
+      mode={evaluation.mode === "topic" ? "topic" : "product"}
     />
   );
 }

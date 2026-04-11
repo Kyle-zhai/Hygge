@@ -19,6 +19,8 @@ import {
   List,
   Circle,
   BarChart3,
+  MessageSquare,
+  Users,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -97,6 +99,10 @@ interface ReportData {
     adoption_rate_shift: number;
     influence_events?: any[];
   };
+  // Topic mode fields
+  consensus_score?: number | null;
+  synthesis?: string | null;
+  debate_highlights?: DebateHighlight[] | null;
 }
 
 interface TopicClassification {
@@ -104,6 +110,12 @@ interface TopicClassification {
   dimensions: Array<{ key: string; label_en: string; label_zh: string; description: string }>;
   readiness_label_en: string;
   readiness_label_zh: string;
+}
+
+interface DebateHighlight {
+  topic: string;
+  perspectives: { persona_name: string; stance: string }[];
+  significance: string;
 }
 
 interface ReportTextViewProps {
@@ -114,6 +126,7 @@ interface ReportTextViewProps {
   onViewScores?: () => void;
   onViewSimulation?: () => void;
   topicClassification?: TopicClassification | null;
+  mode?: "topic" | "product";
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -290,6 +303,58 @@ function ScoreArc({ score, size = 112 }: { score: number; size?: number }) {
           {score != null ? score.toFixed(1) : "--"}
         </motion.span>
         <span className="text-[10px] text-[#666462] -mt-0.5">/10</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Consensus Arc (topic mode: 0-100%) ────────────────────────────── */
+
+function ConsensusArc({ score, size = 112 }: { score: number; size?: number }) {
+  const radius = (size - 14) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min((score ?? 0) / 100, 1);
+  const strokeDashoffset = circumference * (1 - progress);
+  const hex = score >= 70 ? "#4ADE80" : score >= 40 ? "#FBBF24" : "#F87171";
+  const textColor = score >= 70 ? "text-[#4ADE80]" : score >= 40 ? "text-[#FBBF24]" : "text-[#F87171]";
+
+  return (
+    <div
+      className="relative inline-flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#1C1C1C"
+          strokeWidth={5}
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={hex}
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <motion.span
+          className={`text-2xl font-bold tabular-nums ${textColor}`}
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.8 }}
+        >
+          {score != null ? `${score}%` : "--"}
+        </motion.span>
       </div>
     </div>
   );
@@ -508,7 +573,9 @@ export function ReportTextView({
   onViewScores,
   onViewSimulation,
   topicClassification,
+  mode = "product",
 }: ReportTextViewProps) {
+  const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
   const [activeSection, setActiveSection] = useState("executive-summary");
   const [expandedPersonas, setExpandedPersonas] = useState<Set<string>>(
@@ -559,12 +626,21 @@ export function ReportTextView({
     if (report.multi_dimensional_analysis?.length > 0) {
       items.push({ id: "deep-analysis", label: t("deepAnalysis") });
     }
-    items.push({ id: "recommendations", label: t("recommendations") });
-    if (report.action_items?.length > 0) {
-      items.push({ id: "action-items", label: t("actionItems") });
+    if (isTopicMode) {
+      if (report.synthesis) {
+        items.push({ id: "synthesis", label: locale === "zh" ? "综合结论" : "Synthesis" });
+      }
+      if (report.debate_highlights?.length) {
+        items.push({ id: "debate-highlights", label: locale === "zh" ? "讨论亮点" : "Debate Highlights" });
+      }
+    } else {
+      items.push({ id: "recommendations", label: t("recommendations") });
+      if (report.action_items?.length > 0) {
+        items.push({ id: "action-items", label: t("actionItems") });
+      }
     }
     return items;
-  }, [report, t]);
+  }, [report, t, isTopicMode, locale]);
 
   // ── Intersection Observer for active section ──
   useEffect(() => {
@@ -661,12 +737,23 @@ export function ReportTextView({
             <SectionTitle icon={Target}>{t("executiveSummary")}</SectionTitle>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
-              {/* Score Arc */}
+              {/* Score Arc / Consensus Arc */}
               <div className="flex flex-col items-center gap-1.5 shrink-0">
-                <ScoreArc score={report.overall_score ?? 0} />
-                <span className="text-[11px] text-[#666462]">
-                  {t("overallScore")}
-                </span>
+                {isTopicMode ? (
+                  <>
+                    <ConsensusArc score={report.consensus_score ?? 0} />
+                    <span className="text-[11px] text-[#666462]">
+                      {locale === "zh" ? "观点统一度" : "Consensus"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ScoreArc score={report.overall_score ?? 0} />
+                    <span className="text-[11px] text-[#666462]">
+                      {t("overallScore")}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Market Readiness + Key Findings */}
@@ -1200,9 +1287,101 @@ export function ReportTextView({
         )}
 
         {/* ════════════════════════════════════════════════════════════
-            RECOMMENDATIONS
+            SYNTHESIS (topic mode only)
         ════════════════════════════════════════════════════════════ */}
-        <AnimatedSection id="recommendations">
+        {isTopicMode && report.synthesis && (
+          <AnimatedSection id="synthesis">
+            <SectionTitle icon={MessageSquare}>
+              {locale === "zh" ? "综合结论" : "Synthesis"}
+            </SectionTitle>
+
+            <div className="rounded-xl border border-[#C4A882]/15 bg-[#C4A882]/[0.02] p-6">
+              <p className="text-sm text-[#EAEAE8] leading-[1.9] whitespace-pre-line">
+                {report.synthesis}
+              </p>
+            </div>
+          </AnimatedSection>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            DEBATE HIGHLIGHTS (topic mode only)
+        ════════════════════════════════════════════════════════════ */}
+        {isTopicMode && report.debate_highlights && report.debate_highlights.length > 0 && (
+          <AnimatedSection id="debate-highlights">
+            <SectionTitle icon={Users}>
+              {locale === "zh" ? "讨论亮点" : "Debate Highlights"}
+            </SectionTitle>
+
+            <div className="space-y-6">
+              {report.debate_highlights.map((highlight, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="rounded-xl border border-[#2A2A2A] bg-[#141414] overflow-hidden"
+                >
+                  {/* Highlight topic */}
+                  <div className="px-5 pt-5 pb-3">
+                    <h3 className="text-sm font-semibold text-[#EAEAE8]">
+                      {highlight.topic}
+                    </h3>
+                  </div>
+
+                  {/* Perspectives (multi-angle, not just pro/con) */}
+                  <div className="px-5 pb-3 space-y-2">
+                    {highlight.perspectives.map((p, pi) => {
+                      const colors = [
+                        "border-[#4ADE80]/15 bg-[#4ADE80]/[0.03]",
+                        "border-[#FBBF24]/15 bg-[#FBBF24]/[0.03]",
+                        "border-[#C4A882]/15 bg-[#C4A882]/[0.03]",
+                        "border-[#F87171]/15 bg-[#F87171]/[0.03]",
+                        "border-[#60A5FA]/15 bg-[#60A5FA]/[0.03]",
+                      ];
+                      const nameColors = [
+                        "text-[#4ADE80]",
+                        "text-[#FBBF24]",
+                        "text-[#C4A882]",
+                        "text-[#F87171]",
+                        "text-[#60A5FA]",
+                      ];
+                      return (
+                        <div
+                          key={pi}
+                          className={`rounded-lg border ${colors[pi % colors.length]} p-3`}
+                        >
+                          <span className={`text-xs font-semibold ${nameColors[pi % nameColors.length]}`}>
+                            {p.persona_name}
+                          </span>
+                          <p className="text-xs text-[#9B9594] mt-1 leading-relaxed">
+                            {p.stance}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Significance */}
+                  {highlight.significance && (
+                    <div className="px-5 pb-5 pt-1">
+                      <div className="flex gap-2 items-start">
+                        <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#C4A882]" />
+                        <p className="text-xs text-[#666462] leading-relaxed italic">
+                          {highlight.significance}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </AnimatedSection>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            RECOMMENDATIONS (product mode only)
+        ════════════════════════════════════════════════════════════ */}
+        {!isTopicMode && <AnimatedSection id="recommendations">
           <SectionTitle icon={Shield}>{t("recommendations")}</SectionTitle>
 
           {/* Goal Assessment */}
@@ -1436,12 +1615,12 @@ export function ReportTextView({
                 : "No recommendation data available."}
             </p>
           )}
-        </AnimatedSection>
+        </AnimatedSection>}
 
         {/* ════════════════════════════════════════════════════════════
-            ACTION ITEMS
+            ACTION ITEMS (product mode only)
         ════════════════════════════════════════════════════════════ */}
-        {actionItems.length > 0 && (
+        {!isTopicMode && actionItems.length > 0 && (
           <AnimatedSection id="action-items">
             <SectionTitle icon={Lightbulb}>{t("actionItems")}</SectionTitle>
 
@@ -1511,7 +1690,7 @@ export function ReportTextView({
         {/* ════════════════════════════════════════════════════════════
             SCENARIO SIMULATION CTA
         ════════════════════════════════════════════════════════════ */}
-        {report.scenario_simulation && onViewSimulation && (
+        {!isTopicMode && report.scenario_simulation && onViewSimulation && (
           <div className="mt-10 flex justify-center">
             <button
               onClick={onViewSimulation}
