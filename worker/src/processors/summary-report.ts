@@ -21,8 +21,14 @@ export async function generateTopicSummaryReport(
   dimensions: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions);
-  const response = await llm.complete({ system, prompt, maxTokens: 4096 });
-  const parsed = JSON.parse(response.text);
+  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  let parsed: any;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (e) {
+    console.error("[TopicSummary] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
+    throw new Error(`Topic summary JSON parse failed: ${(e as Error).message}`);
+  }
   return {
     overall_score: 0,
     persona_analysis: parsed.persona_analysis,
@@ -50,8 +56,14 @@ export async function generateSummaryReport(
   dimensions?: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions);
-  const response = await llm.complete({ system, prompt, maxTokens: 4096 });
-  const parsed = JSON.parse(response.text);
+  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  let parsed: any;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (e) {
+    console.error("[SummaryReport] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
+    throw new Error(`Summary report JSON parse failed: ${(e as Error).message}`);
+  }
   return {
     overall_score: parsed.overall_score,
     persona_analysis: parsed.persona_analysis,

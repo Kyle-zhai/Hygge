@@ -22,7 +22,13 @@ export async function generatePersonaReview(
 ): Promise<PersonaReviewResult> {
   const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions);
   const response = await llm.complete({ system, prompt, maxTokens: 2048 });
-  const parsed = JSON.parse(response.text);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (e) {
+    console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. Raw text (first 300 chars):`, response.text.slice(0, 300));
+    throw new Error(`Persona review JSON parse failed for ${persona.identity.name}: ${(e as Error).message}`);
+  }
   // Topic mode returns stances, product mode returns numerical scores
   const scores = dimensions ? (parsed.stances ?? parsed.scores) : parsed.scores;
   return {
