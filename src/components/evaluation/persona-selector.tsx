@@ -88,7 +88,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         fetch("/api/personas/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectDescription }),
+          body: JSON.stringify({ projectDescription, mode }),
         }),
       ]);
       const { personas: rawPersonas } = await personasRes.json();

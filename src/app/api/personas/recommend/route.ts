@@ -9,13 +9,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { projectDescription } = await request.json();
+  const { projectDescription, mode } = await request.json();
 
   if (!projectDescription) {
     return NextResponse.json({ error: "projectDescription is required" }, { status: 400 });
   }
 
-  const { data: personas } = await supabase.from("personas").select("*").eq("is_active", true);
+  const validCategories = mode === "topic"
+    ? ["general"]
+    : ["technical", "product", "design", "end_user", "business"];
+
+  const { data: personas } = await supabase
+    .from("personas")
+    .select("*")
+    .eq("is_active", true)
+    .in("category", validCategories);
 
   if (!personas?.length) {
     return NextResponse.json({ recommended_ids: [], reasoning: "No personas available" });
