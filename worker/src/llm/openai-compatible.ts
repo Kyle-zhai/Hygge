@@ -13,7 +13,7 @@ export class OpenAICompatibleLLM implements LLMAdapter {
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90_000);
+    const timeout = setTimeout(() => controller.abort(), 180_000);
 
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: "POST",
