@@ -32,7 +32,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push(`/${locale}/dashboard`);
+      router.push(`/${locale}/evaluate/new`);
       router.refresh();
     }
   }

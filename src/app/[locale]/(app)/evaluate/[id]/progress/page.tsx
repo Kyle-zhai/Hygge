@@ -19,7 +19,7 @@ export default async function EvaluationProgressPage({
     .eq("id", id)
     .single();
 
-  if (!evaluation) redirect(`/${locale}/dashboard`);
+  if (!evaluation) redirect(`/${locale}/evaluate/new`);
 
   if (evaluation.status === "completed") {
     redirect(`/${locale}/evaluate/${id}/result`);

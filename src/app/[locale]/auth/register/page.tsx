@@ -38,7 +38,7 @@ export default function RegisterPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push(`/${locale}/dashboard`);
+      router.push(`/${locale}/evaluate/new`);
       router.refresh();
     }
   }

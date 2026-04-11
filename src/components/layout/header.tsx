@@ -37,7 +37,7 @@ export async function Header() {
                 asChild
                 className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
               >
-                <Link href={`/${locale}/dashboard`}>{t("dashboard")}</Link>
+                <Link href={`/${locale}/evaluate/new`}>{t("dashboard")}</Link>
               </Button>
               <Button
                 variant="ghost"

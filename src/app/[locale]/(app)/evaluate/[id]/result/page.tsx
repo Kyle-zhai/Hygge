@@ -22,7 +22,7 @@ export default async function EvaluationResultPage({
     .single();
 
   if (!evaluation || evaluation.status !== "completed") {
-    redirect(`/${locale}/dashboard`);
+    redirect(`/${locale}/evaluate/new`);
   }
 
   const { data: personas } = await supabase

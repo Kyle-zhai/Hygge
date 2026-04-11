@@ -39,6 +39,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const isNewPage = pathname.includes("/evaluate/new");
   const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,10 +65,12 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
 
   async function handleDelete(projectId: string) {
     setDeleting(projectId);
+    setConfirmDeleteId(null);
     try {
       const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
       if (res.ok) {
         setMenuOpenId(null);
+        router.push("/en/evaluate/new?mode=topic");
         router.refresh();
       }
     } finally {
@@ -236,7 +239,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
                         <span>Share</span>
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => { setMenuOpenId(null); setConfirmDeleteId(item.id); }}
                         disabled={deleting === item.id}
                         className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[#F87171] transition-colors hover:bg-[#F87171]/10"
                       >
@@ -340,6 +343,50 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
             >
               {sidebarContent}
             </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Delete confirmation dialog */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmDeleteId(null)}
+              className="fixed inset-0 z-[60] bg-black/60"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="fixed left-1/2 top-1/2 z-[70] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-2xl"
+            >
+              <h3 className="text-base font-semibold text-[#EAEAE8] mb-2">
+                Delete Discussion
+              </h3>
+              <p className="text-sm text-[#9B9594] mb-6">
+                This action cannot be undone. All data associated with this discussion will be permanently deleted.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-4 py-2 text-sm text-[#EAEAE8] transition-colors hover:bg-[#222222]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(confirmDeleteId)}
+                  disabled={deleting === confirmDeleteId}
+                  className="rounded-lg bg-[#F87171] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#EF4444] disabled:opacity-50"
+                >
+                  {deleting === confirmDeleteId ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
