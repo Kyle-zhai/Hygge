@@ -2,10 +2,14 @@ import type { Persona } from "../types/persona.js";
 import type { ReviewForSimulation } from "../processors/scenario-simulation.js";
 
 const STANCE_TO_NUMBER: Record<string, number> = {
+  strongly_positive: 10,
   strongly_support: 10,
+  positive: 8,
   support: 8,
   neutral: 5,
+  negative: 3,
   oppose: 3,
+  strongly_negative: 1,
   strongly_oppose: 1,
 };
 

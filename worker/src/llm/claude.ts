@@ -18,10 +18,15 @@ export class ClaudeLLM implements LLMAdapter {
       messages: [{ role: "user", content: request.prompt }],
     });
 
-    const text = response.content
+    let text = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === "text")
       .map((block) => block.text)
       .join("");
+
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      text = fenceMatch[1].trim();
+    }
 
     return {
       text,

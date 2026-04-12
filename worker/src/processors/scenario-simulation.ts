@@ -19,7 +19,14 @@ export async function runScenarioSimulation(
 ): Promise<ScenarioSimulationResult> {
   const { system, prompt } = buildScenarioSimulationPrompt(personas, reviews);
   const response = await llm.complete({ system, prompt, maxTokens: 4096 });
-  const result = JSON.parse(response.text) as ScenarioSimulationResult;
+
+  let result: ScenarioSimulationResult;
+  try {
+    result = JSON.parse(response.text) as ScenarioSimulationResult;
+  } catch (e) {
+    console.error("[ScenarioSimulation] JSON parse failed. Raw response:", response.text.slice(0, 500));
+    throw e;
+  }
 
   // Compute adoption_rate_shift from actual stance data instead of trusting LLM
   if (result.initial_adoption?.length && result.final_adoption?.length) {
