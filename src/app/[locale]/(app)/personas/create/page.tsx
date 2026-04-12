@@ -70,13 +70,29 @@ export default function CreatePersonaPage() {
         body: JSON.stringify(body),
       });
 
+      const resData = await res.json();
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create persona");
+        throw new Error(resData.error || "Failed to create persona");
       }
 
-      router.push(`/${locale}/personas`);
-      router.refresh();
+      const jobId = resData.jobId;
+      let attempts = 0;
+      while (attempts < 60) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const statusRes = await fetch(`/api/personas/create/status/${jobId}`);
+        const statusData = await statusRes.json();
+
+        if (statusData.status === "completed") {
+          router.push(`/${locale}/personas`);
+          router.refresh();
+          return;
+        }
+        if (statusData.status === "failed") {
+          throw new Error(statusData.error || "Persona generation failed");
+        }
+        attempts++;
+      }
+      throw new Error("Generation timed out, please try again");
     } catch (e: any) {
       setError(e.message);
     } finally {

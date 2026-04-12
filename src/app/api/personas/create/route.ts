@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
-import { buildGeneratePersonaPrompt } from "@/lib/prompts/generate-persona";
+import { Queue } from "bullmq";
+import IORedis from "ioredis";
+
+let _queue: Queue | null = null;
+function getQueue(): Queue {
+  if (!_queue) {
+    let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
+      redisUrl = redisUrl.replace("redis://", "rediss://");
+    }
+    const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
+    _queue = new Queue("persona-generation", { connection });
+  }
+  return _queue;
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -47,7 +61,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { system, prompt } = buildGeneratePersonaPrompt({
+    const queue = getQueue();
+    const job = await queue.add("generate", {
+      userId: user.id,
       name,
       occupation,
       personality,
@@ -55,79 +71,9 @@ export async function POST(request: Request) {
       importedText,
     });
 
-    const baseURL = process.env.LLM_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1";
-    const apiKey = process.env.LLM_API_KEY || "";
-    const model = process.env.LLM_MODEL || "qwen-max";
-
-    const llmResponse = await fetch(`${baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 4096,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
-
-    if (!llmResponse.ok) {
-      const err = await llmResponse.text();
-      console.error("LLM API error:", llmResponse.status, "model:", model, "baseURL:", baseURL, err);
-      throw new Error(`LLM API error (${llmResponse.status}), model=${model}: ${err.slice(0, 200)}`);
-    }
-
-    const llmData = await llmResponse.json();
-    let text = llmData.choices?.[0]?.message?.content ?? "";
-
-    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) text = fenceMatch[1].trim();
-
-    text = text.replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
-      if (ch === "\n" || ch === "\r" || ch === "\t") return " ";
-      return "";
-    });
-
-    const persona = JSON.parse(text);
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("personas")
-      .insert({
-        identity: persona.identity,
-        demographics: persona.demographics,
-        social_context: persona.social_context,
-        financial_profile: persona.financial_profile,
-        psychology: persona.psychology,
-        behaviors: persona.behaviors,
-        evaluation_lens: persona.evaluation_lens,
-        life_narrative: persona.life_narrative,
-        internal_conflicts: persona.internal_conflicts,
-        contextual_behaviors: persona.contextual_behaviors,
-        latent_needs: persona.latent_needs,
-        system_prompt: persona.system_prompt,
-        category: "custom",
-        is_active: true,
-        creator_id: user.id,
-        is_custom: true,
-        is_public: false,
-        source: importedText ? "imported" : "manual",
-        description: persona.description ?? null,
-        tags: persona.tags ?? [],
-      })
-      .select("id, identity, demographics, evaluation_lens, category, description, tags")
-      .single();
-
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ persona: inserted }, { status: 201 });
+    return NextResponse.json({ jobId: job.id, status: "processing" }, { status: 202 });
   } catch (error: any) {
-    console.error("Persona generation failed:", error?.message, error?.stack);
-    return NextResponse.json({ error: error?.message || "Failed to generate persona" }, { status: 500 });
+    console.error("Failed to queue persona generation:", error?.message);
+    return NextResponse.json({ error: "Failed to start persona generation" }, { status: 500 });
   }
 }
