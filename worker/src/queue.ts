@@ -21,6 +21,14 @@ export const evaluationQueue = new Queue("evaluations", {
   },
 });
 
+export const personaQueue = new Queue("persona-generation", {
+  connection,
+  defaultJobOptions: {
+    removeOnComplete: { age: 3600, count: 50 },
+    removeOnFail: { age: 24 * 3600, count: 50 },
+  },
+});
+
 export function createWorker(
   processor: (job: import("bullmq").Job) => Promise<unknown>,
   concurrency = 1
