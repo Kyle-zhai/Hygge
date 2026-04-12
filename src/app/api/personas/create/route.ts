@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
-import { buildGeneratePersonaPrompt } from "../../../../../worker/src/prompts/generate-persona.js";
+import { buildGeneratePersonaPrompt } from "@/lib/prompts/generate-persona";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
