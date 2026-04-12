@@ -76,23 +76,10 @@ export default function CreatePersonaPage() {
       }
 
       const jobId = resData.jobId;
-      let attempts = 0;
-      while (attempts < 60) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const statusRes = await fetch(`/api/personas/create/status/${jobId}`);
-        const statusData = await statusRes.json();
-
-        if (statusData.status === "completed") {
-          router.push(`/${locale}/personas`);
-          router.refresh();
-          return;
-        }
-        if (statusData.status === "failed") {
-          throw new Error(statusData.error || "Persona generation failed");
-        }
-        attempts++;
-      }
-      throw new Error("Generation timed out, please try again");
+      const pending = JSON.parse(localStorage.getItem("pendingPersonas") || "[]");
+      pending.push({ jobId, name: tab === "form" ? name : (importName || "Imported Persona"), createdAt: Date.now() });
+      localStorage.setItem("pendingPersonas", JSON.stringify(pending));
+      router.push(`/${locale}/personas`);
     } catch (e: any) {
       setError(e.message);
     } finally {
