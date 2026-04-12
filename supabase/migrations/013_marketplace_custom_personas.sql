@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_personas_creator
 CREATE TABLE IF NOT EXISTS public.persona_saves (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  persona_id uuid NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
+  persona_id text NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(user_id, persona_id)
 );
