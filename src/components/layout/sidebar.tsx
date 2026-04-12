@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   PanelLeft,
@@ -38,6 +39,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const locale = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menu, setMenu] = useState<{ itemId: string; top: number; left: number } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -108,7 +110,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/en/auth/login");
+    router.push(`/${locale}/auth/login`);
     router.refresh();
   }
 
@@ -119,7 +121,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
       if (res.ok) {
         setMenu(null);
-        router.push("/en/evaluate/new?mode=topic");
+        router.push(`/${locale}/evaluate/new?mode=topic`);
         router.refresh();
       }
     } finally {
@@ -170,7 +172,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       {/* General Discussion + Product Evaluation */}
       <div className="shrink-0 space-y-1 px-3 pt-2 pb-3">
         <Link
-          href="/en/evaluate/new?mode=topic"
+          href={`/${locale}/evaluate/new?mode=topic`}
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
             isNewPage && currentMode === "topic"
@@ -182,7 +184,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
           <span>General Discussion</span>
         </Link>
         <Link
-          href="/en/evaluate/new?mode=product"
+          href={`/${locale}/evaluate/new?mode=product`}
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
             isNewPage && currentMode === "product"
@@ -194,7 +196,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
           <span>Product Evaluation</span>
         </Link>
         <Link
-          href="/en/compare"
+          href={`/${locale}/compare`}
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
             pathname.includes("/compare")
@@ -292,7 +294,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       <div className="shrink-0 border-t border-[#1C1C1C] px-3 py-3 space-y-1">
         {/* Upgrade */}
         <Link
-          href="/en/pricing"
+          href={`/${locale}/pricing`}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
         >
           <Zap className="h-4 w-4" />

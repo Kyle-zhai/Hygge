@@ -25,6 +25,15 @@ function NewEvaluationContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Reset to step 1 when mode changes
+  const [prevMode, setPrevMode] = useState(mode);
+  if (mode !== prevMode) {
+    setPrevMode(mode);
+    setStep(1);
+    setProjectData(null);
+    setError("");
+  }
+
   async function handleProjectSubmit(data: { rawInput: string; url: string | null; files: File[] }) {
     setProjectData(data);
     const supabase = createClient();
