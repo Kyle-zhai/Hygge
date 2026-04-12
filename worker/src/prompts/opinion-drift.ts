@@ -11,10 +11,14 @@ interface ReviewInput {
 }
 
 const STANCE_TO_NUMBER: Record<string, number> = {
+  strongly_positive: 10,
   strongly_support: 10,
+  positive: 8,
   support: 8,
   neutral: 5,
+  negative: 3,
   oppose: 3,
+  strongly_negative: 1,
   strongly_oppose: 1,
 };
 
@@ -25,8 +29,8 @@ function computeLeaning(scores: EvaluationScores): string {
     typeof v === "number" ? v : typeof v === "string" ? STANCE_TO_NUMBER[v] ?? 5 : 5,
   );
   const avg = numeric.reduce((a, b) => a + b, 0) / numeric.length;
-  if (avg >= 7) return "support";
-  if (avg <= 4) return "oppose";
+  if (avg >= 7) return "positive";
+  if (avg <= 4) return "negative";
   return "neutral";
 }
 
@@ -65,7 +69,7 @@ For each persona, consider:
 Output a "final_leaning" — their stance AFTER the discussion. Output "shift_magnitude":
 - "none" if they stick to their initial view
 - "small" if their stance softens/hardens but doesn't flip
-- "large" if they flip sides (support ↔ oppose) or break out of neutral into a strong stance
+- "large" if they flip sides (positive ↔ negative) or break out of neutral into a strong stance
 
 IMPORTANT: Always respond in English. Base your analysis on the actual reviews, not generic assumptions.
 
@@ -74,8 +78,8 @@ Respond ONLY with valid JSON:
   "drifts": [
     {
       "persona_id": "<id>",
-      "initial_leaning": "<support|oppose|neutral|mixed>",
-      "final_leaning": "<support|oppose|neutral|mixed>",
+      "initial_leaning": "<positive|negative|neutral|mixed>",
+      "final_leaning": "<positive|negative|neutral|mixed>",
       "shift_magnitude": "<none|small|large>",
       "reasoning": "<1-2 sentence narrative of why they would or wouldn't shift, citing a SPECIFIC other persona or argument>"
     }

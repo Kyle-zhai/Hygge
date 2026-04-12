@@ -1,6 +1,6 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
-import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
+import type { EvaluationScores, ProjectParsedData, TopicClassification, PersonaStance, CitedReference } from "../types/evaluation.js";
 import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
 import { config } from "../config.js";
 
@@ -10,6 +10,8 @@ export interface PersonaReviewResult {
   strengths: string[];
   weaknesses: string[];
   llm_model: string;
+  overall_stance?: PersonaStance | null;
+  cited_references?: CitedReference[] | null;
 }
 
 /** Generate a single persona's perspective on the given topic. */
@@ -29,7 +31,6 @@ export async function generatePersonaReview(
     console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. Raw text (first 300 chars):`, response.text.slice(0, 300));
     throw new Error(`Persona review JSON parse failed for ${persona.identity.name}: ${(e as Error).message}`);
   }
-  // Topic mode returns stances, product mode returns numerical scores
   const scores = dimensions ? (parsed.stances ?? parsed.scores) : parsed.scores;
   return {
     scores,
@@ -37,5 +38,7 @@ export async function generatePersonaReview(
     strengths: parsed.strengths,
     weaknesses: parsed.weaknesses,
     llm_model: config.llm.model,
+    overall_stance: parsed.overall_stance ?? null,
+    cited_references: Array.isArray(parsed.cited_references) ? parsed.cited_references : null,
   };
 }

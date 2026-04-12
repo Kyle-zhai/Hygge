@@ -28,12 +28,27 @@ export interface DimensionAnalysis {
   strengths?: string[];
   weaknesses?: string[];
   // Topic mode: stance-based
-  overall_leaning?: string;
-  support_count?: number;
-  oppose_count?: number;
+  overall_leaning?: "positive" | "negative" | "neutral" | "mixed";
+  positive_count?: number;
+  negative_count?: number;
   neutral_count?: number;
-  key_arguments?: { for: string; against: string };
+  key_arguments?: { positive: string; negative: string };
   analysis: string;
+}
+
+export interface ReportPositions {
+  question: string;
+  positive_label: string;
+  positive_summary: string;
+  negative_label: string;
+  negative_summary: string;
+}
+
+export interface ReportReference {
+  title: string;
+  detail: string;
+  source?: string;
+  persona_name?: string;
 }
 
 export interface GoalAssessmentEntry {
@@ -64,10 +79,12 @@ export interface ScenarioSimulationResult {
   summary: string;
 }
 
+export type OpinionLeaning = "positive" | "negative" | "neutral" | "mixed";
+
 export interface OpinionDriftEntry {
   persona_id: string;
-  initial_leaning: "support" | "oppose" | "neutral" | "mixed";
-  final_leaning: "support" | "oppose" | "neutral" | "mixed";
+  initial_leaning: OpinionLeaning;
+  final_leaning: OpinionLeaning;
   shift_magnitude: "none" | "small" | "large";
   reasoning: string;
 }
@@ -104,4 +121,6 @@ export interface SummaryReport {
   consensus_score?: number | null;
   synthesis?: string | null;
   debate_highlights?: DebateHighlight[] | null;
+  positions?: ReportPositions | null;
+  references?: ReportReference[] | null;
 }

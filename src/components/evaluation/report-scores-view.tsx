@@ -35,6 +35,7 @@ interface ReviewData {
   review_text: string;
   strengths: string[];
   weaknesses: string[];
+  overall_stance?: string | null;
 }
 
 interface TopicClassification {
@@ -67,10 +68,12 @@ interface ReportData {
     strengths?: string[];
     weaknesses?: string[];
     overall_leaning?: string;
+    positive_count?: number;
+    negative_count?: number;
+    neutral_count?: number;
     support_count?: number;
     oppose_count?: number;
-    neutral_count?: number;
-    key_arguments?: { for: string; against: string };
+    key_arguments?: { positive?: string; negative?: string; for?: string; against?: string };
   }>;
   goal_assessment: Array<{
     goal: string;
@@ -103,6 +106,19 @@ interface ReportData {
     }>;
   };
   consensus_score?: number | null;
+  positions?: {
+    question: string;
+    positive_label: string;
+    positive_summary: string;
+    negative_label: string;
+    negative_summary: string;
+  } | null;
+  references?: Array<{
+    title: string;
+    detail: string;
+    source?: string;
+    persona_name?: string;
+  }> | null;
 }
 
 interface ReportScoresViewProps {
@@ -116,11 +132,16 @@ interface ReportScoresViewProps {
 }
 
 const leaningConfig: Record<string, { color: string; label: string; labelZh: string }> = {
-  strongly_support: { color: "bg-[#34D399]/10 text-[#34D399]", label: "Strongly Support", labelZh: "强烈支持" },
-  support: { color: "bg-[#4ADE80]/10 text-[#4ADE80]", label: "Support", labelZh: "支持" },
+  strongly_positive: { color: "bg-[#34D399]/10 text-[#34D399]", label: "Strongly Positive", labelZh: "强烈正面" },
+  positive: { color: "bg-[#4ADE80]/10 text-[#4ADE80]", label: "Positive", labelZh: "正面" },
   neutral: { color: "bg-[#FBBF24]/10 text-[#FBBF24]", label: "Neutral", labelZh: "中立" },
-  oppose: { color: "bg-[#F97316]/10 text-[#F97316]", label: "Oppose", labelZh: "反对" },
-  strongly_oppose: { color: "bg-[#F87171]/10 text-[#F87171]", label: "Strongly Oppose", labelZh: "强烈反对" },
+  negative: { color: "bg-[#F97316]/10 text-[#F97316]", label: "Negative", labelZh: "负面" },
+  strongly_negative: { color: "bg-[#F87171]/10 text-[#F87171]", label: "Strongly Negative", labelZh: "强烈负面" },
+  // Legacy compat
+  strongly_support: { color: "bg-[#34D399]/10 text-[#34D399]", label: "Strongly Positive", labelZh: "强烈正面" },
+  support: { color: "bg-[#4ADE80]/10 text-[#4ADE80]", label: "Positive", labelZh: "正面" },
+  oppose: { color: "bg-[#F97316]/10 text-[#F97316]", label: "Negative", labelZh: "负面" },
+  strongly_oppose: { color: "bg-[#F87171]/10 text-[#F87171]", label: "Strongly Negative", labelZh: "强烈负面" },
 };
 
 function StanceBadge({ leaning, locale }: { leaning: string; locale: string }) {
@@ -132,18 +153,18 @@ function StanceBadge({ leaning, locale }: { leaning: string; locale: string }) {
   );
 }
 
-function StanceDistribution({ support, oppose, neutral, locale }: { support: number; oppose: number; neutral: number; locale: string }) {
-  const total = support + oppose + neutral;
+function StanceDistribution({ positive, negative, neutral, locale }: { positive: number; negative: number; neutral: number; locale: string }) {
+  const total = positive + negative + neutral;
   if (total === 0) return null;
   return (
     <div className="flex items-center gap-2">
       <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[#1C1C1C]">
-        {oppose > 0 && <div className="bg-[#F87171]" style={{ width: `${(oppose / total) * 100}%` }} />}
+        {negative > 0 && <div className="bg-[#F87171]" style={{ width: `${(negative / total) * 100}%` }} />}
         {neutral > 0 && <div className="bg-[#FBBF24]" style={{ width: `${(neutral / total) * 100}%` }} />}
-        {support > 0 && <div className="bg-[#4ADE80]" style={{ width: `${(support / total) * 100}%` }} />}
+        {positive > 0 && <div className="bg-[#4ADE80]" style={{ width: `${(positive / total) * 100}%` }} />}
       </div>
       <span className="text-[10px] text-[#666462] shrink-0">
-        {support}{locale === "zh" ? "支持" : "S"} · {neutral}{locale === "zh" ? "中立" : "N"} · {oppose}{locale === "zh" ? "反对" : "O"}
+        {positive}{locale === "zh" ? "正面" : "P"} · {neutral}{locale === "zh" ? "中立" : "N"} · {negative}{locale === "zh" ? "负面" : "Neg"}
       </span>
     </div>
   );
@@ -216,6 +237,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 topicDimensions={topicClassification?.dimensions}
                 locale={locale}
                 stanceMode={isTopicMode}
+                overallStance={review.overall_stance}
               />
             );
           })}
@@ -266,23 +288,23 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                     )}
                   </div>
                   {/* Stance distribution bar for topic mode */}
-                  {isTopicMode && dim.support_count != null && (
-                    <StanceDistribution support={dim.support_count} oppose={dim.oppose_count ?? 0} neutral={dim.neutral_count ?? 0} locale={locale} />
+                  {isTopicMode && (dim.positive_count != null || dim.support_count != null) && (
+                    <StanceDistribution positive={dim.positive_count ?? dim.support_count ?? 0} negative={dim.negative_count ?? dim.oppose_count ?? 0} neutral={dim.neutral_count ?? 0} locale={locale} />
                   )}
                   <p className="text-sm text-[#9B9594]">{dim.analysis}</p>
                   {/* Key arguments for topic mode */}
                   {isTopicMode && dim.key_arguments ? (
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {dim.key_arguments.for && (
+                      {(dim.key_arguments.positive || dim.key_arguments.for) && (
                         <div className="rounded-lg bg-[#4ADE80]/5 border border-[#4ADE80]/10 p-2.5">
-                          <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "支持论点" : "For"}</span>
-                          <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.for}</p>
+                          <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "正面论点" : "Positive"}</span>
+                          <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.positive || dim.key_arguments.for}</p>
                         </div>
                       )}
-                      {dim.key_arguments.against && (
+                      {(dim.key_arguments.negative || dim.key_arguments.against) && (
                         <div className="rounded-lg bg-[#F87171]/5 border border-[#F87171]/10 p-2.5">
-                          <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "反对论点" : "Against"}</span>
-                          <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.against}</p>
+                          <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "负面论点" : "Negative"}</span>
+                          <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.negative || dim.key_arguments.against}</p>
                         </div>
                       )}
                     </div>

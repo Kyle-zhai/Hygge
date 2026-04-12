@@ -17,7 +17,7 @@ export async function GET(
     .from("evaluations")
     .select(`id, status, selected_persona_ids, created_at, completed_at,
       projects!inner (id, user_id, raw_input, parsed_data, url),
-      persona_reviews (id, persona_id, scores, review_text, strengths, weaknesses, llm_model, created_at),
+      persona_reviews (id, persona_id, scores, review_text, strengths, weaknesses, llm_model, created_at, overall_stance, cited_references),
       summary_reports (*)`)
     .eq("id", id)
     .single();

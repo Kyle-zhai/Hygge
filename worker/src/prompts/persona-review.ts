@@ -21,12 +21,13 @@ const FIXED_SCORES_SCHEMA = `"scores": {
 
 function buildDynamicDimensionsInstruction(dimensions: TopicClassification["dimensions"]): string {
   const lines = dimensions.map(d => `  * ${d.key}: ${d.description}`);
-  return `- For each dimension, express your STANCE (not a numerical score). Use one of: strongly_support, support, neutral, oppose, strongly_oppose
+  return `- For each dimension, express your STANCE (not a numerical score). Use one of: strongly_positive, positive, neutral, negative, strongly_negative
+- "positive" means you are leaning IN FAVOR of the topic/proposition on that dimension; "negative" means you are leaning AGAINST it. For open-ended questions, treat "positive" as endorsing the direction and "negative" as cautioning against it. Use "neutral" only when you genuinely have no lean.
 - Your stance reflects your character's position on that aspect of the topic:\n${lines.join("\n")}`;
 }
 
 function buildDynamicScoresSchema(dimensions: TopicClassification["dimensions"]): string {
-  const fields = dimensions.map(d => `    "${d.key}": "<strongly_support|support|neutral|oppose|strongly_oppose>"`).join(",\n");
+  const fields = dimensions.map(d => `    "${d.key}": "<strongly_positive|positive|neutral|negative|strongly_negative>"`).join(",\n");
   return `"stances": {\n${fields}\n  }`;
 }
 
@@ -52,6 +53,7 @@ IMPORTANT EVALUATION RULES:
 ${dimensionsInstruction}
 - Your scoring should reflect your scoring_weights — dimensions you care about more should have more detailed analysis
 - You MUST reference SPECIFIC details from the user's submission — quote exact phrases, mention specific features/claims/data points, and explain why they matter from your perspective. NEVER give generic feedback like "the product has potential" without citing what specifically impressed or concerned you.
+- Your review MUST include CONCRETE DATA when possible: cite statistics, market data, research findings, industry benchmarks, or relevant case studies that support your analysis. For example, instead of "the market is competitive", say "the CRM market reached $58B in 2023 (Gartner), dominated by Salesforce at 23% share — entering without a clear wedge is risky."
 - Your strengths/weaknesses should reflect YOUR perspective AND cite specific evidence from the submission
 - If something triggers your known biases or blind spots, let that show naturally
 - React to the topic the way you would in real life based on your contextual_behaviors
@@ -62,9 +64,13 @@ IMPORTANT: Always respond in English regardless of the input language. Your revi
 Respond ONLY with valid JSON in this exact format:
 {
   ${scoresSchema},
-  "review_text": "<Your detailed review, 200-400 words, written in first person as your character>",
+  "overall_stance": "<strongly_positive|positive|neutral|negative|strongly_negative>",
+  "review_text": "<Your detailed review, 300-500 words, written in first person as your character. Must include specific data points, statistics, or case studies to back up your claims.>",
   "strengths": ["<specific strength 1>", "<specific strength 2>", ...],
-  "weaknesses": ["<specific weakness 1>", "<specific weakness 2>", ...]
+  "weaknesses": ["<specific weakness 1>", "<specific weakness 2>", ...],
+  "cited_references": [
+    { "claim": "<specific factual claim you made>", "source": "<data source, study, benchmark, or case study>" }
+  ]
 }`;
 
   const prompt = `Please provide your perspective on this topic:

@@ -16,7 +16,7 @@ export default async function EvaluationResultPage({
   const { data: evaluation } = await supabase
     .from("evaluations")
     .select(`id, status, mode, topic_classification, selected_persona_ids, created_at, completed_at,
-      persona_reviews (id, persona_id, scores, review_text, strengths, weaknesses, llm_model, created_at),
+      persona_reviews (id, persona_id, scores, review_text, strengths, weaknesses, llm_model, created_at, overall_stance, cited_references),
       summary_reports (*)`)
     .eq("id", id)
     .single();

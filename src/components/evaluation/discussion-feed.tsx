@@ -49,19 +49,19 @@ function getStanceLabel(
   // Topic mode: string stances
   if (typeof values[0] === "string") {
     const stanceOrder: Record<string, number> = {
-      strongly_support: 2,
-      support: 1,
+      strongly_positive: 2, strongly_support: 2,
+      positive: 1, support: 1,
       neutral: 0,
-      oppose: -1,
-      strongly_oppose: -2,
+      negative: -1, oppose: -1,
+      strongly_negative: -2, strongly_oppose: -2,
     };
     const avg =
       values.reduce<number>(
         (sum, v) => sum + (stanceOrder[v as string] ?? 0),
         0,
       ) / values.length;
-    if (avg > 0.5) return { label: t("stanceSupportive"), color: "#4ADE80" };
-    if (avg < -0.5) return { label: t("stanceOpposed"), color: "#F87171" };
+    if (avg > 0.5) return { label: t("stancePositive"), color: "#4ADE80" };
+    if (avg < -0.5) return { label: t("stanceNegative"), color: "#F87171" };
     return { label: t("stanceNeutral"), color: "#FBBF24" };
   }
 

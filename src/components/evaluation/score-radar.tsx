@@ -34,14 +34,19 @@ function scoreTextColor(score: number): string {
   return "text-[#F87171]";
 }
 
-const STANCE_ORDER = ["strongly_oppose", "oppose", "neutral", "support", "strongly_support"] as const;
+const STANCE_ORDER = ["strongly_negative", "negative", "neutral", "positive", "strongly_positive"] as const;
 
 const stanceConfig: Record<string, { position: number; color: string; label: string; labelZh: string }> = {
-  strongly_oppose: { position: 5, color: "#F87171", label: "Strongly Oppose", labelZh: "强烈反对" },
-  oppose: { position: 25, color: "#F97316", label: "Oppose", labelZh: "反对" },
+  strongly_negative: { position: 5, color: "#F87171", label: "Strongly Negative", labelZh: "强烈负面" },
+  negative: { position: 25, color: "#F97316", label: "Negative", labelZh: "负面" },
   neutral: { position: 50, color: "#FBBF24", label: "Neutral", labelZh: "中立" },
-  support: { position: 75, color: "#4ADE80", label: "Support", labelZh: "支持" },
-  strongly_support: { position: 95, color: "#34D399", label: "Strongly Support", labelZh: "强烈支持" },
+  positive: { position: 75, color: "#4ADE80", label: "Positive", labelZh: "正面" },
+  strongly_positive: { position: 95, color: "#34D399", label: "Strongly Positive", labelZh: "强烈正面" },
+  // Legacy compat
+  strongly_oppose: { position: 5, color: "#F87171", label: "Strongly Negative", labelZh: "强烈负面" },
+  oppose: { position: 25, color: "#F97316", label: "Negative", labelZh: "负面" },
+  support: { position: 75, color: "#4ADE80", label: "Positive", labelZh: "正面" },
+  strongly_support: { position: 95, color: "#34D399", label: "Strongly Positive", labelZh: "强烈正面" },
 };
 
 export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode }: ScoreBarProps) {

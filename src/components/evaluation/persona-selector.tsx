@@ -477,6 +477,13 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           );
         })}
       </div>
+
+      {/* Introduction section */}
+      <div className="rounded-lg border border-[#2A2A2A] bg-[#141414]/60 px-4 py-3">
+        <p className="text-xs text-[#9B9594] leading-relaxed">
+          {mode === "product" ? t("personaIntroProduct") : t("personaIntroTopic")}
+        </p>
+      </div>
     </div>
   );
 }

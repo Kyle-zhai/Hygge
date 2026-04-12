@@ -45,6 +45,8 @@ export async function generateTopicSummaryReport(
     consensus_score: parsed.consensus_score,
     synthesis: parsed.synthesis,
     debate_highlights: parsed.debate_highlights,
+    positions: parsed.positions ?? null,
+    references: Array.isArray(parsed.references) ? parsed.references : null,
   };
 }
 

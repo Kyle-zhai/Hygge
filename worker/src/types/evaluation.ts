@@ -47,6 +47,18 @@ export interface TopicClassification {
   readiness_label_zh: string;
 }
 
+export type PersonaStance =
+  | "strongly_positive"
+  | "positive"
+  | "neutral"
+  | "negative"
+  | "strongly_negative";
+
+export interface CitedReference {
+  claim: string;
+  source?: string;
+}
+
 export interface PersonaReview {
   id: string;
   evaluation_id: string;
@@ -57,6 +69,8 @@ export interface PersonaReview {
   weaknesses: string[];
   llm_model: string;
   created_at: string;
+  overall_stance?: PersonaStance | null;
+  cited_references?: CitedReference[] | null;
 }
 
 export interface Evaluation {

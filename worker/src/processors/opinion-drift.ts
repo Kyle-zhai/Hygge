@@ -1,15 +1,10 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores } from "../types/evaluation.js";
+import type { OpinionDriftEntry } from "../types/report.js";
 import { buildOpinionDriftPrompt } from "../prompts/opinion-drift.js";
 
-export interface OpinionDriftEntry {
-  persona_id: string;
-  initial_leaning: "support" | "oppose" | "neutral" | "mixed";
-  final_leaning: "support" | "oppose" | "neutral" | "mixed";
-  shift_magnitude: "none" | "small" | "large";
-  reasoning: string;
-}
+export type { OpinionDriftEntry };
 
 interface ReviewForDrift {
   persona_id: string;

@@ -159,6 +159,8 @@
     "stanceSupportive": "支持",
     "stanceOpposed": "反对",
     "stanceNeutral": "中立",
+    "stancePositive": "正面",
+    "stanceNegative": "负面",
     "squads": "常用阵容",
     "saveSquad": "保存当前阵容",
     "squadDelete": "删除阵容",
@@ -169,7 +171,9 @@
     "compareSlotB": "讨论 B",
     "compareEmpty": "至少需要两次已完成的讨论才能对比。",
     "opinionDrift": "立场漂移",
-    "opinionDriftSubtitle": "每个人在听完全场之后会如何调整立场 —— 谁会被说服、谁会更坚定，以及背后的原因。"
+    "opinionDriftSubtitle": "每个人在听完全场之后会如何调整立场 —— 谁会被说服、谁会更坚定，以及背后的原因。",
+    "personaIntroProduct": "每位选中的人格将从各自独特的专业视角评估你的产品，针对可用性、设计、市场匹配度等维度提供深入反馈。",
+    "personaIntroTopic": "每位选中的人格将从各自独特的视角参与讨论，提供多元观点帮助你全面思考这个话题。"
   },
   "pricing": {
     "title": "只需一次升级，让你的问题活起来",

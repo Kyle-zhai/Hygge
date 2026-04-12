@@ -26,20 +26,30 @@ interface PersonaReviewCardProps {
   topicDimensions?: TopicDimension[];
   locale?: string;
   stanceMode?: boolean;
+  overallStance?: string | null;
 }
 
 const stanceBadgeConfig: Record<string, { color: string; label: string; labelZh: string }> = {
-  strongly_support: { color: "border-[#34D399]/30 bg-[#34D399]/10 text-[#34D399]", label: "Strongly Supportive", labelZh: "强烈支持" },
-  support: { color: "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]", label: "Supportive", labelZh: "支持" },
+  strongly_positive: { color: "border-[#34D399]/30 bg-[#34D399]/10 text-[#34D399]", label: "Strongly Positive", labelZh: "强烈正面" },
+  positive: { color: "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]", label: "Positive", labelZh: "正面" },
   neutral: { color: "border-[#FBBF24]/30 bg-[#FBBF24]/10 text-[#FBBF24]", label: "Neutral", labelZh: "中立" },
-  oppose: { color: "border-[#F97316]/30 bg-[#F97316]/10 text-[#F97316]", label: "Opposed", labelZh: "反对" },
-  strongly_oppose: { color: "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]", label: "Strongly Opposed", labelZh: "强烈反对" },
+  negative: { color: "border-[#F97316]/30 bg-[#F97316]/10 text-[#F97316]", label: "Negative", labelZh: "负面" },
+  strongly_negative: { color: "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]", label: "Strongly Negative", labelZh: "强烈负面" },
+  // Legacy compat
+  strongly_support: { color: "border-[#34D399]/30 bg-[#34D399]/10 text-[#34D399]", label: "Strongly Positive", labelZh: "强烈正面" },
+  support: { color: "border-[#4ADE80]/30 bg-[#4ADE80]/10 text-[#4ADE80]", label: "Positive", labelZh: "正面" },
+  oppose: { color: "border-[#F97316]/30 bg-[#F97316]/10 text-[#F97316]", label: "Negative", labelZh: "负面" },
+  strongly_oppose: { color: "border-[#F87171]/30 bg-[#F87171]/10 text-[#F87171]", label: "Strongly Negative", labelZh: "强烈负面" },
 };
 
 function getOverallStance(scores: Record<string, number | string>): string {
   const values = Object.values(scores).map(String);
-  const order = ["strongly_oppose", "oppose", "neutral", "support", "strongly_support"];
-  const numericValues = values.map(v => order.indexOf(v)).filter(v => v >= 0);
+  const order = ["strongly_negative", "negative", "neutral", "positive", "strongly_positive"];
+  const legacyMap: Record<string, string> = {
+    strongly_support: "strongly_positive", support: "positive", oppose: "negative", strongly_oppose: "strongly_negative",
+  };
+  const mapped = values.map(v => legacyMap[v] ?? v);
+  const numericValues = mapped.map(v => order.indexOf(v)).filter(v => v >= 0);
   if (numericValues.length === 0) return "neutral";
   const avg = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
   return order[Math.round(avg)];
@@ -56,13 +66,14 @@ export function PersonaReviewCard({
   topicDimensions,
   locale,
   stanceMode,
+  overallStance,
 }: PersonaReviewCardProps) {
   const t = useTranslations("evaluation");
   const [expanded, setExpanded] = useState(false);
 
   let headerBadge: { className: string; label: string };
   if (stanceMode) {
-    const overall = getOverallStance(scores);
+    const overall = overallStance || getOverallStance(scores);
     const cfg = stanceBadgeConfig[overall] || stanceBadgeConfig.neutral;
     headerBadge = { className: `border ${cfg.color}`, label: locale === "zh" ? cfg.labelZh : cfg.label };
   } else {

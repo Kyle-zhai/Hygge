@@ -99,6 +99,8 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
             strengths: review.strengths,
             weaknesses: review.weaknesses,
             llm_model: review.llm_model,
+            overall_stance: review.overall_stance ?? null,
+            cited_references: review.cited_references ?? [],
           });
 
           completedCount++;

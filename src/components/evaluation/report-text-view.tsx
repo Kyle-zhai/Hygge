@@ -21,6 +21,7 @@ import {
   BarChart3,
   MessageSquare,
   Users,
+  BookOpen,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -41,6 +42,7 @@ interface ReviewData {
   review_text: string;
   strengths: string[];
   weaknesses: string[];
+  overall_stance?: string | null;
 }
 
 interface ReportData {
@@ -69,10 +71,12 @@ interface ReportData {
     strengths?: string[];
     weaknesses?: string[];
     overall_leaning?: string;
+    positive_count?: number;
+    negative_count?: number;
+    neutral_count?: number;
     support_count?: number;
     oppose_count?: number;
-    neutral_count?: number;
-    key_arguments?: { for: string; against: string };
+    key_arguments?: { positive?: string; negative?: string; for?: string; against?: string };
   }>;
   readiness_label_en?: string;
   readiness_label_zh?: string;
@@ -102,7 +106,14 @@ interface ReportData {
   scenario_simulation?: {
     summary: string;
     adoption_rate_shift: number;
-    influence_events?: any[];
+    initial_adoption?: Array<{ persona_id: string; stance: string }>;
+    final_adoption?: Array<{ persona_id: string; stance: string }>;
+    influence_events?: Array<{
+      influencer_id: string;
+      influenced_id: string;
+      shift: string;
+      reason: string;
+    }>;
   };
   opinion_drift?: Array<{
     persona_id: string;
@@ -115,6 +126,19 @@ interface ReportData {
   consensus_score?: number | null;
   synthesis?: string | null;
   debate_highlights?: DebateHighlight[] | null;
+  positions?: {
+    question: string;
+    positive_label: string;
+    positive_summary: string;
+    negative_label: string;
+    negative_summary: string;
+  } | null;
+  references?: Array<{
+    title: string;
+    detail: string;
+    source?: string;
+    persona_name?: string;
+  }> | null;
 }
 
 interface TopicClassification {
@@ -475,10 +499,13 @@ interface TocItem {
 
 function LeaningPill({ leaning, highlighted }: { leaning: string; highlighted?: boolean }) {
   const map: Record<string, { label: string; color: string }> = {
-    support: { label: "Support", color: "#4ADE80" },
-    oppose: { label: "Oppose", color: "#F87171" },
+    positive: { label: "Positive", color: "#4ADE80" },
+    negative: { label: "Negative", color: "#F87171" },
     neutral: { label: "Neutral", color: "#C4A882" },
     mixed: { label: "Mixed", color: "#9B9594" },
+    // Legacy
+    support: { label: "Positive", color: "#4ADE80" },
+    oppose: { label: "Negative", color: "#F87171" },
   };
   const entry = map[leaning] ?? { label: leaning, color: "#9B9594" };
   return (
@@ -659,9 +686,14 @@ export function ReportTextView({
     if (!report) return [];
     const items: TocItem[] = [
       { id: "executive-summary", label: t("executiveSummary") },
+    ];
+    if (isTopicMode && report.positions) {
+      items.push({ id: "positions", label: locale === "zh" ? "观点框架" : "Positions" });
+    }
+    items.push(
       { id: "persona-perspectives", label: t("personaPerspectives") },
       { id: "consensus-disagreements", label: t("consensusAndDisagreements") },
-    ];
+    );
     if (report.multi_dimensional_analysis?.length > 0) {
       items.push({ id: "deep-analysis", label: t("deepAnalysis") });
     }
@@ -680,6 +712,9 @@ export function ReportTextView({
       if (report.action_items?.length > 0) {
         items.push({ id: "action-items", label: t("actionItems") });
       }
+    }
+    if (report.references && report.references.length > 0) {
+      items.push({ id: "references", label: locale === "zh" ? "参考资料" : "References" });
     }
     return items;
   }, [report, t, isTopicMode, locale]);
@@ -851,6 +886,36 @@ export function ReportTextView({
         </AnimatedSection>
 
         {/* ════════════════════════════════════════════════════════════
+            POSITIONS FRAMING (topic mode only)
+        ════════════════════════════════════════════════════════════ */}
+        {isTopicMode && report.positions && (
+          <AnimatedSection id="positions">
+            <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
+              <p className="text-xs font-medium uppercase tracking-widest text-[#C4A882] mb-3">
+                {locale === "zh" ? "观点框架" : "Positions"}
+              </p>
+              <p className="text-sm text-[#9B9594] mb-4">{report.positions.question}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-[#4ADE80]/20 bg-[#4ADE80]/5 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-2.5 w-2.5 rounded-full bg-[#4ADE80]" />
+                    <span className="text-sm font-semibold text-[#4ADE80]">{report.positions.positive_label}</span>
+                  </div>
+                  <p className="text-xs text-[#9B9594] leading-relaxed">{report.positions.positive_summary}</p>
+                </div>
+                <div className="rounded-lg border border-[#F87171]/20 bg-[#F87171]/5 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-2.5 w-2.5 rounded-full bg-[#F87171]" />
+                    <span className="text-sm font-semibold text-[#F87171]">{report.positions.negative_label}</span>
+                  </div>
+                  <p className="text-xs text-[#9B9594] leading-relaxed">{report.positions.negative_summary}</p>
+                </div>
+              </div>
+            </div>
+          </AnimatedSection>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
             PERSONA PERSPECTIVES
         ════════════════════════════════════════════════════════════ */}
         <AnimatedSection id="persona-perspectives">
@@ -882,17 +947,23 @@ export function ReportTextView({
                   ? (scoreValues as number[]).reduce((a, b) => a + b, 0) / scoreValues.length
                   : null;
 
-                const stanceOrder = ["strongly_oppose", "oppose", "neutral", "support", "strongly_support"];
-                const stanceLabels: Record<string, { text: string; color: string; hex: string }> = {
-                  strongly_support: { text: "text-[#34D399]", color: "Strongly Support", hex: "#34D399" },
-                  support: { text: "text-[#4ADE80]", color: "Support", hex: "#4ADE80" },
-                  neutral: { text: "text-[#FBBF24]", color: "Neutral", hex: "#FBBF24" },
-                  oppose: { text: "text-[#F97316]", color: "Oppose", hex: "#F97316" },
-                  strongly_oppose: { text: "text-[#F87171]", color: "Strongly Oppose", hex: "#F87171" },
+                const stanceOrder = ["strongly_negative", "negative", "neutral", "positive", "strongly_positive"];
+                const legacyMap: Record<string, string> = {
+                  strongly_support: "strongly_positive", support: "positive", oppose: "negative", strongly_oppose: "strongly_negative",
                 };
-                let overallStance: string | null = null;
-                if (isStance) {
-                  const nums = (scoreValues as string[]).map(v => stanceOrder.indexOf(v)).filter(v => v >= 0);
+                const stanceLabels: Record<string, { text: string; color: string; hex: string }> = {
+                  strongly_positive: { text: "text-[#34D399]", color: "Strongly Positive", hex: "#34D399" },
+                  positive: { text: "text-[#4ADE80]", color: "Positive", hex: "#4ADE80" },
+                  neutral: { text: "text-[#FBBF24]", color: "Neutral", hex: "#FBBF24" },
+                  negative: { text: "text-[#F97316]", color: "Negative", hex: "#F97316" },
+                  strongly_negative: { text: "text-[#F87171]", color: "Strongly Negative", hex: "#F87171" },
+                };
+                let overallStance: string | null = review?.overall_stance
+                  ? (legacyMap[review.overall_stance] ?? review.overall_stance)
+                  : null;
+                if (!overallStance && isStance) {
+                  const mapped = (scoreValues as string[]).map(v => legacyMap[v] ?? v);
+                  const nums = mapped.map(v => stanceOrder.indexOf(v)).filter(v => v >= 0);
                   if (nums.length > 0) {
                     overallStance = stanceOrder[Math.round(nums.reduce((a, b) => a + b, 0) / nums.length)];
                   }
@@ -1281,11 +1352,16 @@ export function ReportTextView({
                 const colors = scoreColor(dimScore);
 
                 const leaningStyles: Record<string, { color: string; label: string; labelZh: string }> = {
-                  strongly_support: { color: "#34D399", label: "Strongly Support", labelZh: "强烈支持" },
-                  support: { color: "#4ADE80", label: "Support", labelZh: "支持" },
+                  strongly_positive: { color: "#34D399", label: "Strongly Positive", labelZh: "强烈正面" },
+                  positive: { color: "#4ADE80", label: "Positive", labelZh: "正面" },
                   neutral: { color: "#FBBF24", label: "Neutral", labelZh: "中立" },
-                  oppose: { color: "#F97316", label: "Oppose", labelZh: "反对" },
-                  strongly_oppose: { color: "#F87171", label: "Strongly Oppose", labelZh: "强烈反对" },
+                  negative: { color: "#F97316", label: "Negative", labelZh: "负面" },
+                  strongly_negative: { color: "#F87171", label: "Strongly Negative", labelZh: "强烈负面" },
+                  // Legacy
+                  strongly_support: { color: "#34D399", label: "Strongly Positive", labelZh: "强烈正面" },
+                  support: { color: "#4ADE80", label: "Positive", labelZh: "正面" },
+                  oppose: { color: "#F97316", label: "Negative", labelZh: "负面" },
+                  strongly_oppose: { color: "#F87171", label: "Strongly Negative", labelZh: "强烈负面" },
                 };
                 const leaning = leaningStyles[dim.overall_leaning ?? ""] || leaningStyles.neutral;
 
@@ -1319,18 +1395,21 @@ export function ReportTextView({
                     </div>
 
                     {/* Stance distribution bar */}
-                    {isStanceMode && dim.support_count != null && (() => {
-                      const total = (dim.support_count ?? 0) + (dim.oppose_count ?? 0) + (dim.neutral_count ?? 0);
+                    {isStanceMode && (dim.positive_count != null || dim.support_count != null) && (() => {
+                      const pos = dim.positive_count ?? dim.support_count ?? 0;
+                      const neg = dim.negative_count ?? dim.oppose_count ?? 0;
+                      const neu = dim.neutral_count ?? 0;
+                      const total = pos + neg + neu;
                       if (total === 0) return null;
                       return (
                         <div className="flex items-center gap-2 mb-3">
                           <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[#1C1C1C]">
-                            {(dim.oppose_count ?? 0) > 0 && <div className="bg-[#F87171]" style={{ width: `${((dim.oppose_count ?? 0) / total) * 100}%` }} />}
-                            {(dim.neutral_count ?? 0) > 0 && <div className="bg-[#FBBF24]" style={{ width: `${((dim.neutral_count ?? 0) / total) * 100}%` }} />}
-                            {(dim.support_count ?? 0) > 0 && <div className="bg-[#4ADE80]" style={{ width: `${((dim.support_count ?? 0) / total) * 100}%` }} />}
+                            {neg > 0 && <div className="bg-[#F87171]" style={{ width: `${(neg / total) * 100}%` }} />}
+                            {neu > 0 && <div className="bg-[#FBBF24]" style={{ width: `${(neu / total) * 100}%` }} />}
+                            {pos > 0 && <div className="bg-[#4ADE80]" style={{ width: `${(pos / total) * 100}%` }} />}
                           </div>
                           <span className="text-[10px] text-[#666462] shrink-0">
-                            {dim.support_count}{locale === "zh" ? "支持" : "S"} · {dim.neutral_count ?? 0}{locale === "zh" ? "中立" : "N"} · {dim.oppose_count ?? 0}{locale === "zh" ? "反对" : "O"}
+                            {pos}{locale === "zh" ? "正面" : "P"} · {neu}{locale === "zh" ? "中立" : "N"} · {neg}{locale === "zh" ? "负面" : "Neg"}
                           </span>
                         </div>
                       );
@@ -1346,16 +1425,16 @@ export function ReportTextView({
                     {/* Key arguments (topic) or Strengths & Weaknesses (product) */}
                     {isStanceMode && dim.key_arguments ? (
                       <div className="flex flex-col sm:flex-row gap-4">
-                        {dim.key_arguments.for && (
+                        {(dim.key_arguments.positive || dim.key_arguments.for) && (
                           <div className="flex-1 rounded-lg bg-[#4ADE80]/5 border border-[#4ADE80]/10 p-3">
-                            <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "支持论点" : "For"}</span>
-                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.for}</p>
+                            <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "正面论点" : "Positive"}</span>
+                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.positive || dim.key_arguments.for}</p>
                           </div>
                         )}
-                        {dim.key_arguments.against && (
+                        {(dim.key_arguments.negative || dim.key_arguments.against) && (
                           <div className="flex-1 rounded-lg bg-[#F87171]/5 border border-[#F87171]/10 p-3">
-                            <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "反对论点" : "Against"}</span>
-                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.against}</p>
+                            <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "负面论点" : "Negative"}</span>
+                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.negative || dim.key_arguments.against}</p>
                           </div>
                         )}
                       </div>
@@ -1845,6 +1924,51 @@ export function ReportTextView({
                   </motion.div>
                 );
               })}
+            </div>
+          </AnimatedSection>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            REFERENCES
+        ════════════════════════════════════════════════════════════ */}
+        {report.references && report.references.length > 0 && (
+          <AnimatedSection id="references">
+            <SectionTitle icon={BookOpen}>
+              {locale === "zh" ? "参考资料" : "References & Sources"}
+            </SectionTitle>
+            <div className="space-y-3">
+              {report.references.map((ref, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 6 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.04 }}
+                  className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1C1C1C] text-[10px] font-mono text-[#666462]">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#EAEAE8]">{ref.title}</p>
+                      <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{ref.detail}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {ref.source && (
+                          <span className="rounded-md bg-[#C4A882]/10 px-2 py-0.5 text-[10px] text-[#C4A882]">
+                            {ref.source}
+                          </span>
+                        )}
+                        {ref.persona_name && (
+                          <span className="rounded-md bg-[#1C1C1C] px-2 py-0.5 text-[10px] text-[#666462]">
+                            {locale === "zh" ? "引用者" : "Cited by"}: {ref.persona_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </AnimatedSection>
         )}

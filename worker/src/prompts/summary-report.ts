@@ -18,13 +18,13 @@ function buildDynamicDimensionSchema(dimensions: TopicClassification["dimensions
       "dimension": "<${keys}>",
       "label_en": "<English label for this dimension>",
       "label_zh": "<Chinese label for this dimension>",
-      "overall_leaning": "<strongly_support|support|neutral|oppose|strongly_oppose>",
-      "support_count": <number of personas with support or strongly_support>,
-      "oppose_count": <number of personas with oppose or strongly_oppose>,
+      "overall_leaning": "<strongly_positive|positive|neutral|negative|strongly_negative>",
+      "positive_count": <number of personas with positive or strongly_positive>,
+      "negative_count": <number of personas with negative or strongly_negative>,
       "neutral_count": <number of personas with neutral>,
       "key_arguments": {
-        "for": "<main arguments from supporting personas>",
-        "against": "<main arguments from opposing personas>"
+        "positive": "<main arguments from personas leaning positive>",
+        "negative": "<main arguments from personas leaning negative>"
       },
       "analysis": "<100-200 word deep analysis for this dimension>"
     }
@@ -94,7 +94,22 @@ Respond ONLY with valid JSON matching this structure:
   ],
   "market_readiness": "<low|medium|high>",
   "readiness_label_en": "<contextual label that fits the topic type — e.g. 'Implementation Readiness' for policies, 'Feasibility' for ideas, 'Decision Clarity' for decisions, 'Creative Potential' for creative works. NEVER use 'Market Readiness' unless the topic is actually about a product/market.>",
-  "readiness_label_zh": "<Chinese translation of the contextual label above>"
+  "readiness_label_zh": "<Chinese translation of the contextual label above>",
+  "positions": {
+    "question": "<restate the core question/topic being debated in one sentence>",
+    "positive_label": "<short label for the green/positive side, e.g. 'In favor of launching at $20/mo'>",
+    "positive_summary": "<1-2 sentence summary of the positive position>",
+    "negative_label": "<short label for the red/negative side, e.g. 'Against launching at $20/mo'>",
+    "negative_summary": "<1-2 sentence summary of the negative position>"
+  },
+  "references": [
+    {
+      "title": "<reference title, e.g. 'SaaS pricing benchmarks 2024'>",
+      "detail": "<what this reference says and how it's relevant>",
+      "source": "<origin: persona name, study, report, or industry data>",
+      "persona_name": "<persona who cited or would cite this, if applicable>"
+    }
+  ]
 }
 
 IMPORTANT for debate_highlights:

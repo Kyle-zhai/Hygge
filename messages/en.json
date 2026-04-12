@@ -159,6 +159,8 @@
     "stanceSupportive": "Supportive",
     "stanceOpposed": "Opposed",
     "stanceNeutral": "Neutral",
+    "stancePositive": "Positive",
+    "stanceNegative": "Negative",
     "squads": "Squads",
     "saveSquad": "Save as squad",
     "squadDelete": "Delete squad",
@@ -169,7 +171,9 @@
     "compareSlotB": "Discussion B",
     "compareEmpty": "You need at least two completed discussions to compare.",
     "opinionDrift": "Opinion drift",
-    "opinionDriftSubtitle": "How each voice would shift after hearing the room — where minds flip, where they harden, and why."
+    "opinionDriftSubtitle": "How each voice would shift after hearing the room — where minds flip, where they harden, and why.",
+    "personaIntroProduct": "Each selected persona will evaluate your product from their unique professional perspective, providing targeted feedback on usability, design, market fit, and more.",
+    "personaIntroTopic": "Each selected persona will join the discussion from their unique perspective, offering diverse viewpoints to help you think through the topic."
   },
   "pricing": {
     "title": "One upgrade away from bringing your questions to life",
