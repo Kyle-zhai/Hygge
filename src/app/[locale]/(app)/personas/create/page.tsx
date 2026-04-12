@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Sparkles, Upload, ArrowLeft, Loader2 } from "lucide-react";
+import { Sparkles, Upload, ArrowLeft, Loader2, FileText, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 type Tab = "form" | "import";
@@ -19,17 +19,44 @@ export default function CreatePersonaPage() {
   const [occupation, setOccupation] = useState("");
   const [personality, setPersonality] = useState("");
   const [background, setBackground] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [age, setAge] = useState("");
+  const [location, setLocation] = useState("");
+  const [education, setEducation] = useState("");
+  const [speakingStyle, setSpeakingStyle] = useState("");
+  const [knownBiases, setKnownBiases] = useState("");
 
   const [importText, setImportText] = useState("");
   const [importName, setImportName] = useState("");
+  const [fileName, setFileName] = useState("");
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setImportText((ev.target?.result as string) ?? "");
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
 
   async function handleSubmit() {
     setSubmitting(true);
     setError("");
     try {
+      const advancedParts: string[] = [];
+      if (age) advancedParts.push(`Age: ${age}`);
+      if (location) advancedParts.push(`Location: ${location}`);
+      if (education) advancedParts.push(`Education: ${education}`);
+      if (speakingStyle) advancedParts.push(`Speaking style: ${speakingStyle}`);
+      if (knownBiases) advancedParts.push(`Known biases: ${knownBiases}`);
+      const fullBackground = [background, ...advancedParts].filter(Boolean).join("\n");
+
       const body =
         tab === "form"
-          ? { name, occupation, personality, background }
+          ? { name, occupation, personality, background: fullBackground }
           : {
               name: importName || "Imported Persona",
               occupation: "Imported",
@@ -57,7 +84,7 @@ export default function CreatePersonaPage() {
     }
   }
 
-  const formValid = tab === "form" ? name && occupation && personality : importText.length > 20;
+  const formValid = tab === "form" ? name && occupation && personality : importName && importText.length > 20;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -110,41 +137,108 @@ export default function CreatePersonaPage() {
 
       {tab === "form" ? (
         <div className="space-y-5">
-          <Field label="Name" placeholder="e.g. Elon Musk, Sarah the Designer" value={name} onChange={setName} />
-          <Field label="Occupation" placeholder="e.g. CEO of Tesla & SpaceX, Senior UX Designer" value={occupation} onChange={setOccupation} />
+          <Field label="Name" placeholder="e.g. Alex Chen, Maria Rodriguez" value={name} onChange={setName} />
+          <Field label="Occupation" placeholder="e.g. Startup Founder, Senior UX Designer, College Student" value={occupation} onChange={setOccupation} />
           <FieldArea
             label="Personality & Values"
-            placeholder="Describe their personality, values, how they think and communicate. e.g. 'First-principles thinker, risk-taking, blunt and direct, obsessed with efficiency and scale...'"
+            placeholder="Describe their personality, values, how they think and communicate. e.g. 'Analytical and data-driven, skeptical of hype, values simplicity over complexity, always asks about ROI...'"
             value={personality}
             onChange={setPersonality}
             rows={4}
           />
           <FieldArea
             label="Background (optional)"
-            placeholder="Any additional background: life story, expertise areas, known opinions, cultural context..."
+            placeholder="Any additional context: life experiences, expertise areas, cultural background, opinions..."
             value={background}
             onChange={setBackground}
             rows={3}
           />
+
+          {/* Advanced details toggle */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-sm text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+            Advanced details
+          </button>
+
+          {showAdvanced && (
+            <div className="space-y-4 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C]/50 p-4">
+              <p className="text-xs text-[#C4A882]">
+                The more details you provide, the richer and more realistic the persona will be. All fields are optional.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Age" placeholder="e.g. 35" value={age} onChange={setAge} />
+                <Field label="Location" placeholder="e.g. San Francisco, USA" value={location} onChange={setLocation} />
+              </div>
+              <Field label="Education" placeholder="e.g. MBA from a state university" value={education} onChange={setEducation} />
+              <FieldArea
+                label="Speaking Style"
+                placeholder="e.g. Uses lots of metaphors, speaks in short decisive sentences, often references data..."
+                value={speakingStyle}
+                onChange={setSpeakingStyle}
+                rows={2}
+              />
+              <FieldArea
+                label="Known Biases & Blind Spots"
+                placeholder="e.g. Tends to favor technical solutions over process changes, underestimates marketing..."
+                value={knownBiases}
+                onChange={setKnownBiases}
+                rows={2}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-5">
           <Field
             label="Persona Name"
-            placeholder="e.g. Elon Musk"
+            placeholder="e.g. The Skeptical Engineer, Budget-Conscious Mom"
             value={importName}
             onChange={setImportName}
           />
-          <FieldArea
-            label="Character Definition"
-            placeholder="Paste a character card JSON, system prompt, personality definition, or any text that describes the persona. Supports SillyTavern cards, OpenPersona JSON, or plain text descriptions."
-            value={importText}
-            onChange={setImportText}
-            rows={10}
-          />
-          <p className="text-xs text-[#666462]">
-            Supports: plain text descriptions, JSON character cards, system prompts, GitHub raw URLs content
-          </p>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">
+              Character Document
+            </label>
+            {fileName ? (
+              <div className="flex items-center gap-3 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-3">
+                <FileText className="h-5 w-5 shrink-0 text-[#C4A882]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-[#EAEAE8]">{fileName}</p>
+                  <p className="text-xs text-[#666462]">
+                    {importText.length.toLocaleString()} characters
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setFileName(""); setImportText(""); }}
+                  className="rounded-lg p-1.5 text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed border-[#2A2A2A] bg-[#0C0C0C] px-4 py-8 transition-colors hover:border-[#C4A882]/40">
+                <Upload className="h-6 w-6 text-[#666462]" />
+                <div className="text-center">
+                  <p className="text-sm text-[#9B9594]">
+                    Drop a <span className="text-[#C4A882]">.md</span> or <span className="text-[#C4A882]">.txt</span> file here, or click to browse
+                  </p>
+                  <p className="mt-1 text-xs text-[#666462]">
+                    Any character description, skill definition, or persona document
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  accept=".md,.txt,.json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
         </div>
       )}
 

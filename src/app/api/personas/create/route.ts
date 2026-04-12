@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   const { data: subscription } = await supabase
     .from("subscriptions")
-    .select("plan, custom_personas_limit")
+    .select("plan")
     .eq("user_id", user.id)
     .single();
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Custom personas require a Pro or Max plan" }, { status: 403 });
   }
 
-  const limit = subscription?.custom_personas_limit ?? planConfig.customPersonasLimit;
+  const limit = planConfig.customPersonasLimit;
   if (limit !== -1) {
     const { count } = await supabase
       .from("personas")
