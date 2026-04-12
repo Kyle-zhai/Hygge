@@ -55,23 +55,42 @@ export async function POST(request: Request) {
       importedText,
     });
 
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || "" });
+    const baseURL = process.env.LLM_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    const apiKey = process.env.LLM_API_KEY || "";
+    const model = process.env.LLM_MODEL || "qwen-max";
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      system,
-      messages: [{ role: "user", content: prompt }],
+    const llmResponse = await fetch(`${baseURL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      }),
     });
 
-    let text = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => ("text" in b ? b.text : ""))
-      .join("");
+    if (!llmResponse.ok) {
+      const err = await llmResponse.text();
+      console.error("LLM API error:", err);
+      throw new Error(`LLM API error (${llmResponse.status})`);
+    }
+
+    const llmData = await llmResponse.json();
+    let text = llmData.choices?.[0]?.message?.content ?? "";
 
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) text = fenceMatch[1].trim();
+
+    text = text.replace(/[\x00-\x1F\x7F]/g, (ch: string) => {
+      if (ch === "\n" || ch === "\r" || ch === "\t") return " ";
+      return "";
+    });
 
     const persona = JSON.parse(text);
 
