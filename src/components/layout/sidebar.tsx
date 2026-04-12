@@ -14,7 +14,8 @@ import {
   Loader2,
   X,
   MoreHorizontal,
-  Share2,
+  ExternalLink,
+  ChevronRight,
   Trash2,
   Scale,
 } from "lucide-react";
@@ -38,7 +39,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ itemId: string; top: number; left: number } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const isNewPage = pathname.includes("/evaluate/new");
@@ -57,6 +58,53 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
     }
   }, [collapsed]);
 
+  // Close the floating menu on scroll, resize, or Escape — the computed position
+  // would otherwise stop matching its anchor button.
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    const scrollEl = discussionRef.current;
+    scrollEl?.addEventListener("scroll", close);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      scrollEl?.removeEventListener("scroll", close);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
+
+  function openMenuFor(e: React.MouseEvent<HTMLButtonElement>, itemId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const MENU_W = 192;
+    const MENU_H = 104;
+    const GAP = 8;
+    const MARGIN = 12;
+
+    // Prefer the right side of the button; fall back to the left if it would overflow.
+    let left = rect.right + GAP;
+    if (left + MENU_W > window.innerWidth - MARGIN) {
+      left = Math.max(MARGIN, rect.left - MENU_W - GAP);
+    }
+
+    // Align to button top; if the menu would overflow the viewport bottom,
+    // clamp it upward so the whole menu stays visible.
+    let top = rect.top - 6;
+    if (top + MENU_H > window.innerHeight - MARGIN) {
+      top = window.innerHeight - MARGIN - MENU_H;
+    }
+    if (top < MARGIN) top = MARGIN;
+
+    setMenu({ itemId, top, left });
+  }
+
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -70,7 +118,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
     try {
       const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
       if (res.ok) {
-        setMenuOpenId(null);
+        setMenu(null);
         router.push("/en/evaluate/new?mode=topic");
         router.refresh();
       }
@@ -84,7 +132,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       ? `${window.location.origin}/en/evaluate/${item.evaluationId}/result`
       : window.location.href;
     navigator.clipboard.writeText(url);
-    setMenuOpenId(null);
+    setMenu(null);
   }
 
   const filteredHistory = searchQuery
@@ -205,7 +253,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
               : "#";
             const active = item.evaluationId && pathname.includes(item.evaluationId);
             const ModeIcon = item.mode === "product" ? Package : MessageCircle;
-            const menuOpen = menuOpenId === item.id;
+            const menuOpen = menu?.itemId === item.id;
             return (
               <div key={item.id} className="group relative">
                 <Link
@@ -227,45 +275,13 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
 
                 {/* Three-dot menu — visible on hover */}
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setMenuOpenId(menuOpen ? null : item.id);
-                  }}
+                  onClick={(e) => (menuOpen ? setMenu(null) : openMenuFor(e, item.id))}
                   className={`absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md text-[#666462] transition-all hover:bg-[#2A2A2A] hover:text-[#EAEAE8] ${
                     menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </button>
-
-                {/* Dropdown menu */}
-                {menuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />
-                    <div className="absolute right-0 top-full z-50 mt-1 w-36 rounded-lg border border-[#2A2A2A] bg-[#141414] py-1 shadow-lg">
-                      <button
-                        onClick={() => handleShare(item)}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
-                      >
-                        <Share2 className="h-3.5 w-3.5" />
-                        <span>Share</span>
-                      </button>
-                      <button
-                        onClick={() => { setMenuOpenId(null); setConfirmDeleteId(item.id); }}
-                        disabled={deleting === item.id}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[#F87171] transition-colors hover:bg-[#F87171]/10"
-                      >
-                        {deleting === item.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             );
           })}
@@ -358,6 +374,60 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
             </motion.aside>
           </>
         )}
+      </AnimatePresence>
+
+      {/* Floating history item menu — rendered at top level so it escapes
+          the sidebar's scroll clip, positioned via fixed coords computed from
+          the trigger button's viewport rect. */}
+      <AnimatePresence>
+        {menu && (() => {
+          const item = history.find((i) => i.id === menu.itemId);
+          if (!item) return null;
+          return (
+            <>
+              <div
+                className="fixed inset-0 z-[55]"
+                onClick={() => setMenu(null)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setMenu(null);
+                }}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: -2 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -2 }}
+                transition={{ duration: 0.12, ease: "easeOut" }}
+                style={{ top: menu.top, left: menu.left }}
+                className="fixed z-[60] w-48 rounded-xl border border-[#2A2A2A] bg-[#141414] p-1.5 shadow-2xl shadow-black/50"
+              >
+                <button
+                  onClick={() => handleShare(item)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#EAEAE8] transition-colors hover:bg-[#1C1C1C]"
+                >
+                  <ExternalLink className="h-4 w-4 text-[#9B9594]" />
+                  <span className="flex-1 text-left font-medium">Share</span>
+                  <ChevronRight className="h-4 w-4 text-[#666462]" />
+                </button>
+                <button
+                  onClick={() => {
+                    setMenu(null);
+                    setConfirmDeleteId(item.id);
+                  }}
+                  disabled={deleting === item.id}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#F87171] transition-colors hover:bg-[#F87171]/10"
+                >
+                  {deleting === item.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  <span className="flex-1 text-left font-medium">Delete</span>
+                </button>
+              </motion.div>
+            </>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Delete confirmation dialog */}
