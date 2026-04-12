@@ -123,7 +123,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
       : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
 
-    const scenarioTask = (mode === "product" || planTier === "max")
+    const scenarioTask = planTier === "max"
       ? runScenarioSimulation(llm, personas as Persona[], reviews).catch((simError) => {
           console.error(`[${evaluationId}] Scenario simulation failed, skipping:`, simError);
           return null;
