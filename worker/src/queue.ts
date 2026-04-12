@@ -13,7 +13,13 @@ const connection: ConnectionOptions = new IORedis(redisUrl, {
   maxRetriesPerRequest: null,
 });
 
-export const evaluationQueue = new Queue("evaluations", { connection });
+export const evaluationQueue = new Queue("evaluations", {
+  connection,
+  defaultJobOptions: {
+    removeOnComplete: { age: 3600, count: 100 },
+    removeOnFail: { age: 24 * 3600, count: 100 },
+  },
+});
 
 export function createWorker(
   processor: (job: import("bullmq").Job) => Promise<unknown>,
@@ -22,5 +28,8 @@ export function createWorker(
   return new Worker("evaluations", processor, {
     connection,
     concurrency,
+    drainDelay: 30,
+    stalledInterval: 60_000,
+    lockDuration: 60_000,
   });
 }

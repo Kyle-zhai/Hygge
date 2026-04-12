@@ -50,15 +50,15 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       }
     }
 
-    const parsedData = await parseProject(llm, rawInput, url, attachmentDescriptions);
+    // Parse project and (if topic mode) classify topic in parallel — both only need rawInput.
+    const parseTask = parseProject(llm, rawInput, url, attachmentDescriptions);
+    const classifyTask = mode === "topic" ? classifyTopic(llm, rawInput) : Promise.resolve(null);
+    const [parsedData, classification] = await Promise.all([parseTask, classifyTask]);
+
     await supabase.from("projects").update({ parsed_data: parsedData }).eq("id", projectId);
 
-    // 3. Topic mode: classify topic and generate dynamic dimensions
     let dimensions: TopicClassification["dimensions"] | undefined;
-
-    if (mode === "topic") {
-      console.log(`[${evaluationId}] Topic mode — classifying topic...`);
-      const classification = await classifyTopic(llm, rawInput);
+    if (classification) {
       dimensions = classification.dimensions;
       console.log(`[${evaluationId}] Topic type: ${classification.topic_type}, dimensions: ${dimensions.map(d => d.key).join(", ")}`);
       await supabase.from("evaluations").update({ topic_classification: classification }).eq("id", evaluationId);
@@ -114,36 +114,29 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       reviews.push(...batchResults);
     }
 
-    // 6. Generate discussion summary report
-    console.log(`[${evaluationId}] Generating summary report...`);
-    const summaryReport = mode === "topic" && dimensions
-      ? await generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
-      : await generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
-    console.log(`[${evaluationId}] Summary report generated`);
+    // 6. Summary report, scenario sim, and opinion drift all depend on reviews
+    //    but are independent of each other — run them in parallel.
+    console.log(`[${evaluationId}] Running summary + sim + drift in parallel...`);
+    const summaryTask = mode === "topic" && dimensions
+      ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
+      : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
 
-    // 7a. Run social dynamics scenario simulation (Max plan, both modes)
-    if (planTier === "max") {
-      console.log(`[${evaluationId}] Running scenario simulation (${mode} mode)...`);
-      try {
-        const simulation = await runScenarioSimulation(llm, personas as Persona[], reviews);
-        summaryReport.scenario_simulation = simulation;
-        console.log(`[${evaluationId}] Scenario simulation done`);
-      } catch (simError) {
-        console.error(`[${evaluationId}] Scenario simulation failed, skipping:`, simError);
-        summaryReport.scenario_simulation = null;
-      }
-    }
+    const scenarioTask = planTier === "max"
+      ? runScenarioSimulation(llm, personas as Persona[], reviews).catch((simError) => {
+          console.error(`[${evaluationId}] Scenario simulation failed, skipping:`, simError);
+          return null;
+        })
+      : Promise.resolve(null);
 
-    // 7b. Run opinion drift analysis (all plans, both modes — cheap single LLM call)
-    try {
-      console.log(`[${evaluationId}] Running opinion drift analysis...`);
-      const drift = await generateOpinionDrift(llm, personas as Persona[], reviews);
-      summaryReport.opinion_drift = drift.length > 0 ? drift : null;
-      console.log(`[${evaluationId}] Opinion drift analysis done (${drift.length} entries)`);
-    } catch (driftError) {
+    const driftTask = generateOpinionDrift(llm, personas as Persona[], reviews).catch((driftError) => {
       console.error(`[${evaluationId}] Opinion drift failed, skipping:`, driftError);
-      summaryReport.opinion_drift = null;
-    }
+      return null;
+    });
+
+    const [summaryReport, simulation, drift] = await Promise.all([summaryTask, scenarioTask, driftTask]);
+    summaryReport.scenario_simulation = simulation;
+    summaryReport.opinion_drift = drift && drift.length > 0 ? drift : null;
+    console.log(`[${evaluationId}] Summary + sim + drift complete (${drift?.length ?? 0} drift entries)`);
 
     await job.updateProgress(95);
 
