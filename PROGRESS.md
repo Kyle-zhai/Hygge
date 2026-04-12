@@ -8,12 +8,36 @@ Hygge 是一个 AI 驱动的多视角评估平台（Round Table Discussion）。
 
 ### 核心架构
 
-- **前端**：Next.js App Router + next-intl（中英双语）
-- **后端**：Next.js API Routes + BullMQ Worker（异步 LLM 处理）
+- **前端**：Next.js App Router + next-intl（中英双语），部署在 **Vercel**（海外服务器）
+- **后端**：Next.js API Routes（仅负责鉴权、验证、队列调度）+ **BullMQ Worker**（实际 LLM 处理）
+- **Worker**：独立 Node.js 服务，部署在 **Railway**，通过 Docker 构建
 - **数据库**：Supabase (Postgres + RLS)
-- **LLM**：Qwen API（OpenAI-compatible 接口），通过 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 配置
+- **消息队列**：Redis（Upstash），连接 Vercel API Routes 和 Railway Worker
+- **LLM**：阿里云 DashScope Qwen API（OpenAI-compatible 接口），通过 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 配置
 - **支付**：Stripe Subscription + Webhook
-- **部署**：Vercel（Next.js 前端）+ 独立 Worker 服务
+
+### 为什么 LLM 调用必须在 Worker（Railway）而不是 Vercel
+
+**核心原因：Vercel 服务器在海外，无法访问阿里云 DashScope API。**
+
+我们使用的 LLM 是阿里云的 Qwen API（DashScope），这是一个中国大陆的云服务。Vercel 的 Serverless Functions 默认运行在美国东部（iad1），从海外服务器调用 DashScope 会被拒绝（返回 400 "Model not exist" 等误导性错误）。
+
+Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有 LLM 调用都必须通过 Worker 执行。
+
+**架构流程**：
+```
+用户操作 → Vercel API Route（鉴权、验证、限额检查）
+         → 写入 Redis 队列（BullMQ job）
+         → Railway Worker 取出任务
+         → Worker 调用 DashScope Qwen API
+         → Worker 将结果写入 Supabase
+         → 前端轮询/Realtime 获取结果
+```
+
+**受影响的功能**：
+- Evaluation（评估生成）— 从一开始就走 Worker 队列
+- Persona Generation（自定义 Persona 生成）— 最初直接在 Vercel 调用 LLM 导致失败，已迁移到 Worker
+- Persona Recommend（Persona 推荐）— 目前在 Vercel 调 LLM 会失败，降级为返回默认推荐
 
 ---
 
@@ -53,29 +77,37 @@ Hygge 是一个 AI 驱动的多视角评估平台（Round Table Discussion）。
 
 ## 当前进行中
 
-### Persona Marketplace & 自定义 Persona（进行中）
+### Persona Marketplace & 自定义 Persona
 
 **目标**：让用户创建自定义 Persona 并在社区市场中分享。
 
 #### 已完成
-- [x] 数据库 Migration 013：personas 表新增 `creator_id`, `is_custom`, `is_public`, `source`, `uses_count`, `description`, `tags` 字段；新建 `persona_saves` 表
+- [x] 数据库 Migration 013 已执行：personas 表新增 `creator_id`, `is_custom`, `is_public`, `source`, `uses_count`, `description`, `tags` 字段；新建 `persona_saves` 表（`persona_id` 为 text 类型匹配 personas.id）
 - [x] 定价重构（plans.ts）：Free $0 / Pro $35 / Max $89，含 Feature Gating
-- [x] LLM Persona 生成 Prompt（`src/lib/prompts/generate-persona.ts`）
-- [x] API Routes：
-  - `POST /api/personas/create` — 创建自定义 Persona（通过 LLM 生成）
-  - `GET /api/marketplace` — 浏览公开 Personas（搜索、标签、分页）
-  - `POST/DELETE /api/personas/[id]/save` — 收藏/取消收藏
-  - `POST/DELETE /api/personas/[id]/publish` — 发布/取消发布到市场
-  - `GET /api/personas` — 返回三类：official / custom / saved
+- [x] LLM Persona 生成迁移到 Worker：
+  - `POST /api/personas/create` — 验证权限后推送 BullMQ 任务到 `persona-generation` 队列，返回 jobId
+  - `GET /api/personas/create/status/[jobId]` — 前端轮询 job 状态
+  - `worker/src/processors/generate-persona.ts` — Worker 端处理 LLM 调用并写入数据库
+  - `worker/src/index.ts` — 注册第二个 Worker 监听 `persona-generation` 队列
 - [x] 前端页面：
+  - `/personas/create` — 创建 persona（From Scratch 表单含可展开高级选项 + Import External .md 文件上传）
   - `/marketplace` — 浏览市场（搜索、标签筛选、收藏按钮、分页）
   - `/personas` — 管理自己的 custom & saved personas
-  - `/personas/create` — 创建 persona（From Scratch 表单 + Import External 文件上传）
+- [x] API Routes：
+  - `GET /api/marketplace` — 浏览公开 Personas
+  - `POST/DELETE /api/personas/[id]/save` — 收藏/取消收藏
+  - `POST/DELETE /api/personas/[id]/publish` — 发布/取消发布到市场
 - [x] 侧边栏新增 Marketplace 和 My Personas 导航
+- [x] 统一所有代码使用 `LLM_API_KEY`，移除 `ANTHROPIC_API_KEY` 引用
+- [x] Persona recommend 路由降级处理（DashScope 不可达时返回默认推荐）
 
-#### 待解决
-- [ ] **Persona 生成 LLM 调用 400 错误**：API route 调用 Qwen API 返回 400，已添加详细错误日志，等待下次测试确认具体原因
-- [ ] **Migration 013 未执行**：需要在 Supabase 上运行 `supabase/migrations/013_marketplace_custom_personas.sql`，否则 personas 表缺少新字段，insert 会失败
+#### 待验证
+- [ ] Persona 生成端到端测试（Worker 部署后验证 create → 轮询 → 完成流程）
+- [ ] Marketplace 浏览和收藏功能测试
+- [ ] Publish/unpublish 功能测试
+
+#### 已知问题
+- `/api/personas` GET 路由已简化为基础查询（不含 custom/saved 分类），避免 persona_saves join 导致 500 错误。后续需要单独端点处理 custom/saved 分类展示。
 
 ---
 
@@ -102,20 +134,21 @@ Hygge 是一个 AI 驱动的多视角评估平台（Round Table Discussion）。
 
 ### 短期（近期迭代）
 
-1. **修复 Persona 生成**
-   - 解决 Qwen API 400 错误
-   - 执行 Migration 013
-   - 端到端测试 create → publish → marketplace browse → save → use in evaluation
+1. **验证 Persona 生成流程**
+   - 确认 Railway Worker 正确处理 persona-generation 队列
+   - 端到端测试 create → poll → complete → 在评估中使用
+   - 将 persona recommend 也迁移到 Worker（目前在 Vercel 降级运行）
 
-2. **Marketplace 完善**
+2. **Personas API 完善**
+   - 恢复 `/api/personas` 的 custom/saved 分类功能（独立端点或安全 join）
+   - 评估选 persona 时展示 custom + saved personas
+   - Persona 选择面板分 tab（Official / Custom / Saved）
+
+3. **Marketplace 完善**
    - Persona 详情页（点击卡片查看完整信息）
    - 热门排序 / 最新排序
    - Featured personas（Max 用户优先展示）
    - 使用次数统计更新
-
-3. **评估流程集成自定义 Persona**
-   - 评估选 persona 时展示 custom + saved personas
-   - Persona 选择面板分 tab（Official / Custom / Saved）
 
 ### 中期
 
@@ -152,9 +185,38 @@ Hygge 是一个 AI 驱动的多视角评估平台（Round Table Discussion）。
 
 ---
 
+## 环境变量配置
+
+### Vercel（Next.js 前端 + API Routes）
+| 变量 | 用途 | 注意 |
+|------|------|------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 连接 | |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名 key | |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 管理 key | |
+| `REDIS_URL` | BullMQ 队列连接 | 用于推送 job |
+| `LLM_API_KEY` | DashScope API Key | Vercel 海外无法直接调 LLM，仅 recommend 降级用 |
+| `LLM_MODEL` | 模型名 | `qwen-max` |
+| `LLM_BASE_URL` | API 地址 | |
+| `STRIPE_*` | Stripe 支付相关 | |
+
+> 注意：Vercel 环境变量需同时勾选 Production 和 Preview，否则非 Production 分支部署读不到变量。当前 Production Branch 为 `platform-v2`。
+
+### Railway（BullMQ Worker）
+| 变量 | 用途 |
+|------|------|
+| `LLM_API_KEY` | DashScope API Key（实际调用 LLM 的地方） |
+| `LLM_MODEL` | `qwen-max` |
+| `LLM_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `LLM_PROVIDER` | `openai-compatible` |
+| `REDIS_URL` | 同一个 Upstash Redis 实例 |
+| `SUPABASE_URL` | Supabase 连接 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 管理 key |
+
+---
+
 ## 技术债务
 
-- [ ] Worker 和 Next.js 共享 prompt 文件的方式需要统一（目前 `generate-persona.ts` 在两处各有一份）
-- [ ] Vercel 环境变量仅配置了 Production，Preview 部署缺少 LLM 相关变量
+- [ ] `generate-persona.ts` prompt 在 `src/lib/prompts/` 和 `worker/src/processors/` 各有一份，需要统一到共享位置
+- [ ] `/api/personas/recommend` 在 Vercel 上无法调用 DashScope，需迁移到 Worker 或改用代理
+- [ ] `/api/personas` GET 路由的 custom/saved 分类被临时移除，需要恢复
 - [ ] 部分 API route 缺少 rate limiting
-- [ ] Persona insert 的字段依赖 migration 013，需确保已执行
