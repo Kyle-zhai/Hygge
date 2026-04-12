@@ -33,9 +33,12 @@ interface HistoryItem {
 interface SidebarProps {
   userEmail: string | null;
   history: HistoryItem[];
+  plan: string;
+  evaluationsUsed: number;
+  evaluationsLimit: number;
 }
 
-export function Sidebar({ userEmail, history }: SidebarProps) {
+export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluationsLimit }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -48,6 +51,7 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
   const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const discussionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,8 +64,13 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
     }
   }, [collapsed]);
 
-  // Close the floating menu on scroll, resize, or Escape — the computed position
-  // would otherwise stop matching its anchor button.
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setUserMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [userMenuOpen]);
+
   useEffect(() => {
     if (!menu) return;
     const close = () => setMenu(null);
@@ -291,35 +300,20 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
       </div>
 
       {/* Bottom section */}
-      <div className="shrink-0 border-t border-[#1C1C1C] px-3 py-3 space-y-1">
-        {/* Upgrade */}
-        <Link
-          href={`/${locale}/pricing`}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
-        >
-          <Zap className="h-4 w-4" />
-          <span>Upgrade</span>
-        </Link>
-
-        {/* User */}
+      <div className="shrink-0 border-t border-[#1C1C1C] px-3 py-3">
         {userEmail && (
-          <div className="flex items-center justify-between rounded-lg px-3 py-2">
+          <button
+            onClick={() => setUserMenuOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-[#1C1C1C]/60"
+          >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-xs font-medium text-[#E2DDD5]">
                 {userEmail[0].toUpperCase()}
               </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm text-[#EAEAE8]">{userEmail.split("@")[0]}</p>
-              </div>
+              <p className="truncate text-sm text-[#EAEAE8]">{userEmail.split("@")[0]}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
-              title="Log Out"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
-          </div>
+            <LogOut className="h-3.5 w-3.5 shrink-0 text-[#666462]" />
+          </button>
         )}
       </div>
     </div>
@@ -469,6 +463,79 @@ export function Sidebar({ userEmail, history }: SidebarProps) {
                   className="rounded-lg bg-[#F87171] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#EF4444] disabled:opacity-50"
                 >
                   {deleting === confirmDeleteId ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* User menu popup — fixed position to escape sidebar overflow-hidden */}
+      <AnimatePresence>
+        {userMenuOpen && userEmail && (
+          <>
+            <div className="fixed inset-0 z-[55]" onClick={() => setUserMenuOpen(false)} />
+            <motion.div
+              key="user-menu"
+              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="fixed bottom-[60px] left-[12px] z-[60] w-[236px] rounded-xl border border-[#2A2A2A] bg-[#141414] shadow-2xl shadow-black/60"
+            >
+              {/* User info */}
+              <div className="flex items-center gap-3 px-4 py-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-sm font-medium text-[#E2DDD5]">
+                  {userEmail[0].toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[#EAEAE8]">{userEmail.split("@")[0]}</p>
+                  <p className="truncate text-xs text-[#666462]">{userEmail}</p>
+                </div>
+              </div>
+
+              <div className="mx-3 border-t border-[#2A2A2A]" />
+
+              {/* Plan + Credits */}
+              <div className="px-4 py-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-[#666462]">Credits Left</span>
+                  <span className="rounded-md bg-[#1C1C1C] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#C4A882]">
+                    {plan}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-semibold text-[#EAEAE8]">
+                    {evaluationsLimit - evaluationsUsed}
+                  </span>
+                  <span className="text-xs text-[#666462]">/ {evaluationsLimit}</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1C1C1C]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#C4A882] to-[#8B7355] transition-all duration-300"
+                    style={{ width: `${Math.max(2, ((evaluationsLimit - evaluationsUsed) / evaluationsLimit) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mx-3 border-t border-[#2A2A2A]" />
+
+              {/* Actions */}
+              <div className="p-1.5">
+                <Link
+                  href={`/${locale}/pricing`}
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span>Upgrade Plan</span>
+                </Link>
+                <button
+                  onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign out</span>
                 </button>
               </div>
             </motion.div>
