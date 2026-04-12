@@ -127,7 +127,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ persona: inserted }, { status: 201 });
   } catch (error: any) {
-    console.error("Persona generation failed:", error?.message);
-    return NextResponse.json({ error: "Failed to generate persona" }, { status: 500 });
+    console.error("Persona generation failed:", error?.message, error?.stack);
+    return NextResponse.json({ error: error?.message || "Failed to generate persona" }, { status: 500 });
   }
 }
