@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HeroSection } from "@/components/landing/hero-section";
+import { LiveDemo } from "@/components/landing/live-demo";
 import { PersonaShowcase } from "@/components/landing/persona-showcase";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { FeaturesGrid } from "@/components/landing/features-grid";
@@ -112,6 +113,133 @@ export default async function LandingPage() {
     },
   ];
 
+  const demoScript = {
+    topicOverline: locale === "zh" ? "真实圆桌片段" : "A real round table",
+    topicTitle:
+      locale === "zh"
+        ? "我们应该把 Pro 定在 $20/月，还是 $10/月起步?"
+        : "Should we launch Pro at $20/mo, or start at $10?",
+    perspectivesLabel: locale === "zh" ? "4 位参与者" : "4 perspectives",
+    summaryLabel: locale === "zh" ? "讨论总结" : "Discussion Summary",
+    consensusLabel: locale === "zh" ? "共识度 78%" : "Consensus 78%",
+    thinkingLabel: locale === "zh" ? "思考中" : "Thinking",
+    waitingLabel: locale === "zh" ? "等待中..." : "Waiting...",
+    summaryText:
+      locale === "zh"
+        ? "大家一致认为 $20 更能传递产品价值,但必须搭配清晰的 Free 限额让用户先尝到甜头。三人推荐分层入场:$0 看见价值、$20 解锁完整体验。Kevin 坚持 $30 更能筛出认真的用户,属于主要分歧点。"
+        : "The room agrees $20 signals value, but only if the Free tier lets users taste the product first. Three voices back a layered entry: $0 to prove value, $20 to unlock the full experience. Kevin holds out for $30 to filter serious users — the main point of tension.",
+    personas:
+      locale === "zh"
+        ? [
+            {
+              id: "p1",
+              name: "Sarah Kim",
+              role: "UX 设计师",
+              avatar: "/personas/2.png",
+              stance: "support" as const,
+              quote:
+                "$20 更符合用户对 SaaS 的锚定价。但只有在免费版足够让他们感受到价值时,升级才会自然发生——否则定价再合理也没用。",
+              tags: [
+                { kind: "up" as const, label: "符合心智预期" },
+                { kind: "down" as const, label: "依赖免费版诱饵" },
+              ],
+            },
+            {
+              id: "p2",
+              name: "Kevin Lee",
+              role: "风险投资人",
+              avatar: "/personas/11.png",
+              stance: "oppose" as const,
+              quote:
+                "都不够。早期应该是 $30 起步,筛出真正愿意付费的人。便宜 10 块钱换来的都是犹豫型用户,你会后悔的。",
+              tags: [
+                { kind: "up" as const, label: "提升 ARPU" },
+                { kind: "down" as const, label: "吓退尝鲜用户" },
+              ],
+            },
+            {
+              id: "p3",
+              name: "James Liu",
+              role: "产品经理",
+              avatar: "/personas/3.png",
+              stance: "support" as const,
+              quote:
+                "$20 是甜蜜点。$10 让人觉得你不自信,$30 在这个品类里要解释半天。先 $20 跑三个月,看留存再决定要不要往上推。",
+              tags: [
+                { kind: "up" as const, label: "清晰定位" },
+                { kind: "up" as const, label: "数据驱动试错" },
+              ],
+            },
+            {
+              id: "p4",
+              name: "Emma Wilson",
+              role: "普通用户",
+              avatar: "/personas/5.png",
+              stance: "neutral" as const,
+              quote:
+                "说实话我更关心免费版能做什么。$20 我会犹豫但可以接受,前提是先让我确定它值这个钱——别一开始就弹升级窗口。",
+              tags: [
+                { kind: "up" as const, label: "真实用户声音" },
+                { kind: "down" as const, label: "对升级弹窗敏感" },
+              ],
+            },
+          ]
+        : [
+            {
+              id: "p1",
+              name: "Sarah Kim",
+              role: "UX Designer",
+              avatar: "/personas/2.png",
+              stance: "support" as const,
+              quote:
+                "$20 anchors well against other SaaS people pay for. But it only converts if the free tier actually lets them feel the value — otherwise your price is irrelevant.",
+              tags: [
+                { kind: "up" as const, label: "Anchors as real SaaS" },
+                { kind: "down" as const, label: "Depends on free tier hook" },
+              ],
+            },
+            {
+              id: "p2",
+              name: "Kevin Lee",
+              role: "Venture Capitalist",
+              avatar: "/personas/11.png",
+              stance: "oppose" as const,
+              quote:
+                "Neither. Start at $30. You want to filter out tire-kickers early. The $10 you save bringing people in, you lose ten times over on churn and support.",
+              tags: [
+                { kind: "up" as const, label: "Higher ARPU" },
+                { kind: "down" as const, label: "Scares off triers" },
+              ],
+            },
+            {
+              id: "p3",
+              name: "James Liu",
+              role: "Product Manager",
+              avatar: "/personas/3.png",
+              stance: "support" as const,
+              quote:
+                "$20 is the sweet spot. $10 reads as insecure; $30 needs a story. Ship at $20, watch 90-day retention, raise only if the data earns it.",
+              tags: [
+                { kind: "up" as const, label: "Clear positioning" },
+                { kind: "up" as const, label: "Data-driven" },
+              ],
+            },
+            {
+              id: "p4",
+              name: "Emma Wilson",
+              role: "End User",
+              avatar: "/personas/5.png",
+              stance: "neutral" as const,
+              quote:
+                "Honestly I care more about what the free tier does. $20 is fine if I'm sure it's worth it — just don't hit me with an upgrade modal on day one.",
+              tags: [
+                { kind: "up" as const, label: "Authentic user voice" },
+                { kind: "down" as const, label: "Hates upgrade nags" },
+              ],
+            },
+          ],
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-[#0C0C0C]">
       <Header />
@@ -123,6 +251,8 @@ export default async function LandingPage() {
           ctaText={t("cta")}
           ctaHref={`/${locale}/auth/register`}
         />
+
+        <LiveDemo script={demoScript} />
 
         <PersonaShowcase
           heading={locale === "zh" ? "认识您的讨论伙伴" : "Meet your discussion partners"}

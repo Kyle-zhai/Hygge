@@ -158,7 +158,18 @@
     "reportReady": "Report ready.",
     "stanceSupportive": "Supportive",
     "stanceOpposed": "Opposed",
-    "stanceNeutral": "Neutral"
+    "stanceNeutral": "Neutral",
+    "squads": "Squads",
+    "saveSquad": "Save as squad",
+    "squadDelete": "Delete squad",
+    "squadNamePlaceholder": "Name this squad (e.g. Product launch panel)",
+    "compareTitle": "Compare discussions",
+    "compareSubtitle": "See how two past discussions stack up — track how your thinking (and the feedback) has evolved.",
+    "compareSlotA": "Discussion A",
+    "compareSlotB": "Discussion B",
+    "compareEmpty": "You need at least two completed discussions to compare.",
+    "opinionDrift": "Opinion drift",
+    "opinionDriftSubtitle": "How each voice would shift after hearing the room — where minds flip, where they harden, and why."
   },
   "pricing": {
     "title": "One upgrade away from bringing your questions to life",

@@ -41,6 +41,7 @@ export async function generateTopicSummaryReport(
     readiness_label_en: parsed.readiness_label_en,
     readiness_label_zh: parsed.readiness_label_zh,
     scenario_simulation: null,
+    opinion_drift: null,
     consensus_score: parsed.consensus_score,
     synthesis: parsed.synthesis,
     debate_highlights: parsed.debate_highlights,
@@ -76,5 +77,6 @@ export async function generateSummaryReport(
     readiness_label_en: parsed.readiness_label_en,
     readiness_label_zh: parsed.readiness_label_zh,
     scenario_simulation: null,
+    opinion_drift: null,
   };
 }

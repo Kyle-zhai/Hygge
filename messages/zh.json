@@ -158,7 +158,18 @@
     "reportReady": "报告已生成",
     "stanceSupportive": "支持",
     "stanceOpposed": "反对",
-    "stanceNeutral": "中立"
+    "stanceNeutral": "中立",
+    "squads": "常用阵容",
+    "saveSquad": "保存当前阵容",
+    "squadDelete": "删除阵容",
+    "squadNamePlaceholder": "给这个阵容起个名字（例如：产品发布评审团）",
+    "compareTitle": "对比讨论",
+    "compareSubtitle": "看两次讨论的差异 —— 追踪你的思路（和反馈）是如何演进的。",
+    "compareSlotA": "讨论 A",
+    "compareSlotB": "讨论 B",
+    "compareEmpty": "至少需要两次已完成的讨论才能对比。",
+    "opinionDrift": "立场漂移",
+    "opinionDriftSubtitle": "每个人在听完全场之后会如何调整立场 —— 谁会被说服、谁会更坚定，以及背后的原因。"
   },
   "pricing": {
     "title": "只需一次升级，让你的问题活起来",

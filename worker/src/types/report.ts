@@ -64,6 +64,14 @@ export interface ScenarioSimulationResult {
   summary: string;
 }
 
+export interface OpinionDriftEntry {
+  persona_id: string;
+  initial_leaning: "support" | "oppose" | "neutral" | "mixed";
+  final_leaning: "support" | "oppose" | "neutral" | "mixed";
+  shift_magnitude: "none" | "small" | "large";
+  reasoning: string;
+}
+
 export interface SummaryReport {
   id: string;
   evaluation_id: string;
@@ -91,6 +99,7 @@ export interface SummaryReport {
   readiness_label_en?: string;
   readiness_label_zh?: string;
   scenario_simulation: ScenarioSimulationResult | null;
+  opinion_drift: OpinionDriftEntry[] | null;
   // Topic mode only
   consensus_score?: number | null;
   synthesis?: string | null;

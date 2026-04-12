@@ -1,6 +1,25 @@
 import type { Persona } from "../types/persona.js";
 import type { ReviewForSimulation } from "../processors/scenario-simulation.js";
 
+const STANCE_TO_NUMBER: Record<string, number> = {
+  strongly_support: 10,
+  support: 8,
+  neutral: 5,
+  oppose: 3,
+  strongly_oppose: 1,
+};
+
+function computeAverageScore(scores: Record<string, number | string>): number {
+  const values = Object.values(scores);
+  if (values.length === 0) return 5;
+  const numeric = values.map((v) => {
+    if (typeof v === "number") return v;
+    if (typeof v === "string") return STANCE_TO_NUMBER[v] ?? 5;
+    return 5;
+  });
+  return numeric.reduce((a, b) => a + b, 0) / numeric.length;
+}
+
 export function buildScenarioSimulationPrompt(
   personas: Persona[],
   reviews: ReviewForSimulation[]
@@ -54,9 +73,7 @@ Respond ONLY with valid JSON:
   const personaProfiles = personas
     .map((p) => {
       const review = reviews.find((r) => r.persona_id === p.id);
-      const avgScore = review
-        ? (Object.values(review.scores) as number[]).reduce((a, b) => a + b, 0) / 6
-        : 0;
+      const avgScore = review ? computeAverageScore(review.scores as Record<string, number | string>) : 5;
       const stance = avgScore > 6 ? "Positive" : avgScore > 4 ? "Neutral" : "Negative";
       return `### ${p.identity.name} (ID: ${p.id})
 Role: ${p.demographics.occupation}

@@ -8,6 +8,7 @@ import { classifyTopic } from "./classify-topic.js";
 import { generatePersonaReview } from "./persona-review.js";
 import { generateSummaryReport, generateTopicSummaryReport } from "./summary-report.js";
 import { runScenarioSimulation } from "./scenario-simulation.js";
+import { generateOpinionDrift } from "./opinion-drift.js";
 import type { Persona } from "../types/persona.js";
 import type { TopicClassification } from "../types/evaluation.js";
 
@@ -120,9 +121,9 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       : await generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
     console.log(`[${evaluationId}] Summary report generated`);
 
-    // 7. Run social dynamics scenario simulation (Max plan only, product mode only)
-    if (planTier === "max" && mode === "product") {
-      console.log(`[${evaluationId}] Running scenario simulation...`);
+    // 7a. Run social dynamics scenario simulation (Max plan, both modes)
+    if (planTier === "max") {
+      console.log(`[${evaluationId}] Running scenario simulation (${mode} mode)...`);
       try {
         const simulation = await runScenarioSimulation(llm, personas as Persona[], reviews);
         summaryReport.scenario_simulation = simulation;
@@ -131,6 +132,17 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         console.error(`[${evaluationId}] Scenario simulation failed, skipping:`, simError);
         summaryReport.scenario_simulation = null;
       }
+    }
+
+    // 7b. Run opinion drift analysis (all plans, both modes — cheap single LLM call)
+    try {
+      console.log(`[${evaluationId}] Running opinion drift analysis...`);
+      const drift = await generateOpinionDrift(llm, personas as Persona[], reviews);
+      summaryReport.opinion_drift = drift.length > 0 ? drift : null;
+      console.log(`[${evaluationId}] Opinion drift analysis done (${drift.length} entries)`);
+    } catch (driftError) {
+      console.error(`[${evaluationId}] Opinion drift failed, skipping:`, driftError);
+      summaryReport.opinion_drift = null;
     }
 
     await job.updateProgress(95);

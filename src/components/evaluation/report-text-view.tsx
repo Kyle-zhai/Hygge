@@ -104,6 +104,13 @@ interface ReportData {
     adoption_rate_shift: number;
     influence_events?: any[];
   };
+  opinion_drift?: Array<{
+    persona_id: string;
+    initial_leaning: string;
+    final_leaning: string;
+    shift_magnitude: "none" | "small" | "large";
+    reasoning: string;
+  }> | null;
   // Topic mode fields
   consensus_score?: number | null;
   synthesis?: string | null;
@@ -464,6 +471,33 @@ interface TocItem {
   label: string;
 }
 
+/* ── Leaning Pill (opinion drift) ───────────────────────────────────── */
+
+function LeaningPill({ leaning, highlighted }: { leaning: string; highlighted?: boolean }) {
+  const map: Record<string, { label: string; color: string }> = {
+    support: { label: "Support", color: "#4ADE80" },
+    oppose: { label: "Oppose", color: "#F87171" },
+    neutral: { label: "Neutral", color: "#C4A882" },
+    mixed: { label: "Mixed", color: "#9B9594" },
+  };
+  const entry = map[leaning] ?? { label: leaning, color: "#9B9594" };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+        highlighted ? "ring-1 ring-[#C4A882]/40" : ""
+      }`}
+      style={{
+        color: entry.color,
+        backgroundColor: `${entry.color}15`,
+        borderColor: `${entry.color}40`,
+        borderWidth: "1px",
+      }}
+    >
+      {entry.label}
+    </span>
+  );
+}
+
 /* ── Desktop Sidebar TOC ─────────────────────────────────────────────── */
 
 function TableOfContents({
@@ -630,6 +664,9 @@ export function ReportTextView({
     ];
     if (report.multi_dimensional_analysis?.length > 0) {
       items.push({ id: "deep-analysis", label: t("deepAnalysis") });
+    }
+    if (report.opinion_drift && report.opinion_drift.length > 0) {
+      items.push({ id: "opinion-drift", label: t("opinionDrift") });
     }
     if (isTopicMode) {
       if (report.synthesis) {
@@ -1369,6 +1406,49 @@ export function ReportTextView({
         )}
 
         {/* ════════════════════════════════════════════════════════════
+            OPINION DRIFT (both modes)
+        ════════════════════════════════════════════════════════════ */}
+        {report.opinion_drift && report.opinion_drift.length > 0 && (
+          <AnimatedSection id="opinion-drift">
+            <SectionTitle icon={TrendingUp}>{t("opinionDrift")}</SectionTitle>
+            <p className="mb-6 text-sm text-[#9B9594] max-w-3xl leading-relaxed">
+              {t("opinionDriftSubtitle")}
+            </p>
+            <div className="space-y-3">
+              {report.opinion_drift.map((drift, i) => {
+                const persona = personas.find((p) => p.id === drift.persona_id);
+                const name = persona?.identity?.locale_variants?.[locale as "zh" | "en"]?.name
+                  || persona?.identity?.name
+                  || "—";
+                const avatar = persona?.identity?.avatar || "?";
+                const shifted = drift.shift_magnitude !== "none" && drift.initial_leaning !== drift.final_leaning;
+                return (
+                  <motion.div
+                    key={drift.persona_id}
+                    initial={{ opacity: 0, y: 6 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.04 }}
+                    className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">{avatar}</span>
+                      <span className="text-sm font-medium text-[#EAEAE8]">{name}</span>
+                      <div className="ml-auto flex items-center gap-2 text-xs">
+                        <LeaningPill leaning={drift.initial_leaning} />
+                        <ArrowRight className={`h-3 w-3 ${shifted ? "text-[#C4A882]" : "text-[#3A3A3A]"}`} />
+                        <LeaningPill leaning={drift.final_leaning} highlighted={shifted} />
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#9B9594] leading-relaxed pl-9">{drift.reasoning}</p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </AnimatedSection>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
             SYNTHESIS (topic mode only)
         ════════════════════════════════════════════════════════════ */}
         {isTopicMode && report.synthesis && (
@@ -1772,7 +1852,7 @@ export function ReportTextView({
         {/* ════════════════════════════════════════════════════════════
             SCENARIO SIMULATION CTA
         ════════════════════════════════════════════════════════════ */}
-        {!isTopicMode && report.scenario_simulation && onViewSimulation && (
+        {report.scenario_simulation && onViewSimulation && (
           <div className="mt-10 flex justify-center">
             <button
               onClick={onViewSimulation}

@@ -7,7 +7,8 @@ import { buildScenarioSimulationPrompt } from "../prompts/scenario-simulation.js
 export interface ReviewForSimulation {
   persona_id: string;
   persona_name: string;
-  scores: EvaluationScores;
+  // Product mode: numeric scores; topic mode: stance strings keyed by dynamic dimension
+  scores: EvaluationScores | Record<string, string>;
 }
 
 /** Simulate social dynamics among personas discussing the topic. */

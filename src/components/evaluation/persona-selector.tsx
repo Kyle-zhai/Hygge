@@ -5,7 +5,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2 } from "lucide-react";
+import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2, Bookmark, X } from "lucide-react";
+
+interface PersonaSquad {
+  id: string;
+  name: string;
+  persona_ids: string[];
+  created_at: string;
+}
 
 interface PersonaData {
   id: string;
@@ -69,6 +76,7 @@ const incomeLabels: Record<string, Record<string, string>> = {
 export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, disabled, mode = "product" }: PersonaSelectorProps) {
   const categoryOrder = mode === "topic" ? generalCategoryOrder : productCategoryOrder;
   const t = useTranslations("evaluation");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const [personas, setPersonas] = useState<PersonaData[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -82,15 +90,23 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [genderFilters, setGenderFilters] = useState<Set<string>>(new Set());
   const [incomeFilters, setIncomeFilters] = useState<Set<string>>(new Set());
 
+  // Squads
+  const [squads, setSquads] = useState<PersonaSquad[]>([]);
+  const [activeSquadId, setActiveSquadId] = useState<string | null>(null);
+  const [showSaveSquad, setShowSaveSquad] = useState(false);
+  const [squadNameDraft, setSquadNameDraft] = useState("");
+  const [savingSquad, setSavingSquad] = useState(false);
+
   useEffect(() => {
     async function load() {
-      const [personasRes, recommendRes] = await Promise.all([
+      const [personasRes, recommendRes, squadsRes] = await Promise.all([
         fetch("/api/personas"),
         fetch("/api/personas/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ projectDescription, mode }),
         }),
+        fetch("/api/squads"),
       ]);
       const { personas: rawPersonas } = await personasRes.json();
       const { recommended_ids } = await recommendRes.json();
@@ -100,10 +116,50 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       const recSet = new Set<string>(recommended_ids || []);
       setRecommendedIds(recSet);
       setSelectedIds(new Set((recommended_ids || []).slice(0, maxPersonas)));
+      if (squadsRes.ok) {
+        const { squads: fetched } = await squadsRes.json();
+        setSquads(fetched || []);
+      }
       setLoading(false);
     }
     load();
   }, [projectDescription, maxPersonas]);
+
+  async function applySquad(squad: PersonaSquad) {
+    const valid = squad.persona_ids.filter((id) => personas.some((p) => p.id === id));
+    setSelectedIds(new Set(valid.slice(0, maxPersonas)));
+    setActiveSquadId(squad.id);
+  }
+
+  async function saveCurrentAsSquad() {
+    const name = squadNameDraft.trim();
+    if (!name || selectedIds.size === 0) return;
+    setSavingSquad(true);
+    try {
+      const res = await fetch("/api/squads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, personaIds: Array.from(selectedIds) }),
+      });
+      if (res.ok) {
+        const { squad } = await res.json();
+        setSquads((prev) => [squad, ...prev]);
+        setActiveSquadId(squad.id);
+        setShowSaveSquad(false);
+        setSquadNameDraft("");
+      }
+    } finally {
+      setSavingSquad(false);
+    }
+  }
+
+  async function deleteSquad(id: string) {
+    const prev = squads;
+    setSquads((s) => s.filter((x) => x.id !== id));
+    if (activeSquadId === id) setActiveSquadId(null);
+    const res = await fetch(`/api/squads/${id}`, { method: "DELETE" });
+    if (!res.ok) setSquads(prev);
+  }
 
   // Filtering logic
   const filtered = useMemo(() => {
@@ -123,6 +179,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   }, [personas, activeCategory, ageFilters, genderFilters, incomeFilters]);
 
   function togglePersona(id: string) {
+    setActiveSquadId(null);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -174,6 +231,86 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : t("startEvaluation")}
         </Button>
       </div>
+
+      {/* Squads row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#666462] uppercase tracking-wide">
+          <Bookmark className="h-3 w-3" />
+          {t("squads")}
+        </span>
+        {squads.map((squad) => (
+          <span
+            key={squad.id}
+            className={`group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors cursor-pointer ${
+              activeSquadId === squad.id
+                ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+            }`}
+            onClick={() => applySquad(squad)}
+          >
+            <span className="max-w-[140px] truncate">{squad.name}</span>
+            <span className="text-[#666462]">·{squad.persona_ids.length}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteSquad(squad.id);
+              }}
+              className="ml-0.5 text-[#666462] hover:text-[#F87171] opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label={t("squadDelete")}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <button
+          type="button"
+          disabled={selectedIds.size === 0}
+          onClick={() => setShowSaveSquad(true)}
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#3A3A3A] px-2.5 py-1 text-xs text-[#9B9594] hover:border-[#E2DDD5] hover:text-[#EAEAE8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          + {t("saveSquad")}
+        </button>
+      </div>
+
+      {showSaveSquad && (
+        <div className="rounded-lg border border-[#2A2A2A] bg-[#141414] p-3 flex items-center gap-2">
+          <input
+            autoFocus
+            type="text"
+            value={squadNameDraft}
+            onChange={(e) => setSquadNameDraft(e.target.value.slice(0, 60))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveCurrentAsSquad();
+              if (e.key === "Escape") {
+                setShowSaveSquad(false);
+                setSquadNameDraft("");
+              }
+            }}
+            placeholder={t("squadNamePlaceholder")}
+            className="flex-1 bg-[#0C0C0C] border border-[#2A2A2A] rounded px-3 py-1.5 text-sm text-[#EAEAE8] placeholder:text-[#666462] focus:outline-none focus:border-[#3A3A3A]"
+          />
+          <Button
+            size="sm"
+            onClick={saveCurrentAsSquad}
+            disabled={!squadNameDraft.trim() || savingSquad}
+            className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C]"
+          >
+            {savingSquad ? <Loader2 className="h-3 w-3 animate-spin" /> : tCommon("save")}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setShowSaveSquad(false);
+              setSquadNameDraft("");
+            }}
+            className="text-[#9B9594]"
+          >
+            {tCommon("cancel")}
+          </Button>
+        </div>
+      )}
 
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-2">
