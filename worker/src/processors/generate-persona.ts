@@ -177,9 +177,11 @@ export async function processPersonaGeneration(job: Job<PersonaJobData>) {
   const response = await llm.complete({ system, prompt, maxTokens: 4096 });
   const persona = JSON.parse(response.text);
 
+  const personaId = `custom_${crypto.randomUUID()}`;
   const { data: inserted, error: insertError } = await supabase
     .from("personas")
     .insert({
+      id: personaId,
       identity: persona.identity,
       demographics: persona.demographics,
       social_context: persona.social_context,
