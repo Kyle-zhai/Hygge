@@ -30,23 +30,35 @@ export async function POST(request: Request) {
   }
 
   try {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || "" });
+    const baseURL = process.env.LLM_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    const apiKey = process.env.LLM_API_KEY || "";
+    const model = process.env.LLM_MODEL || "qwen-max";
 
     const personaList = personas.map((p: any) =>
       `- ID: ${p.id} | ${p.identity.name} | ${p.demographics.occupation} | Focus: ${p.evaluation_lens.primary_question}`
     ).join("\n");
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system: `You are a focus group coordinator. Given a project description and a list of available personas, recommend 5-8 of the most relevant personas.
-Consider: target audience match, diverse perspectives, relevant expertise.
-Respond ONLY with valid JSON: { "recommended_ids": ["id1", "id2", ...], "reasoning": "brief explanation" }`,
-      messages: [{ role: "user", content: `Project: ${projectDescription}\n\nAvailable personas:\n${personaList}` }],
+    const llmResponse = await fetch(`${baseURL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        messages: [
+          { role: "system", content: `You are a focus group coordinator. Given a project description and a list of available personas, recommend 5-8 of the most relevant personas.\nConsider: target audience match, diverse perspectives, relevant expertise.\nRespond ONLY with valid JSON: { "recommended_ids": ["id1", "id2", ...], "reasoning": "brief explanation" }` },
+          { role: "user", content: `Project: ${projectDescription}\n\nAvailable personas:\n${personaList}` },
+        ],
+      }),
     });
 
-    const text = response.content.filter((b) => b.type === "text").map((b) => "text" in b ? b.text : "").join("");
+    if (!llmResponse.ok) throw new Error(`LLM error ${llmResponse.status}`);
+    const data = await llmResponse.json();
+    let text = data.choices?.[0]?.message?.content ?? "";
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) text = fenceMatch[1].trim();
     return NextResponse.json(JSON.parse(text));
   } catch (error) {
     return NextResponse.json({
