@@ -271,13 +271,6 @@ export default function MyPersonasPage() {
     setDialog(null);
   }
 
-  useEffect(() => {
-    if (!menuOpenId) return;
-    function close() { setMenuOpenId(null); }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [menuOpenId]);
-
   const activePending = pendingJobs.filter((j) => j.status !== "completed");
   const isEmpty = personas.length === 0 && activePending.length === 0;
 
@@ -300,6 +293,10 @@ export default function MyPersonasPage() {
           Create
         </Link>
       </div>
+
+      {menuOpenId && (
+        <div className="fixed inset-0 z-30" onClick={() => setMenuOpenId(null)} />
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -377,7 +374,6 @@ export default function MyPersonasPage() {
                   {/* Three-dot menu */}
                   <div className="relative ml-2">
                     <button
-                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
                         setMenuOpenId(menuOpenId === p.id ? null : p.id);
@@ -387,10 +383,7 @@ export default function MyPersonasPage() {
                       <MoreVertical className="h-4 w-4" />
                     </button>
                     {menuOpenId === p.id && (
-                      <div
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-full z-40 mt-1 w-52 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] py-1 shadow-xl"
-                      >
+                      <div className="absolute right-0 top-full z-40 mt-1 w-52 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] py-1 shadow-xl">
                         {p.is_public ? (
                           <button
                             onClick={() => { setMenuOpenId(null); setDialog({ type: "unpublish", persona: p }); }}
