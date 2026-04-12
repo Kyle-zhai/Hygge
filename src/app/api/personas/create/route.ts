@@ -77,8 +77,8 @@ export async function POST(request: Request) {
 
     if (!llmResponse.ok) {
       const err = await llmResponse.text();
-      console.error("LLM API error:", llmResponse.status, err);
-      throw new Error(`LLM API error (${llmResponse.status}): ${err.slice(0, 200)}`);
+      console.error("LLM API error:", llmResponse.status, "model:", model, "baseURL:", baseURL, err);
+      throw new Error(`LLM API error (${llmResponse.status}), model=${model}: ${err.slice(0, 200)}`);
     }
 
     const llmData = await llmResponse.json();
