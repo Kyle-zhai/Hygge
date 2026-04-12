@@ -1,9 +1,22 @@
+export interface PlanFeatures {
+  opinionDrift: boolean;
+  positions: boolean;
+  references: boolean;
+  scenarioSimulation: boolean;
+  pdfExport: boolean;
+  customPersonas: boolean;
+  marketplacePublish: boolean;
+  marketplaceFeatured: boolean;
+}
+
 export interface PlanConfig {
   name: "free" | "pro" | "max";
   stripePriceId: string | null;
   price: number;
   evaluationsLimit: number;
   maxPersonas: number;
+  customPersonasLimit: number;
+  features: PlanFeatures;
 }
 
 export const PLANS: Record<string, PlanConfig> = {
@@ -13,20 +26,53 @@ export const PLANS: Record<string, PlanConfig> = {
     price: 0,
     evaluationsLimit: 3,
     maxPersonas: 5,
+    customPersonasLimit: 0,
+    features: {
+      opinionDrift: false,
+      positions: false,
+      references: false,
+      scenarioSimulation: false,
+      pdfExport: false,
+      customPersonas: false,
+      marketplacePublish: false,
+      marketplaceFeatured: false,
+    },
   },
   pro: {
     name: "pro",
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID || "",
-    price: 2000,
-    evaluationsLimit: 15,
+    price: 3500,
+    evaluationsLimit: 20,
     maxPersonas: 12,
+    customPersonasLimit: 10,
+    features: {
+      opinionDrift: true,
+      positions: true,
+      references: true,
+      scenarioSimulation: false,
+      pdfExport: true,
+      customPersonas: true,
+      marketplacePublish: true,
+      marketplaceFeatured: false,
+    },
   },
   max: {
     name: "max",
     stripePriceId: process.env.STRIPE_MAX_PRICE_ID || "",
-    price: 10000,
+    price: 8900,
     evaluationsLimit: 60,
     maxPersonas: 25,
+    customPersonasLimit: -1,
+    features: {
+      opinionDrift: true,
+      positions: true,
+      references: true,
+      scenarioSimulation: true,
+      pdfExport: true,
+      customPersonas: true,
+      marketplacePublish: true,
+      marketplaceFeatured: true,
+    },
   },
 };
 

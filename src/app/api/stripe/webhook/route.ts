@@ -58,6 +58,7 @@ export async function POST(request: Request) {
             stripe_subscription_id: subscriptionId,
             evaluations_limit: plan.evaluationsLimit,
             evaluations_used: 0,
+            custom_personas_limit: plan.customPersonasLimit,
             current_period_start: new Date(item.current_period_start * 1000).toISOString(),
             current_period_end: new Date(item.current_period_end * 1000).toISOString(),
           })
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
         const updateData: Record<string, any> = {
           plan: plan.name,
           evaluations_limit: plan.evaluationsLimit,
+          custom_personas_limit: plan.customPersonasLimit,
           current_period_start: newPeriodStart,
           current_period_end: new Date(subItem.current_period_end * 1000).toISOString(),
         };
@@ -112,6 +114,7 @@ export async function POST(request: Request) {
           plan: "free",
           stripe_subscription_id: null,
           evaluations_limit: PLANS.free.evaluationsLimit,
+          custom_personas_limit: PLANS.free.customPersonasLimit,
         })
         .eq("stripe_subscription_id", subscription.id);
       break;

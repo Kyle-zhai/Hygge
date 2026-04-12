@@ -19,6 +19,8 @@ import {
   ChevronRight,
   Trash2,
   Scale,
+  Store,
+  UserCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -215,6 +217,30 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
         >
           <Scale className="h-4 w-4" />
           <span>Compare</span>
+        </Link>
+        <Link
+          href={`/${locale}/marketplace`}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.includes("/marketplace")
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
+              : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
+          }`}
+        >
+          <Store className="h-4 w-4" />
+          <span>Marketplace</span>
+        </Link>
+        <Link
+          href={`/${locale}/personas`}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.includes("/personas")
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
+              : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
+          }`}
+        >
+          <UserCircle className="h-4 w-4" />
+          <span>My Personas</span>
         </Link>
       </div>
 

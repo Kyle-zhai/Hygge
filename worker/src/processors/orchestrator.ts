@@ -130,10 +130,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         })
       : Promise.resolve(null);
 
-    const driftTask = generateOpinionDrift(llm, personas as Persona[], reviews).catch((driftError) => {
-      console.error(`[${evaluationId}] Opinion drift failed, skipping:`, driftError);
-      return null;
-    });
+    const driftTask = planTier === "pro" || planTier === "max"
+      ? generateOpinionDrift(llm, personas as Persona[], reviews).catch((driftError) => {
+          console.error(`[${evaluationId}] Opinion drift failed, skipping:`, driftError);
+          return null;
+        })
+      : Promise.resolve(null);
 
     const [summaryReport, simulation, drift] = await Promise.all([summaryTask, scenarioTask, driftTask]);
     summaryReport.scenario_simulation = simulation;
