@@ -12,6 +12,21 @@ export class OpenAICompatibleLLM implements LLMAdapter {
   }
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
+    let userContent: unknown = request.prompt;
+
+    if (request.media?.length) {
+      const parts: unknown[] = [];
+      for (const item of request.media) {
+        if (item.type === "image") {
+          parts.push({ type: "image_url", image_url: { url: item.url } });
+        } else if (item.type === "video") {
+          parts.push({ type: "video_url", video_url: { url: item.url } });
+        }
+      }
+      parts.push({ type: "text", text: request.prompt });
+      userContent = parts;
+    }
+
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: "POST",
       headers: {
@@ -23,7 +38,7 @@ export class OpenAICompatibleLLM implements LLMAdapter {
         max_tokens: request.maxTokens ?? 4096,
         messages: [
           { role: "system", content: request.system },
-          { role: "user", content: request.prompt },
+          { role: "user", content: userContent },
         ],
       }),
     });

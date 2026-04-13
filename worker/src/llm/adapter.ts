@@ -1,6 +1,12 @@
+export interface MediaItem {
+  type: "image" | "video";
+  url: string;
+}
+
 export interface LLMRequest {
   system: string;
   prompt: string;
+  media?: MediaItem[];
   maxTokens?: number;
 }
 

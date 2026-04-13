@@ -4,7 +4,7 @@ import { useState, useId, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Paperclip, FileText, Image, ArrowUp, X } from "lucide-react";
+import { Paperclip, FileText, Image, Film, ArrowUp, X } from "lucide-react";
 
 interface ProjectInputProps {
   onSubmit: (data: { rawInput: string; url: string | null; files: File[] }) => void;
@@ -76,6 +76,8 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
               >
                 {file.type.startsWith("image/") ? (
                   <Image className="h-3.5 w-3.5 text-[#666462]" />
+                ) : file.type.startsWith("video/") ? (
+                  <Film className="h-3.5 w-3.5 text-[#666462]" />
                 ) : (
                   <FileText className="h-3.5 w-3.5 text-[#666462]" />
                 )}
@@ -94,7 +96,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           <input
             id={inputId}
             type="file"
-            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx,.pptx,.mp4,.mov,.avi,.webm"
             multiple
             onChange={handleFileChange}
             style={{ display: "none" }}

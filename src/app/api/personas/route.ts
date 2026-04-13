@@ -6,7 +6,7 @@ export async function GET() {
 
   const { data: personas, error } = await supabase
     .from("personas")
-    .select("id, identity, demographics, evaluation_lens, category")
+    .select("id, identity, demographics, evaluation_lens, category, is_custom, creator_id")
     .eq("is_active", true)
     .order("category");
 
@@ -15,5 +15,15 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ personas });
+  let savedIds: string[] = [];
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: saves } = await supabase
+      .from("persona_saves")
+      .select("persona_id")
+      .eq("user_id", user.id);
+    savedIds = (saves || []).map((s: { persona_id: string }) => s.persona_id);
+  }
+
+  return NextResponse.json({ personas, savedIds });
 }

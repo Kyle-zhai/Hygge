@@ -3,7 +3,7 @@ export const PARSE_PROJECT_SYSTEM = `You are a topic analysis assistant. Your jo
 The user may provide:
 - Plain text describing their topic
 - A URL to a relevant website or resource
-- File attachments (PDFs, screenshots) with extracted content
+- File attachments (PDFs, Word docs, PowerPoints, screenshots, videos) with extracted content
 - A mix of any of the above
 
 First, identify what TYPE of topic the user is submitting. Then extract structured information accordingly.

@@ -1,7 +1,8 @@
 import type { Job } from "bullmq";
+import { OfficeParser } from "officeparser";
 import { supabase } from "../supabase.js";
-import { ClaudeLLM } from "../llm/claude.js";
 import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
+import type { MediaItem } from "../llm/adapter.js";
 import { config } from "../config.js";
 import { parseProject } from "./parse-project.js";
 import { classifyTopic } from "./classify-topic.js";
@@ -25,33 +26,66 @@ interface EvaluationJobData {
 
 export async function processEvaluation(job: Job<EvaluationJobData>) {
   const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode } = job.data;
-  const llm = config.llm.provider === "openai-compatible"
-    ? new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL)
-    : new ClaudeLLM(config.llm.apiKey, config.llm.model);
+  const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
 
   try {
     // 1. Update status to processing
     await supabase.from("evaluations").update({ status: "processing" }).eq("id", evaluationId);
 
-    // 2. Parse user submission
-    let attachmentDescriptions: string[] = [];
+    // 2. Parse user submission — separate text descriptions from media items
+    const attachmentDescriptions: string[] = [];
+    const mediaItems: MediaItem[] = [];
     if (attachments && attachments.length > 0) {
       for (const path of attachments) {
-        const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(path);
+        const filename = path.split("/").pop() ?? path;
+        const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+        const isImage = /^(png|jpg|jpeg|gif|webp)$/.test(ext);
+        const isVideo = /^(mp4|mov|avi|webm|mkv)$/.test(ext);
+        const isDocument = /^(pdf|docx|pptx)$/.test(ext);
+
+        if (isVideo) {
+          const { data: urlData } = await supabase.storage.from("attachments").createSignedUrl(path, 3600);
+          if (urlData?.signedUrl) {
+            mediaItems.push({ type: "video", url: urlData.signedUrl });
+            attachmentDescriptions.push(`[Video attachment: ${filename}]`);
+          }
+          continue;
+        }
+
+        const { data } = await supabase.storage.from("attachments").download(path);
+        if (!data) continue;
+
         if (isImage) {
-          attachmentDescriptions.push(`[Image attachment: ${path.split("/").pop()}]`);
+          const base64 = Buffer.from(await data.arrayBuffer()).toString("base64");
+          const mime = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+          mediaItems.push({ type: "image", url: `data:${mime};base64,${base64}` });
+          attachmentDescriptions.push(`[Image attachment: ${filename}]`);
+        } else if (isDocument) {
+          try {
+            const buffer = Buffer.from(await data.arrayBuffer());
+            const ast = await OfficeParser.parseOffice(buffer);
+            const text = ast.toText().slice(0, 8000);
+            attachmentDescriptions.push(`[Document: ${filename}]\n${text}`);
+          } catch (parseErr) {
+            console.error(`[${evaluationId}] Failed to parse ${filename}:`, parseErr);
+            attachmentDescriptions.push(`[Document: ${filename} — could not extract text]`);
+          }
         } else {
-          const { data } = await supabase.storage.from("attachments").download(path);
-          if (data) {
+          try {
             const text = await data.text();
-            attachmentDescriptions.push(`[PDF attachment: ${path.split("/").pop()}]\n${text.slice(0, 5000)}`);
+            attachmentDescriptions.push(`[Attachment: ${filename}]\n${text.slice(0, 5000)}`);
+          } catch {
+            attachmentDescriptions.push(`[Attachment: ${filename} — binary file]`);
           }
         }
       }
     }
 
-    // Parse project and (if topic mode) classify topic in parallel — both only need rawInput.
-    const parseTask = parseProject(llm, rawInput, url, attachmentDescriptions);
+    // Use vision model when media attachments are present, text model otherwise
+    const parseLlm = mediaItems.length > 0
+      ? new OpenAICompatibleLLM(config.llm.apiKey, config.llm.visionModel, config.llm.baseURL)
+      : llm;
+    const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems);
     const classifyTask = mode === "topic" ? classifyTopic(llm, rawInput) : Promise.resolve(null);
     const [parsedData, classification] = await Promise.all([parseTask, classifyTask]);
 
