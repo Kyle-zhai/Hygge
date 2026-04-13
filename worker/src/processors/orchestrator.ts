@@ -10,6 +10,7 @@ import { generatePersonaReview } from "./persona-review.js";
 import { generateSummaryReport, generateTopicSummaryReport } from "./summary-report.js";
 import { runScenarioSimulation } from "./scenario-simulation.js";
 import { generateOpinionDrift } from "./opinion-drift.js";
+import { runRoundTableDebate } from "./round-table-debate.js";
 import type { Persona } from "../types/persona.js";
 import type { TopicClassification } from "../types/evaluation.js";
 
@@ -165,7 +166,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     // 6. Summary report, scenario sim, and opinion drift all depend on reviews
     //    but are independent of each other — run them in parallel.
-    console.log(`[${evaluationId}] Running summary + sim + drift in parallel...`);
+    console.log(`[${evaluationId}] Running summary + sim + drift + debate in parallel...`);
     const summaryTask = mode === "topic" && dimensions
       ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
       : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
@@ -184,10 +185,18 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         })
       : Promise.resolve(null);
 
-    const [summaryReport, simulation, drift] = await Promise.all([summaryTask, scenarioTask, driftTask]);
+    const debateTask = planTier === "max"
+      ? runRoundTableDebate(llm, personaList, reviews).catch((debateError) => {
+          console.error(`[${evaluationId}] Round table debate failed, skipping:`, debateError);
+          return null;
+        })
+      : Promise.resolve(null);
+
+    const [summaryReport, simulation, drift, debate] = await Promise.all([summaryTask, scenarioTask, driftTask, debateTask]);
     summaryReport.scenario_simulation = simulation;
+    summaryReport.round_table_debate = debate;
     summaryReport.opinion_drift = drift && drift.length > 0 ? drift : null;
-    console.log(`[${evaluationId}] Summary + sim + drift complete (${drift?.length ?? 0} drift entries)`);
+    console.log(`[${evaluationId}] Summary + sim + drift + debate complete (${drift?.length ?? 0} drift, debate: ${debate ? "yes" : "no"})`);
 
     await job.updateProgress(95);
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { ReportTextView } from "@/components/evaluation/report-text-view";
 import { ReportScoresView } from "@/components/evaluation/report-scores-view";
 import { ScenarioSimulationView } from "@/components/evaluation/scenario-simulation-view";
@@ -35,11 +37,14 @@ interface ReportViewProps {
   reviews: ReviewData[];
   personas: PersonaData[];
   locale: string;
+  evaluationId?: string;
   topicClassification?: TopicClassification | null;
   mode?: "topic" | "product";
 }
 
-export function ReportView({ report, reviews, personas, locale, topicClassification, mode = "product" }: ReportViewProps) {
+export function ReportView({ report, reviews, personas, locale, evaluationId, topicClassification, mode = "product" }: ReportViewProps) {
+  const router = useRouter();
+  const currentLocale = useLocale();
   const [view, setView] = useState<ViewMode>("report");
   const savedScrollY = useRef(0);
   const pendingScroll = useRef<number | null>(null);
@@ -72,6 +77,19 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
   function handleBackToReport() {
     pendingScroll.current = savedScrollY.current;
     setView("report");
+  }
+
+  async function handleStartDebate(personaId: string) {
+    if (!evaluationId) return;
+    const res = await fetch("/api/debates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evaluationId, personaId }),
+    });
+    if (res.ok) {
+      const debate = await res.json();
+      router.push(`/${currentLocale}/debates/${debate.id}`);
+    }
   }
 
   if (view === "scores") {
@@ -112,6 +130,8 @@ export function ReportView({ report, reviews, personas, locale, topicClassificat
         locale={locale}
         onViewScores={handleViewScores}
         onViewSimulation={report?.scenario_simulation ? handleViewSimulation : undefined}
+        onStartDebate={evaluationId ? handleStartDebate : undefined}
+        evaluationId={evaluationId}
         topicClassification={topicClassification}
         mode={mode}
       />

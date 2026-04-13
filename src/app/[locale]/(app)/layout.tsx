@@ -15,13 +15,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
-  let history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean }[] = [];
+  let history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean; isDebate?: boolean; debateId?: string }[] = [];
   let plan = "free";
   let evaluationsUsed = 0;
   let evaluationsLimit = PLANS.free.evaluationsLimit;
 
   if (user) {
-    const [{ data: projects }, { data: subscription }] = await Promise.all([
+    const [{ data: projects }, { data: subscription }, { data: debates }] = await Promise.all([
       supabase
         .from("projects")
         .select("id, raw_input, parsed_data, evaluations (id, status, mode, comparison_base_id)")
@@ -33,6 +33,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .select("plan, evaluations_used, evaluations_limit")
         .eq("user_id", user.id)
         .single(),
+      supabase
+        .from("debates")
+        .select("id, persona_id, title, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(10),
     ]);
 
     if (projects) {
@@ -47,6 +53,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           isCompare: !!eval0?.comparison_base_id,
         };
       });
+    }
+
+    if (debates && debates.length > 0) {
+      for (const d of debates) {
+        history.push({
+          id: `debate-${d.id}`,
+          name: d.title || "Debate",
+          evaluationId: null,
+          status: "completed",
+          mode: "debate",
+          isCompare: false,
+          isDebate: true,
+          debateId: d.id,
+        });
+      }
     }
 
     if (subscription) {

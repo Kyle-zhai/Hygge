@@ -90,6 +90,7 @@ export default async function EvaluationResultPage({
       reviews={reviews}
       personas={personas || []}
       locale={locale}
+      evaluationId={evaluation.id}
       topicClassification={topicClassification}
       mode={evaluation.mode === "topic" ? "topic" : "product"}
     />

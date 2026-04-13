@@ -3,6 +3,7 @@ export interface PlanFeatures {
   positions: boolean;
   references: boolean;
   scenarioSimulation: boolean;
+  roundTableDebate: boolean;
   pdfExport: boolean;
   customPersonas: boolean;
   marketplacePublish: boolean;
@@ -32,6 +33,7 @@ export const PLANS: Record<string, PlanConfig> = {
       positions: false,
       references: false,
       scenarioSimulation: false,
+      roundTableDebate: false,
       pdfExport: false,
       customPersonas: false,
       marketplacePublish: false,
@@ -41,7 +43,7 @@ export const PLANS: Record<string, PlanConfig> = {
   pro: {
     name: "pro",
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID || "",
-    price: 3500,
+    price: 2000,
     evaluationsLimit: 20,
     maxPersonas: 12,
     customPersonasLimit: 10,
@@ -50,6 +52,7 @@ export const PLANS: Record<string, PlanConfig> = {
       positions: true,
       references: true,
       scenarioSimulation: false,
+      roundTableDebate: false,
       pdfExport: true,
       customPersonas: true,
       marketplacePublish: true,
@@ -59,15 +62,16 @@ export const PLANS: Record<string, PlanConfig> = {
   max: {
     name: "max",
     stripePriceId: process.env.STRIPE_MAX_PRICE_ID || "",
-    price: 8900,
+    price: 5000,
     evaluationsLimit: 60,
-    maxPersonas: 25,
+    maxPersonas: 20,
     customPersonasLimit: -1,
     features: {
       opinionDrift: true,
       positions: true,
       references: true,
       scenarioSimulation: true,
+      roundTableDebate: true,
       pdfExport: true,
       customPersonas: true,
       marketplacePublish: true,
