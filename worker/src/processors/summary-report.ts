@@ -1,6 +1,7 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type { SummaryReport } from "../types/report.js";
+import { robustJsonParse } from "../utils/json-parse.js";
 import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
 
 export interface ReviewForSummary {
@@ -21,10 +22,10 @@ export async function generateTopicSummaryReport(
   dimensions: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions);
-  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
   let parsed: any;
   try {
-    parsed = JSON.parse(response.text);
+    parsed = robustJsonParse(response.text);
   } catch (e) {
     console.error("[TopicSummary] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
     throw new Error(`Topic summary JSON parse failed: ${(e as Error).message}`);
@@ -60,10 +61,10 @@ export async function generateSummaryReport(
   dimensions?: TopicClassification["dimensions"]
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions);
-  const response = await llm.complete({ system, prompt, maxTokens: 8192 });
+  const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
   let parsed: any;
   try {
-    parsed = JSON.parse(response.text);
+    parsed = robustJsonParse(response.text);
   } catch (e) {
     console.error("[SummaryReport] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
     throw new Error(`Summary report JSON parse failed: ${(e as Error).message}`);

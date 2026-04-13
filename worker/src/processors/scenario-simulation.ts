@@ -2,6 +2,7 @@ import type { LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores } from "../types/evaluation.js";
 import type { Persona } from "../types/persona.js";
 import type { ScenarioSimulationResult } from "../types/report.js";
+import { robustJsonParse } from "../utils/json-parse.js";
 import { buildScenarioSimulationPrompt } from "../prompts/scenario-simulation.js";
 
 export interface ReviewForSimulation {
@@ -18,11 +19,11 @@ export async function runScenarioSimulation(
   reviews: ReviewForSimulation[]
 ): Promise<ScenarioSimulationResult> {
   const { system, prompt } = buildScenarioSimulationPrompt(personas, reviews);
-  const response = await llm.complete({ system, prompt, maxTokens: 4096 });
+  const response = await llm.complete({ system, prompt, maxTokens: 4096, jsonMode: true });
 
   let result: ScenarioSimulationResult;
   try {
-    result = JSON.parse(response.text) as ScenarioSimulationResult;
+    result = robustJsonParse<ScenarioSimulationResult>(response.text);
   } catch (e) {
     console.error("[ScenarioSimulation] JSON parse failed. Raw response:", response.text.slice(0, 500));
     throw e;

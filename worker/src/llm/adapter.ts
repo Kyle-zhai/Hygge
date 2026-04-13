@@ -8,6 +8,7 @@ export interface LLMRequest {
   prompt: string;
   media?: MediaItem[];
   maxTokens?: number;
+  jsonMode?: boolean;
 }
 
 export interface LLMResponse {
