@@ -5,6 +5,7 @@ import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Sparkles, Upload, ArrowLeft, Loader2, FileText, X, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { AvatarUpload } from "@/components/avatar-upload";
 
 type Tab = "form" | "import";
 
@@ -25,6 +26,8 @@ export default function CreatePersonaPage() {
   const [education, setEducation] = useState("");
   const [speakingStyle, setSpeakingStyle] = useState("");
   const [knownBiases, setKnownBiases] = useState("");
+
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   const [importText, setImportText] = useState("");
   const [importName, setImportName] = useState("");
@@ -56,12 +59,13 @@ export default function CreatePersonaPage() {
 
       const body =
         tab === "form"
-          ? { name, occupation, personality, background: fullBackground }
+          ? { name, occupation, personality, background: fullBackground, avatarUrl: avatarUrl || undefined }
           : {
               name: importName || "Imported Persona",
               occupation: "Imported",
               personality: "See imported definition",
               importedText: importText,
+              avatarUrl: avatarUrl || undefined,
             };
 
       const res = await fetch("/api/personas/create", {
@@ -137,6 +141,10 @@ export default function CreatePersonaPage() {
           {error}
         </div>
       )}
+
+      <div className="mb-6">
+        <AvatarUpload value={avatarUrl} onChange={setAvatarUrl} />
+      </div>
 
       {tab === "form" ? (
         <div className="space-y-5">

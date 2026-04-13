@@ -62,17 +62,18 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { name, tagline, occupation, description, tags } = body;
+  const { name, tagline, avatar, occupation, description, tags } = body;
 
   const updates: Record<string, unknown> = {};
 
-  if (name !== undefined || tagline !== undefined) {
+  if (name !== undefined || tagline !== undefined || avatar !== undefined) {
     const identity = { ...existing.identity };
     if (name !== undefined) {
       identity.name = name;
       if (identity.locale_variants?.en) identity.locale_variants.en.name = name;
     }
     if (tagline !== undefined) identity.tagline = tagline;
+    if (avatar !== undefined) identity.avatar = avatar;
     updates.identity = identity;
   }
 

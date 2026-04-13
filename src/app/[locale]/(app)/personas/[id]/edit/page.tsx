@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Loader2, Save, X } from "lucide-react";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import Link from "next/link";
+import { AvatarUpload } from "@/components/avatar-upload";
 
 export default function EditPersonaPage() {
   const locale = useLocale();
@@ -55,7 +56,7 @@ export default function EditPersonaPage() {
       const res = await fetch(`/api/personas/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, tagline, occupation, description, tags }),
+        body: JSON.stringify({ name, tagline, occupation, description, tags, avatar }),
       });
 
       if (!res.ok) {
@@ -103,20 +104,15 @@ export default function EditPersonaPage() {
         My Personas
       </Link>
 
-      <div className="mb-8 flex items-center gap-4">
-        {avatar && (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-2xl">
-            {avatar}
-          </div>
-        )}
-        <div>
-          <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
-            Edit Persona
-          </h1>
-          <p className="mt-0.5 text-sm text-[#666462]">
-            Update your persona&apos;s public-facing information
-          </p>
-        </div>
+      <h1 className="mb-1 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        Edit Persona
+      </h1>
+      <p className="mb-8 text-sm text-[#666462]">
+        Update your persona&apos;s public-facing information
+      </p>
+
+      <div className="mb-6">
+        <AvatarUpload value={avatar} onChange={setAvatar} />
       </div>
 
       {error && (

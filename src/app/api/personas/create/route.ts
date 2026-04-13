@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { name, occupation, personality, background, importedText } = body;
+  const { name, occupation, personality, background, importedText, avatarUrl } = body;
 
   if (!name || !occupation || !personality) {
     return NextResponse.json({ error: "name, occupation, and personality are required" }, { status: 400 });
@@ -69,6 +69,7 @@ export async function POST(request: Request) {
       personality,
       background,
       importedText,
+      avatarUrl,
     });
 
     return NextResponse.json({ jobId: job.id, status: "processing" }, { status: 202 });

@@ -158,10 +158,11 @@ export interface PersonaJobData {
   personality: string;
   background?: string;
   importedText?: string;
+  avatarUrl?: string;
 }
 
 export async function processPersonaGeneration(job: Job<PersonaJobData>) {
-  const { userId, name, occupation, personality, background, importedText } = job.data;
+  const { userId, name, occupation, personality, background, importedText, avatarUrl } = job.data;
   const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
 
   console.log(`[persona-gen:${job.id}] Generating persona "${name}" for user ${userId}`);
@@ -178,6 +179,7 @@ export async function processPersonaGeneration(job: Job<PersonaJobData>) {
   const persona = JSON.parse(response.text);
 
   persona.identity.name = name;
+  if (avatarUrl) persona.identity.avatar = avatarUrl;
   if (persona.identity.locale_variants?.en) {
     persona.identity.locale_variants.en.name = name;
   }
