@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+
+function getAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET(
   _req: Request,
@@ -79,7 +87,8 @@ export async function PATCH(
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const admin = getAdminClient();
+  const { error } = await admin
     .from("personas")
     .update(updates)
     .eq("id", id);
@@ -125,7 +134,8 @@ export async function DELETE(
     );
   }
 
-  const { error } = await supabase
+  const admin = getAdminClient();
+  const { error } = await admin
     .from("personas")
     .update({ is_active: false })
     .eq("id", id);
