@@ -20,6 +20,16 @@ import {
   MoreVertical,
   Pencil,
 } from "lucide-react";
+import { PersonaAvatar } from "@/components/persona-avatar";
+
+const CATEGORIES = [
+  { value: "technical", label: "Technical" },
+  { value: "product", label: "Product" },
+  { value: "design", label: "Design" },
+  { value: "end_user", label: "End User" },
+  { value: "business", label: "Business" },
+  { value: "general", label: "General" },
+];
 
 interface PersonaFull {
   id: string;
@@ -149,6 +159,8 @@ export default function MyPersonasPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ type: DialogType; persona: PersonaFull } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [publishDesc, setPublishDesc] = useState("");
+  const [publishCategory, setPublishCategory] = useState("");
   const [pendingJobs, setPendingJobs] = useState<PendingPersona[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
@@ -242,11 +254,17 @@ export default function MyPersonasPage() {
 
   async function handlePublish(id: string) {
     setActionLoading(true);
-    const res = await fetch(`/api/personas/${id}/publish`, { method: "POST" });
+    const res = await fetch(`/api/personas/${id}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: publishDesc, category: publishCategory }),
+    });
     if (res.ok) {
-      setPersonas((prev) => prev.map((p) => (p.id === id ? { ...p, is_public: true } : p)));
+      setPersonas((prev) => prev.map((p) => (p.id === id ? { ...p, is_public: true, description: publishDesc || p.description } : p)));
     }
     setActionLoading(false);
+    setPublishDesc("");
+    setPublishCategory("");
     setDialog(null);
   }
 
@@ -340,9 +358,7 @@ export default function MyPersonasPage() {
                     onClick={() => setExpandedId(isExpanded ? null : p.id)}
                     className="flex items-center gap-4 min-w-0 flex-1 text-left"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-lg">
-                      {p.identity.avatar}
-                    </div>
+                    <PersonaAvatar avatar={p.identity.avatar} size={40} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-medium text-[#EAEAE8]">
@@ -394,7 +410,7 @@ export default function MyPersonasPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => { setMenuOpenId(null); setDialog({ type: "publish", persona: p }); }}
+                            onClick={() => { setMenuOpenId(null); setPublishDesc(p.description ?? ""); setPublishCategory(p.demographics?.occupation ? "" : ""); setDialog({ type: "publish", persona: p }); }}
                             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[#C4A882] transition-colors hover:bg-[#252525]"
                           >
                             <Globe className="h-3.5 w-3.5" />
@@ -570,9 +586,7 @@ export default function MyPersonasPage() {
             </div>
 
             <div className="mb-2 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-base">
-                {dialog.persona.identity.avatar}
-              </div>
+              <PersonaAvatar avatar={dialog.persona.identity.avatar} size={36} />
               <div>
                 <p className="text-sm font-medium text-[#EAEAE8]">
                   {dialog.persona.identity.name}
@@ -583,18 +597,50 @@ export default function MyPersonasPage() {
               </div>
             </div>
 
-            <p className="mb-6 text-sm text-[#9B9594]">
-              {dialog.type === "publish" &&
-                "This persona will be visible to all users in the marketplace. You can unpublish it at any time."}
-              {dialog.type === "unpublish" &&
-                "This persona will be removed from the marketplace. Users who saved it will no longer see it."}
-              {dialog.type === "delete" &&
-                "This action cannot be undone. The persona will be permanently removed from your account."}
-            </p>
+            {dialog.type === "publish" && (
+              <div className="mb-5 space-y-4">
+                <p className="text-sm text-[#9B9594]">
+                  This persona will be visible to all users in the marketplace.
+                </p>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Category</label>
+                  <select
+                    value={publishCategory}
+                    onChange={(e) => setPublishCategory(e.target.value)}
+                    className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] outline-none transition-colors focus:border-[#C4A882]/50"
+                  >
+                    <option value="">Select a category</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Introduction</label>
+                  <textarea
+                    value={publishDesc}
+                    onChange={(e) => setPublishDesc(e.target.value)}
+                    placeholder="Describe this persona for marketplace users..."
+                    rows={3}
+                    className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
+                  />
+                </div>
+              </div>
+            )}
+            {dialog.type === "unpublish" && (
+              <p className="mb-6 text-sm text-[#9B9594]">
+                This persona will be removed from the marketplace. Users who saved it will no longer see it.
+              </p>
+            )}
+            {dialog.type === "delete" && (
+              <p className="mb-6 text-sm text-[#9B9594]">
+                This action cannot be undone. The persona will be permanently removed from your account.
+              </p>
+            )}
 
             <div className="flex gap-3">
               <button
-                onClick={() => setDialog(null)}
+                onClick={() => { setDialog(null); setPublishDesc(""); setPublishCategory(""); }}
                 disabled={actionLoading}
                 className="flex-1 rounded-xl border border-[#2A2A2A] px-4 py-2.5 text-sm text-[#9B9594] transition-colors hover:border-[#444] hover:text-[#EAEAE8] disabled:opacity-40"
               >
@@ -606,7 +652,7 @@ export default function MyPersonasPage() {
                   else if (dialog.type === "unpublish") handleUnpublish(dialog.persona.id);
                   else if (dialog.type === "delete") handleDelete(dialog.persona.id);
                 }}
-                disabled={actionLoading}
+                disabled={actionLoading || (dialog.type === "publish" && (!publishCategory || !publishDesc.trim()))}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
                   dialog.type === "delete"
                     ? "bg-[#F87171] text-white hover:bg-[#EF4444]"
