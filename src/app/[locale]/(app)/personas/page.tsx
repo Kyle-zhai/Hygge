@@ -620,6 +620,12 @@ export default function MyPersonasPage() {
                   <textarea
                     value={publishDesc}
                     onChange={(e) => setPublishDesc(e.target.value)}
+                    onWheel={(e) => {
+                      const el = e.currentTarget;
+                      el.scrollTop += e.deltaY;
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     placeholder="Describe this persona for marketplace users..."
                     rows={4}
                     className="scrollbar-sidebar w-full max-h-40 overscroll-contain rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
