@@ -1,17 +1,22 @@
 import type { ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type { ReviewForSummary } from "../processors/summary-report.js";
 
-const FIXED_DIMENSION_SCHEMA = `"multi_dimensional_analysis": [
+function buildNumericDimensionSchema(dimensions: TopicClassification["dimensions"]): string {
+  const keys = dimensions.map(d => d.key).join("|");
+  return `"multi_dimensional_analysis": [
     {
-      "dimension": "<usability|market_fit|design|tech_quality|innovation|pricing>",
-      "score": <averaged score>,
+      "dimension": "<${keys}>",
+      "label_en": "<English label for this dimension>",
+      "label_zh": "<Chinese label for this dimension>",
+      "score": <averaged score 1-10>,
       "strengths": ["<specific strength>"],
       "weaknesses": ["<specific weakness>"],
-      "analysis": "<100-200 word deep analysis for this dimension, adapted to the topic type>"
+      "analysis": "<100-200 word deep analysis for this dimension>"
     }
   ]`;
+}
 
-function buildDynamicDimensionSchema(dimensions: TopicClassification["dimensions"]): string {
+function buildStanceDimensionSchema(dimensions: TopicClassification["dimensions"]): string {
   const keys = dimensions.map(d => d.key).join("|");
   return `"multi_dimensional_analysis": [
     {
@@ -36,7 +41,7 @@ function buildScoresLine(review: ReviewForSummary, dimensions?: TopicClassificat
     return "Scores: " + dimensions.map(d => `${d.key}=${(review.scores as Record<string, number>)[d.key] ?? "N/A"}`).join(", ");
   }
   const s = review.scores as Record<string, number>;
-  return `Scores: usability=${s.usability}, market_fit=${s.market_fit}, design=${s.design}, tech_quality=${s.tech_quality}, innovation=${s.innovation}, pricing=${s.pricing}`;
+  return "Scores: " + Object.entries(s).map(([k, v]) => `${k}=${v}`).join(", ");
 }
 
 export function buildTopicSummaryReportPrompt(
@@ -45,7 +50,7 @@ export function buildTopicSummaryReportPrompt(
   rawInput: string,
   dimensions: TopicClassification["dimensions"]
 ): { system: string; prompt: string } {
-  const dimensionSchema = buildDynamicDimensionSchema(dimensions);
+  const dimensionSchema = buildStanceDimensionSchema(dimensions);
 
   const system = `You are synthesizing a multi-perspective discussion on a topic. Multiple AI personas with different backgrounds have independently shared their views. Your job is to produce a comprehensive synthesis report.
 
@@ -157,8 +162,15 @@ export function buildSummaryReportPrompt(
   dimensions?: TopicClassification["dimensions"]
 ): { system: string; prompt: string } {
   const dimensionSchema = dimensions
-    ? buildDynamicDimensionSchema(dimensions)
-    : FIXED_DIMENSION_SCHEMA;
+    ? buildNumericDimensionSchema(dimensions)
+    : buildNumericDimensionSchema([
+        { key: "usability", label_en: "Usability", label_zh: "可用性", description: "" },
+        { key: "market_fit", label_en: "Market Fit", label_zh: "市场契合", description: "" },
+        { key: "design", label_en: "Design", label_zh: "设计", description: "" },
+        { key: "tech_quality", label_en: "Tech Quality", label_zh: "技术质量", description: "" },
+        { key: "innovation", label_en: "Innovation", label_zh: "创新性", description: "" },
+        { key: "pricing", label_en: "Pricing", label_zh: "定价", description: "" },
+      ]);
 
   const readinessNote = dimensions
     ? `The "market_readiness" field should reflect overall readiness/feasibility for this topic type (low/medium/high). Also include "readiness_label_en" and "readiness_label_zh" fields with a contextually appropriate label.`

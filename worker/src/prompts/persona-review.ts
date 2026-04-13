@@ -1,32 +1,24 @@
 import type { Persona } from "../types/persona.js";
 import type { ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 
-const FIXED_DIMENSIONS_INSTRUCTION = `- Score each dimension from 1-10 (integers only)
-- Adapt the meaning of each dimension to fit the topic type:
-  * usability: For products, how easy to use. For ideas/policies, how practical to implement. For events, how accessible. For designs/creative works, how clear and engaging.
-  * market_fit: For products, product-market fit. For ideas/policies, relevance to the target audience or stakeholders. For events, audience appeal. For creative works, audience resonance.
-  * design: For products, visual/UX design. For ideas/policies, how well-structured the approach is. For events, organization and experience design. For creative works, craft and aesthetics.
-  * tech_quality: For products, technical implementation. For ideas, technical feasibility. For policies, rigor and evidence base. For other topics, quality of execution or foundation.
-  * innovation: How novel or original the topic is in its domain.
-  * pricing: For products, value proposition. For policies/ideas, cost-effectiveness or resource efficiency. For other topics, overall value relative to effort/investment.`;
+function buildDynamicNumericInstruction(dimensions: TopicClassification["dimensions"]): string {
+  const lines = dimensions.map(d => `  * ${d.key}: ${d.description}`);
+  return `- Score each dimension from 1-10 (integers only)\n- Evaluate based on these dimensions:\n${lines.join("\n")}`;
+}
 
-const FIXED_SCORES_SCHEMA = `"scores": {
-    "usability": <1-10>,
-    "market_fit": <1-10>,
-    "design": <1-10>,
-    "tech_quality": <1-10>,
-    "innovation": <1-10>,
-    "pricing": <1-10>
-  }`;
+function buildDynamicNumericSchema(dimensions: TopicClassification["dimensions"]): string {
+  const fields = dimensions.map(d => `    "${d.key}": <1-10>`).join(",\n");
+  return `"scores": {\n${fields}\n  }`;
+}
 
-function buildDynamicDimensionsInstruction(dimensions: TopicClassification["dimensions"]): string {
+function buildStanceInstruction(dimensions: TopicClassification["dimensions"]): string {
   const lines = dimensions.map(d => `  * ${d.key}: ${d.description}`);
   return `- For each dimension, express your STANCE (not a numerical score). Use one of: strongly_positive, positive, neutral, negative, strongly_negative
 - "positive" means you are leaning IN FAVOR of the topic/proposition on that dimension; "negative" means you are leaning AGAINST it. For open-ended questions, treat "positive" as endorsing the direction and "negative" as cautioning against it. Use "neutral" only when you genuinely have no lean.
 - Your stance reflects your character's position on that aspect of the topic:\n${lines.join("\n")}`;
 }
 
-function buildDynamicScoresSchema(dimensions: TopicClassification["dimensions"]): string {
+function buildStanceSchema(dimensions: TopicClassification["dimensions"]): string {
   const fields = dimensions.map(d => `    "${d.key}": "<strongly_positive|positive|neutral|negative|strongly_negative>"`).join(",\n");
   return `"stances": {\n${fields}\n  }`;
 }
@@ -35,15 +27,36 @@ export function buildPersonaReviewPrompt(
   persona: Persona,
   project: ProjectParsedData,
   rawInput: string,
-  dimensions?: TopicClassification["dimensions"]
+  dimensions?: TopicClassification["dimensions"],
+  mode?: "product" | "topic"
 ): { system: string; prompt: string } {
-  const dimensionsInstruction = dimensions
-    ? buildDynamicDimensionsInstruction(dimensions)
-    : FIXED_DIMENSIONS_INSTRUCTION;
+  let dimensionsInstruction: string;
+  let scoresSchema: string;
 
-  const scoresSchema = dimensions
-    ? buildDynamicScoresSchema(dimensions)
-    : FIXED_SCORES_SCHEMA;
+  if (dimensions && mode === "topic") {
+    dimensionsInstruction = buildStanceInstruction(dimensions);
+    scoresSchema = buildStanceSchema(dimensions);
+  } else if (dimensions) {
+    dimensionsInstruction = buildDynamicNumericInstruction(dimensions);
+    scoresSchema = buildDynamicNumericSchema(dimensions);
+  } else {
+    dimensionsInstruction = buildDynamicNumericInstruction([
+      { key: "usability", label_en: "Usability", label_zh: "可用性", description: "How easy to use or practical to implement" },
+      { key: "market_fit", label_en: "Market Fit", label_zh: "市场契合", description: "Product-market fit or relevance to target audience" },
+      { key: "design", label_en: "Design", label_zh: "设计", description: "Visual/UX design quality or structural quality" },
+      { key: "tech_quality", label_en: "Tech Quality", label_zh: "技术质量", description: "Technical implementation quality or feasibility" },
+      { key: "innovation", label_en: "Innovation", label_zh: "创新性", description: "How novel or original in its domain" },
+      { key: "pricing", label_en: "Pricing", label_zh: "定价", description: "Value proposition or cost-effectiveness" },
+    ]);
+    scoresSchema = buildDynamicNumericSchema([
+      { key: "usability", label_en: "", label_zh: "", description: "" },
+      { key: "market_fit", label_en: "", label_zh: "", description: "" },
+      { key: "design", label_en: "", label_zh: "", description: "" },
+      { key: "tech_quality", label_en: "", label_zh: "", description: "" },
+      { key: "innovation", label_en: "", label_zh: "", description: "" },
+      { key: "pricing", label_en: "", label_zh: "", description: "" },
+    ]);
+  }
 
   const system = `${persona.system_prompt}
 

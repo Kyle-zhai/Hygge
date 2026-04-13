@@ -6,7 +6,7 @@ interface ProjectRow {
   id: string;
   parsed_data: { name?: string } | null;
   raw_input: string;
-  evaluations: { id: string; status: string; mode: string }[];
+  evaluations: { id: string; status: string; mode: string; comparison_base_id: string | null }[];
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     data: { user },
   } = await supabase.auth.getUser();
 
-  let history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string }[] = [];
+  let history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean }[] = [];
   let plan = "free";
   let evaluationsUsed = 0;
   let evaluationsLimit = PLANS.free.evaluationsLimit;
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const [{ data: projects }, { data: subscription }] = await Promise.all([
       supabase
         .from("projects")
-        .select("id, raw_input, parsed_data, evaluations (id, status, mode)")
+        .select("id, raw_input, parsed_data, evaluations (id, status, mode, comparison_base_id)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(20),
@@ -44,6 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           evaluationId: eval0?.id ?? null,
           status: eval0?.status ?? null,
           mode: eval0?.mode ?? "topic",
+          isCompare: !!eval0?.comparison_base_id,
         };
       });
     }

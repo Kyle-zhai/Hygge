@@ -31,6 +31,7 @@ interface HistoryItem {
   evaluationId: string | null;
   status: string | null;
   mode: string;
+  isCompare: boolean;
 }
 
 interface SidebarProps {
@@ -54,6 +55,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const discussionRef = useRef<HTMLDivElement>(null);
 
@@ -149,9 +151,22 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
     setMenu(null);
   }
 
-  const filteredHistory = searchQuery
-    ? history.filter((h) => h.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : history;
+  const filteredHistory = history.filter((h) => {
+    if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (typeFilter.size === 0) return true;
+    if (h.isCompare) return typeFilter.has("compare");
+    if (h.mode === "product") return typeFilter.has("product");
+    return typeFilter.has("topic");
+  });
+
+  function toggleTypeFilter(type: string) {
+    setTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }
 
   const sidebarContent = (
     <div className="flex h-full flex-col overflow-hidden">
@@ -274,6 +289,27 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       >
         <p className="mb-2 px-3 text-xs font-medium text-[#666462]">Your Discussions</p>
 
+        {/* Type filter */}
+        <div className="mb-2 flex flex-wrap gap-1 px-2">
+          {(["topic", "product", "compare"] as const).map((type) => {
+            const active = typeFilter.has(type);
+            const labels: Record<string, string> = { topic: "Topic", product: "Product", compare: "Compare" };
+            return (
+              <button
+                key={type}
+                onClick={() => toggleTypeFilter(type)}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                  active
+                    ? "bg-[#C4A882]/20 text-[#C4A882]"
+                    : "bg-[#1C1C1C] text-[#666462] hover:text-[#9B9594]"
+                }`}
+              >
+                {labels[type]}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Search */}
         <div className="mb-2 px-1">
           <div className="flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-2.5 py-1.5">
@@ -302,7 +338,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                 : `/en/evaluate/${item.evaluationId}/progress`
               : "#";
             const active = item.evaluationId && pathname.includes(item.evaluationId);
-            const ModeIcon = item.mode === "product" ? Package : MessageCircle;
+            const ModeIcon = item.isCompare ? Scale : item.mode === "product" ? Package : MessageCircle;
             const menuOpen = menu?.itemId === item.id;
             return (
               <div key={item.id} className="group relative">

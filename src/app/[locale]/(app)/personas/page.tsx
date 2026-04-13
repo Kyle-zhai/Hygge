@@ -31,6 +31,19 @@ const CATEGORIES = [
   { value: "general", label: "General" },
 ];
 
+const SCENARIOS = [
+  { value: "product_evaluation", label: "Product Evaluation" },
+  { value: "market_research", label: "Market Research" },
+  { value: "user_testing", label: "User Testing" },
+  { value: "design_review", label: "Design Review" },
+  { value: "business_strategy", label: "Business Strategy" },
+  { value: "competitive_analysis", label: "Competitive Analysis" },
+  { value: "content_review", label: "Content Review" },
+  { value: "policy_discussion", label: "Policy Discussion" },
+  { value: "brainstorming", label: "Brainstorming" },
+  { value: "decision_making", label: "Decision Making" },
+];
+
 interface PersonaFull {
   id: string;
   identity: { name: string; avatar: string; tagline: string };
@@ -161,6 +174,9 @@ export default function MyPersonasPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [publishDesc, setPublishDesc] = useState("");
   const [publishCategory, setPublishCategory] = useState("");
+  const [publishTags, setPublishTags] = useState<string[]>([]);
+  const [publishTagInput, setPublishTagInput] = useState("");
+  const [publishScenarios, setPublishScenarios] = useState<string[]>([]);
   const [pendingJobs, setPendingJobs] = useState<PendingPersona[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
@@ -257,14 +273,22 @@ export default function MyPersonasPage() {
     const res = await fetch(`/api/personas/${id}/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: publishDesc, category: publishCategory }),
+      body: JSON.stringify({
+        description: publishDesc,
+        category: publishCategory,
+        tags: publishTags,
+        scenarios: publishScenarios,
+      }),
     });
     if (res.ok) {
-      setPersonas((prev) => prev.map((p) => (p.id === id ? { ...p, is_public: true, description: publishDesc || p.description } : p)));
+      setPersonas((prev) => prev.map((p) => (p.id === id ? { ...p, is_public: true, description: publishDesc || p.description, tags: publishTags } : p)));
     }
     setActionLoading(false);
     setPublishDesc("");
     setPublishCategory("");
+    setPublishTags([]);
+    setPublishTagInput("");
+    setPublishScenarios([]);
     setDialog(null);
   }
 
@@ -627,9 +651,75 @@ export default function MyPersonasPage() {
                       e.stopPropagation();
                     }}
                     placeholder="Describe this persona for marketplace users..."
-                    rows={4}
+                    rows={3}
                     className="scrollbar-sidebar w-full max-h-40 overscroll-contain rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
                   />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Scenarios</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SCENARIOS.map((s) => {
+                      const active = publishScenarios.includes(s.value);
+                      return (
+                        <button
+                          key={s.value}
+                          type="button"
+                          onClick={() =>
+                            setPublishScenarios((prev) =>
+                              active ? prev.filter((v) => v !== s.value) : [...prev, s.value]
+                            )
+                          }
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                            active
+                              ? "bg-[#C4A882]/20 text-[#C4A882] ring-1 ring-[#C4A882]/30"
+                              : "bg-[#1C1C1C] text-[#666462] hover:text-[#9B9594]"
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Tags</label>
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-2.5 py-2 min-h-[36px]">
+                    {publishTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 rounded-full bg-[#1C1C1C] px-2 py-0.5 text-[11px] text-[#9B9594]"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => setPublishTags((prev) => prev.filter((t) => t !== tag))}
+                          className="text-[#666462] hover:text-[#F87171]"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      type="text"
+                      value={publishTagInput}
+                      onChange={(e) => setPublishTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.key === "Enter" || e.key === ",") && publishTagInput.trim()) {
+                          e.preventDefault();
+                          const tag = publishTagInput.trim().replace(/,$/,"");
+                          if (tag && !publishTags.includes(tag)) {
+                            setPublishTags((prev) => [...prev, tag]);
+                          }
+                          setPublishTagInput("");
+                        }
+                        if (e.key === "Backspace" && !publishTagInput && publishTags.length > 0) {
+                          setPublishTags((prev) => prev.slice(0, -1));
+                        }
+                      }}
+                      placeholder={publishTags.length === 0 ? "Type and press Enter..." : ""}
+                      className="min-w-[80px] flex-1 bg-transparent text-xs text-[#EAEAE8] placeholder:text-[#444] outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -646,7 +736,7 @@ export default function MyPersonasPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => { setDialog(null); setPublishDesc(""); setPublishCategory(""); }}
+                onClick={() => { setDialog(null); setPublishDesc(""); setPublishCategory(""); setPublishTags([]); setPublishTagInput(""); setPublishScenarios([]); }}
                 disabled={actionLoading}
                 className="flex-1 rounded-xl border border-[#2A2A2A] px-4 py-2.5 text-sm text-[#9B9594] transition-colors hover:border-[#444] hover:text-[#EAEAE8] disabled:opacity-40"
               >
