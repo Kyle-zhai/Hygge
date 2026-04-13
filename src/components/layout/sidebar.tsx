@@ -22,6 +22,7 @@ import {
   Store,
   UserCircle,
   BarChart3,
+  ListFilter,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -57,6 +58,8 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   const [collapsed, setCollapsed] = useState(false);
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
   const discussionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -287,27 +290,56 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           e.stopPropagation();
         }}
       >
-        <p className="mb-2 px-3 text-xs font-medium text-[#666462]">Your Discussions</p>
-
-        {/* Type filter */}
-        <div className="mb-2 flex flex-wrap gap-1 px-2">
-          {(["topic", "product", "compare"] as const).map((type) => {
-            const active = typeFilter.has(type);
-            const labels: Record<string, string> = { topic: "Topic", product: "Product", compare: "Compare" };
-            return (
-              <button
-                key={type}
-                onClick={() => toggleTypeFilter(type)}
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                  active
-                    ? "bg-[#C4A882]/20 text-[#C4A882]"
-                    : "bg-[#1C1C1C] text-[#666462] hover:text-[#9B9594]"
-                }`}
-              >
-                {labels[type]}
-              </button>
-            );
-          })}
+        <div className="mb-2 flex items-center justify-between px-3">
+          <p className="text-xs font-medium text-[#666462]">Your Discussions</p>
+          <div className="relative">
+            <button
+              ref={filterBtnRef}
+              onClick={() => setFilterOpen((v) => !v)}
+              className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                typeFilter.size > 0
+                  ? "text-[#C4A882] bg-[#C4A882]/10"
+                  : "text-[#666462] hover:text-[#9B9594] hover:bg-[#1C1C1C]"
+              }`}
+            >
+              <ListFilter className="h-3.5 w-3.5" />
+            </button>
+            <AnimatePresence>
+              {filterOpen && (
+                <>
+                  <div className="fixed inset-0 z-[55]" onClick={() => setFilterOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, x: -4, scale: 0.96 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -4, scale: 0.96 }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
+                    className="absolute right-0 top-full mt-1 z-[60] w-[130px] rounded-lg border border-[#2A2A2A] bg-[#141414] p-1 shadow-xl shadow-black/50"
+                  >
+                    {(["topic", "product", "compare"] as const).map((type) => {
+                      const active = typeFilter.has(type);
+                      const labels: Record<string, string> = { topic: "Topic", product: "Product", compare: "Compare" };
+                      const Icons: Record<string, typeof MessageCircle> = { topic: MessageCircle, product: Package, compare: Scale };
+                      const Icon = Icons[type];
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => toggleTypeFilter(type)}
+                          className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                            active
+                              ? "bg-[#C4A882]/10 text-[#C4A882]"
+                              : "text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+                          }`}
+                        >
+                          <Icon className="h-3 w-3" />
+                          <span className="font-medium">{labels[type]}</span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Search */}
