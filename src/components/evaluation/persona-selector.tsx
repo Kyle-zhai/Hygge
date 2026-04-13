@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2, Bookmark, X } from "lucide-react";
+import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2, Bookmark, X, Heart, User } from "lucide-react";
 
 interface PersonaSquad {
   id: string;
@@ -29,6 +29,8 @@ interface PersonaData {
   demographics: { age: number; gender: string; occupation: string; income_level: string };
   evaluation_lens: { primary_question: string };
   category: string;
+  is_custom?: boolean;
+  creator_id?: string;
 }
 
 interface PersonaSelectorProps {
@@ -81,9 +83,10 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [personas, setPersonas] = useState<PersonaData[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [recommendedIds, setRecommendedIds] = useState<Set<string>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Filters — special values: "my_saved", "my_custom"
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [ageFilters, setAgeFilters] = useState<Set<string>>(new Set());
@@ -108,11 +111,12 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         }),
         fetch("/api/squads"),
       ]);
-      const { personas: rawPersonas } = await personasRes.json();
+      const { personas: rawPersonas, savedIds: fetchedSavedIds } = await personasRes.json();
       const { recommended_ids } = await recommendRes.json();
-      const validCategories = mode === "topic" ? ["general"] : ["technical", "product", "design", "end_user", "business"];
+      const validCategories = mode === "topic" ? ["general"] : ["technical", "product", "design", "end_user", "business", "custom"];
       const allPersonas = (rawPersonas || []).filter((p: PersonaData) => validCategories.includes(p.category));
       setPersonas(allPersonas);
+      setSavedIds(new Set<string>(fetchedSavedIds || []));
       const recSet = new Set<string>(recommended_ids || []);
       setRecommendedIds(recSet);
       setSelectedIds(new Set((recommended_ids || []).slice(0, maxPersonas)));
@@ -161,10 +165,21 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
     if (!res.ok) setSquads(prev);
   }
 
+  const hasSaved = savedIds.size > 0;
+  const hasCustom = personas.some((p) => p.is_custom);
+
   // Filtering logic
   const filtered = useMemo(() => {
     return personas.filter((p) => {
-      if (activeCategory && p.category !== activeCategory) return false;
+      if (activeCategory === "my_saved") {
+        if (!savedIds.has(p.id)) return false;
+      } else if (activeCategory === "my_custom") {
+        if (!p.is_custom) return false;
+      } else if (activeCategory) {
+        if (p.category !== activeCategory) return false;
+      } else {
+        if (p.category === "custom") return false;
+      }
       if (ageFilters.size > 0) {
         const matchesAge = Array.from(ageFilters).some((label) => {
           const range = ageRanges.find((r) => r.label === label);
@@ -176,7 +191,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       if (incomeFilters.size > 0 && !incomeFilters.has(p.demographics.income_level)) return false;
       return true;
     });
-  }, [personas, activeCategory, ageFilters, genderFilters, incomeFilters]);
+  }, [personas, activeCategory, savedIds, ageFilters, genderFilters, incomeFilters]);
 
   function togglePersona(id: string) {
     setActiveSquadId(null);
@@ -324,6 +339,29 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             >
               {t("allCategories")}
             </Button>
+            {hasSaved && (
+              <Button
+                variant={activeCategory === "my_saved" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
+                className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+              >
+                <Heart className="mr-1 h-3 w-3" />
+                {locale === "zh" ? "已收藏" : "My Saved"}
+              </Button>
+            )}
+            {hasCustom && (
+              <Button
+                variant={activeCategory === "my_custom" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
+                className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+              >
+                <User className="mr-1 h-3 w-3" />
+                {locale === "zh" ? "我的自定义" : "My Custom"}
+              </Button>
+            )}
+            <span className="mx-0.5 h-4 w-px bg-[#2A2A2A]" />
             {categoryOrder.map((cat) => (
               <Button
                 key={cat}
@@ -421,6 +459,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         {filtered.map((persona) => {
           const isSelected = selectedIds.has(persona.id);
           const isRecommended = recommendedIds.has(persona.id);
+          const isSaved = savedIds.has(persona.id);
+          const isCustom = persona.is_custom;
           const localized = persona.identity.locale_variants[locale as "zh" | "en"] || persona.identity.locale_variants.en;
           const tags = persona.identity.tags;
 
@@ -439,13 +479,15 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-sm text-[#EAEAE8] truncate">{localized.name}</span>
+                      {isCustom && <User className="h-3 w-3 shrink-0 text-[#C4A882]" />}
+                      {isSaved && <Heart className="h-3 w-3 shrink-0 text-[#C4A882]" />}
                       {isRecommended && <Sparkles className="h-3 w-3 shrink-0 text-[#E2DDD5]" />}
                       {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
                     </div>
                     <p className="mt-0.5 text-xs text-[#666462] truncate">
-                      {tags && tags.length > 0
-                        ? tags.slice(0, 2).join(" · ")
-                        : localized.tagline}
+                      {persona.demographics.occupation && localized.tagline
+                        ? `${persona.demographics.occupation} · ${localized.tagline}`
+                        : persona.demographics.occupation || localized.tagline || (tags && tags.length > 0 ? tags.slice(0, 2).join(" · ") : "")}
                     </p>
                   </div>
                 </CardContent>

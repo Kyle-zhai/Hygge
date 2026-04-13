@@ -7,8 +7,8 @@ export const config = {
   llm: {
     apiKey: process.env.LLM_API_KEY || "",
     model: process.env.LLM_MODEL || "qwen-max",
+    visionModel: process.env.LLM_VISION_MODEL || "qwen3.5-omni-plus",
     baseURL: process.env.LLM_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    provider: process.env.LLM_PROVIDER || "openai-compatible",
   },
   supabase: {
     url: process.env.SUPABASE_URL || "",
