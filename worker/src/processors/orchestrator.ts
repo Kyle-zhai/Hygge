@@ -22,10 +22,11 @@ interface EvaluationJobData {
   selectedPersonaIds: string[];
   planTier: "free" | "pro" | "max";
   mode: "product" | "topic";
+  comparisonBaseId?: string;
 }
 
 export async function processEvaluation(job: Job<EvaluationJobData>) {
-  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode } = job.data;
+  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId } = job.data;
   const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
 
   try {
@@ -86,17 +87,33 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       ? new OpenAICompatibleLLM(config.llm.apiKey, config.llm.visionModel, config.llm.baseURL)
       : llm;
     const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems);
-    const classifyTask = mode === "topic" ? classifyTopic(llm, rawInput) : Promise.resolve(null);
-    const [parsedData, classification] = await Promise.all([parseTask, classifyTask]);
+
+    let classification: TopicClassification;
+    let parsedData: import("../types/evaluation.js").ProjectParsedData;
+
+    if (comparisonBaseId) {
+      const { data: baseEval } = await supabase
+        .from("evaluations")
+        .select("topic_classification")
+        .eq("id", comparisonBaseId)
+        .single();
+      if (!baseEval?.topic_classification) {
+        throw new Error("Base evaluation has no topic_classification for compare");
+      }
+      classification = baseEval.topic_classification as TopicClassification;
+      parsedData = await parseTask;
+    } else {
+      const classifyTask = classifyTopic(llm, rawInput);
+      const [pd, cl] = await Promise.all([parseTask, classifyTask]);
+      parsedData = pd;
+      classification = cl;
+    }
 
     await supabase.from("projects").update({ parsed_data: parsedData }).eq("id", projectId);
 
-    let dimensions: TopicClassification["dimensions"] | undefined;
-    if (classification) {
-      dimensions = classification.dimensions;
-      console.log(`[${evaluationId}] Topic type: ${classification.topic_type}, dimensions: ${dimensions.map(d => d.key).join(", ")}`);
-      await supabase.from("evaluations").update({ topic_classification: classification }).eq("id", evaluationId);
-    }
+    const dimensions = classification.dimensions;
+    console.log(`[${evaluationId}] Topic type: ${classification.topic_type}, dimensions: ${dimensions.map(d => d.key).join(", ")}${comparisonBaseId ? " (reused from base)" : ""}`);
+    await supabase.from("evaluations").update({ topic_classification: classification }).eq("id", evaluationId);
 
     // 4. Fetch selected personas
     const { data: personas } = await supabase.from("personas").select("*").in("id", selectedPersonaIds);
@@ -116,39 +133,35 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     }> = [];
 
     let completedCount = 0;
-    const CONCURRENCY = 3;
     const personaList = personas as Persona[];
 
-    for (let i = 0; i < personaList.length; i += CONCURRENCY) {
-      const batch = personaList.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
-        batch.map(async (persona) => {
-          const review = await generatePersonaReview(llm, persona, parsedData, rawInput, dimensions);
+    const batchResults = await Promise.all(
+      personaList.map(async (persona) => {
+        const review = await generatePersonaReview(llm, persona, parsedData, rawInput, dimensions, mode);
 
-          await supabase.from("persona_reviews").insert({
-            evaluation_id: evaluationId,
-            persona_id: persona.id,
-            scores: review.scores,
-            review_text: review.review_text,
-            strengths: review.strengths,
-            weaknesses: review.weaknesses,
-            llm_model: review.llm_model,
-            overall_stance: review.overall_stance ?? null,
-            cited_references: review.cited_references ?? [],
-          });
+        await supabase.from("persona_reviews").insert({
+          evaluation_id: evaluationId,
+          persona_id: persona.id,
+          scores: review.scores,
+          review_text: review.review_text,
+          strengths: review.strengths,
+          weaknesses: review.weaknesses,
+          llm_model: review.llm_model,
+          overall_stance: review.overall_stance ?? null,
+          cited_references: review.cited_references ?? [],
+        });
 
-          completedCount++;
-          await job.updateProgress(Math.round((completedCount / personaList.length) * 80));
+        completedCount++;
+        await job.updateProgress(Math.round((completedCount / personaList.length) * 80));
 
-          return {
-            persona_id: persona.id,
-            persona_name: persona.identity.name,
-            ...review,
-          };
-        })
-      );
-      reviews.push(...batchResults);
-    }
+        return {
+          persona_id: persona.id,
+          persona_name: persona.identity.name,
+          ...review,
+        };
+      })
+    );
+    reviews.push(...batchResults);
 
     // 6. Summary report, scenario sim, and opinion drift all depend on reviews
     //    but are independent of each other — run them in parallel.

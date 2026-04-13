@@ -1,6 +1,6 @@
 # Hygge — 项目进展与规划
 
-> 最后更新：2026-04-12
+> 最后更新：2026-04-13
 
 ## 产品定位
 
@@ -48,6 +48,7 @@ Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有
 - [x] LLM 解析用户输入 → 多 Persona 并行评审 → 综合报告生成
 - [x] 实时讨论动态（Realtime Discussion Feed）替代进度条
 - [x] 附件支持（图片、PDF）
+- [x] 动态评分维度：Product 和 Topic 模式的评分维度均由 LLM 根据每次问题动态生成，不再使用固定 6 维度
 
 ### Persona 系统
 - [x] 内置多角色 Persona（按 category 分组）
@@ -66,7 +67,9 @@ Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有
 - [x] 侧边栏导航 + 历史记录浮动菜单
 - [x] 用户菜单弹窗（账户信息、剩余额度进度条、Plan 徽章、登出）
 - [x] Squads 功能（Persona 组合预设）
-- [x] Compare 功能（多次评估对比）
+- [x] Compare 功能重构：选择历史评估 → 提交新版文字/文件 → 复用同维度+同Persona再评 → 并排对比
+- [x] Your Discussions 多选筛选器（Topic / Product / Compare）
+- [x] Compare 会话以 Scale 图标显示在 Your Discussions 中
 
 ### 商业化
 - [x] Stripe 订阅（Free / Pro / Max）
@@ -102,6 +105,24 @@ Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有
 - [x] 侧边栏新增 Marketplace 和 My Personas 导航
 - [x] 统一所有代码使用 `LLM_API_KEY`，移除 `ANTHROPIC_API_KEY` 引用
 - [x] Persona recommend 路由降级处理（DashScope 不可达时返回默认推荐）
+- [x] Publish persona 支持多选适用场景（scenarios）和自由标签（tags）
+- [x] Migration 015：personas 表新增 `scenarios text[]` 字段
+
+### Compare 功能重构
+
+**目标**：用户选择一次历史评估作为基线，提交新版文字/文件，系统复用基线评估的维度和 Personas 重新评审，并排展示两份报告的差异。
+
+#### 已完成
+- [x] Migration 014：evaluations 表新增 `comparison_base_id` 外键（指向基线评估）
+- [x] `POST /api/evaluations/compare` — 创建比较评估（校验基线归属、复用 persona_ids + mode，关联 comparison_base_id）
+- [x] Worker orchestrator：当 `comparisonBaseId` 存在时，从基线评估读取 `topic_classification` 而非重新生成维度
+- [x] `CompareCreateView` — 两步流：选择历史评估 → 输入新版文字 + 上传附件 → 提交
+- [x] `CompareResultView` — 并排对比：总分 + Delta 指示器、维度逐项对比、逐 Persona 评审对比、共识对比、行动项对比
+- [x] 结果页自动检测 `comparison_base_id`，渲染 `CompareResultView`
+- [x] 侧边栏 Your Discussions 显示 compare 记录（Scale 图标）
+- [x] Your Discussions 多选类型筛选器（Topic / Product / Compare，金色激活态）
+- [x] Topic 模式立场值（stance）映射为数值（5 级量表）以支持对比分数展示
+- [x] 队列入队失败时回滚评估和项目记录，不扣额度
 
 #### 待验证
 - [ ] Persona 生成端到端测试（Worker 部署后验证 create → 轮询 → 完成流程）
@@ -116,6 +137,7 @@ Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有
 
 #### 已知问题
 - `/api/personas` GET 路由已简化为基础查询（不含 custom/saved 分类），避免 persona_saves join 导致 500 错误。My Personas 页面已改用独立端点 `/api/personas/mine`。
+- Worker persona-review 已增加 scores 返回值校验，LLM 未返回有效 scores 时抛出明确错误
 
 ---
 

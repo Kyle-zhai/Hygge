@@ -48,15 +48,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   let description: string | undefined;
   let category: string | undefined;
+  let tags: string[] | undefined;
+  let scenarios: string[] | undefined;
   try {
     const body = await req.json();
     description = body.description;
     category = body.category;
+    tags = Array.isArray(body.tags) ? body.tags : undefined;
+    scenarios = Array.isArray(body.scenarios) ? body.scenarios : undefined;
   } catch {}
 
   const updates: Record<string, unknown> = { is_public: true };
   if (description) updates.description = description;
   if (category) updates.category = category;
+  if (tags) updates.tags = tags;
+  if (scenarios) updates.scenarios = scenarios;
 
   const admin = getAdminClient();
   const { error } = await admin

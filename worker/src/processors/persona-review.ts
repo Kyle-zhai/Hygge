@@ -20,9 +20,10 @@ export async function generatePersonaReview(
   persona: Persona,
   project: ProjectParsedData,
   rawInput: string,
-  dimensions?: TopicClassification["dimensions"]
+  dimensions?: TopicClassification["dimensions"],
+  mode?: "product" | "topic"
 ): Promise<PersonaReviewResult> {
-  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions);
+  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions, mode);
   const response = await llm.complete({ system, prompt, maxTokens: 2048 });
   let parsed: any;
   try {
@@ -31,7 +32,10 @@ export async function generatePersonaReview(
     console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. Raw text (first 300 chars):`, response.text.slice(0, 300));
     throw new Error(`Persona review JSON parse failed for ${persona.identity.name}: ${(e as Error).message}`);
   }
-  const scores = dimensions ? (parsed.stances ?? parsed.scores) : parsed.scores;
+  const scores = (dimensions && mode === "topic") ? (parsed.stances ?? parsed.scores) : parsed.scores;
+  if (!scores || typeof scores !== "object") {
+    throw new Error(`Persona review for ${persona.identity.name} returned no scores`);
+  }
   return {
     scores,
     review_text: parsed.review_text,

@@ -35,7 +35,7 @@ interface DiscussionFeedProps {
 
 type CardState = "waiting" | "thinking" | "completed";
 
-const CONCURRENCY = 3;
+const CONCURRENCY = Infinity;
 
 // --- Helpers ---
 
