@@ -92,9 +92,11 @@ Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有
 - [x] 前端页面：
   - `/personas/create` — 创建 persona（From Scratch 表单含可展开高级选项 + Import External .md 文件上传）
   - `/marketplace` — 浏览市场（搜索、标签筛选、收藏按钮、分页）
-  - `/personas` — 管理自己的 custom & saved personas
+  - `/personas` — My Personas 管理页面（展开查看详情、删除、发布到 Marketplace 确认弹窗）
 - [x] API Routes：
   - `GET /api/marketplace` — 浏览公开 Personas
+  - `GET /api/personas/mine` — 获取当前用户的自定义 Personas（含完整详情字段）
+  - `DELETE /api/personas/[id]` — 软删除 Persona（设置 `is_active: false`，验证所有权）
   - `POST/DELETE /api/personas/[id]/save` — 收藏/取消收藏
   - `POST/DELETE /api/personas/[id]/publish` — 发布/取消发布到市场
 - [x] 侧边栏新增 Marketplace 和 My Personas 导航
@@ -105,9 +107,15 @@ Railway Worker 部署在可以访问 DashScope 的网络环境中，因此所有
 - [ ] Persona 生成端到端测试（Worker 部署后验证 create → 轮询 → 完成流程）
 - [ ] Marketplace 浏览和收藏功能测试
 - [ ] Publish/unpublish 功能测试
+- [ ] My Personas 页面功能验证（需部署后端到端测试）：
+  - `/api/personas/mine` 是否正确返回当前用户的自定义 Personas
+  - 展开卡片查看 Persona 完整详情（Demographics, Psychology, Evaluation Lens, Life Narrative, Latent Needs）
+  - 删除 Persona（确认弹窗 → 调用 `DELETE /api/personas/[id]` → 列表刷新）
+  - 发布到 Marketplace（确认弹窗 → 调用 `POST /api/personas/[id]/publish`）
+  - 从 Marketplace 取消发布（确认弹窗 → 调用 `DELETE /api/personas/[id]/publish`）
 
 #### 已知问题
-- `/api/personas` GET 路由已简化为基础查询（不含 custom/saved 分类），避免 persona_saves join 导致 500 错误。后续需要单独端点处理 custom/saved 分类展示。
+- `/api/personas` GET 路由已简化为基础查询（不含 custom/saved 分类），避免 persona_saves join 导致 500 错误。My Personas 页面已改用独立端点 `/api/personas/mine`。
 
 ---
 

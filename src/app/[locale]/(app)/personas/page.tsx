@@ -569,8 +569,8 @@ export default function MyPersonasPage() {
 
       {/* Confirmation Dialog */}
       {dialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-semibold text-[#EAEAE8]">
                 {dialog.type === "publish" && "Publish to Marketplace"}
@@ -621,8 +621,8 @@ export default function MyPersonasPage() {
                     value={publishDesc}
                     onChange={(e) => setPublishDesc(e.target.value)}
                     placeholder="Describe this persona for marketplace users..."
-                    rows={3}
-                    className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
+                    rows={4}
+                    className="scrollbar-sidebar w-full max-h-40 overscroll-contain rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
                   />
                 </div>
               </div>
