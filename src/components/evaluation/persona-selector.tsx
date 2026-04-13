@@ -113,7 +113,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       ]);
       const { personas: rawPersonas, savedIds: fetchedSavedIds } = await personasRes.json();
       const { recommended_ids } = await recommendRes.json();
-      const validCategories = mode === "topic" ? ["general"] : ["technical", "product", "design", "end_user", "business", "custom"];
+      const validCategories = mode === "topic" ? ["general", "custom"] : ["technical", "product", "design", "end_user", "business", "custom"];
       const allPersonas = (rawPersonas || []).filter((p: PersonaData) => validCategories.includes(p.category));
       setPersonas(allPersonas);
       setSavedIds(new Set<string>(fetchedSavedIds || []));
@@ -329,38 +329,38 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={activeCategory === null ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveCategory(null)}
+          className={activeCategory === null ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
+        >
+          {t("allCategories")}
+        </Button>
+        {hasSaved && (
+          <Button
+            variant={activeCategory === "my_saved" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
+            className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+          >
+            <Heart className="mr-1 h-3 w-3" />
+            {locale === "zh" ? "已收藏" : "My Saved"}
+          </Button>
+        )}
+        {hasCustom && (
+          <Button
+            variant={activeCategory === "my_custom" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
+            className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+          >
+            <User className="mr-1 h-3 w-3" />
+            {locale === "zh" ? "我的自定义" : "My Custom"}
+          </Button>
+        )}
         {categoryOrder.length > 1 && (
           <>
-            <Button
-              variant={activeCategory === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveCategory(null)}
-              className={activeCategory === null ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
-            >
-              {t("allCategories")}
-            </Button>
-            {hasSaved && (
-              <Button
-                variant={activeCategory === "my_saved" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
-                className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-              >
-                <Heart className="mr-1 h-3 w-3" />
-                {locale === "zh" ? "已收藏" : "My Saved"}
-              </Button>
-            )}
-            {hasCustom && (
-              <Button
-                variant={activeCategory === "my_custom" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
-                className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-              >
-                <User className="mr-1 h-3 w-3" />
-                {locale === "zh" ? "我的自定义" : "My Custom"}
-              </Button>
-            )}
             <span className="mx-0.5 h-4 w-px bg-[#2A2A2A]" />
             {categoryOrder.map((cat) => (
               <Button
