@@ -1,6 +1,7 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
 import type { RoundTableDebateResult, DebateRound } from "../types/report.js";
+import { robustJsonParse } from "../utils/json-parse.js";
 import {
   buildSelectionPrompt,
   buildDebateRoundPrompt,
@@ -14,8 +15,8 @@ export async function runRoundTableDebate(
   reviews: ReviewForDebate[],
 ): Promise<RoundTableDebateResult> {
   const { system: selSys, prompt: selPrompt } = buildSelectionPrompt(personas, reviews);
-  const selResponse = await llm.complete({ system: selSys, prompt: selPrompt, maxTokens: 512 });
-  const selection = JSON.parse(selResponse.text);
+  const selResponse = await llm.complete({ system: selSys, prompt: selPrompt, maxTokens: 512, jsonMode: true });
+  const selection = robustJsonParse<any>(selResponse.text);
 
   const selectedIds: string[] = selection.selected_persona_ids;
   const topicFocus: string = selection.topic_focus;
@@ -35,8 +36,8 @@ export async function runRoundTableDebate(
       selectedReviews,
       rawRounds,
     );
-    const response = await llm.complete({ system, prompt, maxTokens: 2048 });
-    const parsed = JSON.parse(response.text);
+    const response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
+    const parsed = robustJsonParse<any>(response.text);
 
     const messages = Array.isArray(parsed.messages) ? parsed.messages : [];
     rounds.push({ round: i + 1, theme: roundThemes[i] || topicFocus, messages });
@@ -44,8 +45,8 @@ export async function runRoundTableDebate(
   }
 
   const { system: outSys, prompt: outPrompt } = buildOutcomePrompt(selectedPersonas, rawRounds);
-  const outResponse = await llm.complete({ system: outSys, prompt: outPrompt, maxTokens: 1024 });
-  const outcome = JSON.parse(outResponse.text);
+  const outResponse = await llm.complete({ system: outSys, prompt: outPrompt, maxTokens: 1024, jsonMode: true });
+  const outcome = robustJsonParse<any>(outResponse.text);
 
   return {
     selected_persona_ids: selectedIds,

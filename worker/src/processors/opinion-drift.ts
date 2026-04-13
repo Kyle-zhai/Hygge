@@ -2,6 +2,7 @@ import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores } from "../types/evaluation.js";
 import type { OpinionDriftEntry } from "../types/report.js";
+import { robustJsonParse } from "../utils/json-parse.js";
 import { buildOpinionDriftPrompt } from "../prompts/opinion-drift.js";
 
 export type { OpinionDriftEntry };
@@ -23,11 +24,11 @@ export async function generateOpinionDrift(
   if (reviews.length < 2) return [];
 
   const { system, prompt, initialLeanings } = buildOpinionDriftPrompt(personas, reviews);
-  const response = await llm.complete({ system, prompt, maxTokens: 2048 });
+  const response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
 
   let parsed: { drifts?: OpinionDriftEntry[] };
   try {
-    parsed = JSON.parse(response.text);
+    parsed = robustJsonParse(response.text);
   } catch (e) {
     console.error(`[OpinionDrift] JSON parse failed. Raw (first 300 chars):`, response.text.slice(0, 300));
     return [];
