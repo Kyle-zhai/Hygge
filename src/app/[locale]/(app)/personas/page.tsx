@@ -569,8 +569,8 @@ export default function MyPersonasPage() {
 
       {/* Confirmation Dialog */}
       {dialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-semibold text-[#EAEAE8]">
                 {dialog.type === "publish" && "Publish to Marketplace"}
