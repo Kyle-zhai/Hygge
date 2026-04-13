@@ -18,12 +18,15 @@ export async function runRoundTableDebate(
   const selResponse = await llm.complete({ system: selSys, prompt: selPrompt, maxTokens: 512, jsonMode: true });
   const selection = robustJsonParse<any>(selResponse.text);
 
-  const selectedIds: string[] = selection.selected_persona_ids;
+  const rawIds: string[] = selection.selected_persona_ids || [];
+  const validIds = rawIds.filter((id) => personas.some((p) => p.id === id));
+  if (validIds.length < 2) throw new Error(`Debate selection returned ${validIds.length} valid personas (need ≥2)`);
+
   const topicFocus: string = selection.topic_focus;
   const roundThemes: string[] = selection.round_themes || [topicFocus, "Counter-arguments", "Final positions"];
 
-  const selectedPersonas = personas.filter((p) => selectedIds.includes(p.id));
-  const selectedReviews = reviews.filter((r) => selectedIds.includes(r.persona_id));
+  const selectedPersonas = personas.filter((p) => validIds.includes(p.id));
+  const selectedReviews = reviews.filter((r) => validIds.includes(r.persona_id));
 
   const rounds: DebateRound[] = [];
   const rawRounds: Array<{ round: number; messages: Array<{ persona_id: string; content: string }> }> = [];
@@ -49,7 +52,7 @@ export async function runRoundTableDebate(
   const outcome = robustJsonParse<any>(outResponse.text);
 
   return {
-    selected_persona_ids: selectedIds,
+    selected_persona_ids: validIds,
     topic_focus: topicFocus,
     rounds,
     outcome: {

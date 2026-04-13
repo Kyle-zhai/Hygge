@@ -31,6 +31,7 @@ export default function DebateChatPage() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [waiting, setWaiting] = useState(false);
+  const waitingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -65,7 +66,10 @@ export default function DebateChatPage() {
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
-          if (msg.role === "persona") setWaiting(false);
+          if (msg.role === "persona") {
+            if (waitingTimer.current) clearTimeout(waitingTimer.current);
+            setWaiting(false);
+          }
         }
       )
       .subscribe();
@@ -79,17 +83,15 @@ export default function DebateChatPage() {
     setSending(true);
     setWaiting(true);
     setInput("");
+    if (waitingTimer.current) clearTimeout(waitingTimer.current);
+    waitingTimer.current = setTimeout(() => setWaiting(false), 45_000);
 
     try {
-      const res = await fetch(`/api/debates/${id}/messages`, {
+      await fetch(`/api/debates/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text }),
       });
-      if (res.ok) {
-        const msg = await res.json();
-        setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-      }
     } finally {
       setSending(false);
       inputRef.current?.focus();

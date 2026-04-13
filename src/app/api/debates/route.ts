@@ -6,6 +6,15 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("plan")
+    .eq("user_id", user.id)
+    .single();
+  if (!sub || sub.plan !== "max") {
+    return NextResponse.json({ error: "1v1 Debate requires Max plan" }, { status: 403 });
+  }
+
   const { evaluationId, personaId } = await request.json();
   if (!evaluationId || !personaId) {
     return NextResponse.json({ error: "evaluationId and personaId required" }, { status: 400 });
