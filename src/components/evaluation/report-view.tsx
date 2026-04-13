@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import { ReportTextView } from "@/components/evaluation/report-text-view";
 import { ReportScoresView } from "@/components/evaluation/report-scores-view";
 import { ScenarioSimulationView } from "@/components/evaluation/scenario-simulation-view";
+import { RoundTableDebateView } from "@/components/evaluation/round-table-debate-view";
 
 interface PersonaData {
   id: string;
@@ -30,7 +31,7 @@ interface TopicClassification {
   readiness_label_zh: string;
 }
 
-type ViewMode = "report" | "scores" | "simulation";
+type ViewMode = "report" | "scores" | "simulation" | "debate";
 
 interface ReportViewProps {
   report: any;
@@ -74,6 +75,13 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
     setView("simulation");
   }
 
+  function handleViewDebate() {
+    savedScrollY.current = window.scrollY;
+    pendingScroll.current = 0;
+    window.scrollTo(0, 0);
+    setView("debate");
+  }
+
   function handleBackToReport() {
     pendingScroll.current = savedScrollY.current;
     setView("report");
@@ -108,6 +116,20 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
     );
   }
 
+  if (view === "debate" && report?.round_table_debate) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
+        <RoundTableDebateView
+          debate={report.round_table_debate}
+          personas={personas}
+          locale={locale}
+          onBack={handleBackToReport}
+          onStartDebate={evaluationId ? handleStartDebate : undefined}
+        />
+      </div>
+    );
+  }
+
   if (view === "simulation" && report?.scenario_simulation) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
@@ -130,6 +152,7 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
         locale={locale}
         onViewScores={handleViewScores}
         onViewSimulation={report?.scenario_simulation ? handleViewSimulation : undefined}
+        onViewDebate={report?.round_table_debate ? handleViewDebate : undefined}
         onStartDebate={evaluationId ? handleStartDebate : undefined}
         evaluationId={evaluationId}
         topicClassification={topicClassification}
