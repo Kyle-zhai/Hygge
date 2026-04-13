@@ -77,6 +77,11 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
       base: [
         t("feat_discussions_max"),
         t("feat_personas_max"),
+        t("feat_full_report"),
+        t("feat_opinion_drift"),
+        t("feat_export"),
+        t("feat_compare"),
+        t("feat_marketplace"),
       ],
       extras: [
         t("feat_custom_personas_unlimited"),

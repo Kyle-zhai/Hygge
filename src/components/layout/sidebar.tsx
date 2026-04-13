@@ -134,11 +134,16 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
     router.refresh();
   }
 
-  async function handleDelete(projectId: string) {
-    setDeleting(projectId);
+  async function handleDelete(itemId: string) {
+    const item = history.find((h) => h.id === itemId);
+    if (!item) return;
+    setDeleting(itemId);
     setConfirmDeleteId(null);
     try {
-      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+      const url = item.isDebate && item.debateId
+        ? `/api/debates/${item.debateId}`
+        : `/api/projects/${itemId}`;
+      const res = await fetch(url, { method: "DELETE" });
       if (res.ok) {
         setMenu(null);
         router.push(`/${locale}/evaluate/new?mode=topic`);
@@ -151,7 +156,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
   function handleShare(item: HistoryItem) {
     const url = item.evaluationId
-      ? `${window.location.origin}/en/evaluate/${item.evaluationId}/result`
+      ? `${window.location.origin}/${locale}/evaluate/${item.evaluationId}/result`
       : window.location.href;
     navigator.clipboard.writeText(url);
     setMenu(null);
