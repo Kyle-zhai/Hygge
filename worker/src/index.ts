@@ -3,6 +3,7 @@ import IORedis from "ioredis";
 import { config } from "./config.js";
 import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
+import { processDebateResponse } from "./processors/debate-response.js";
 
 console.log("Starting Hygge discussion worker...");
 
@@ -26,6 +27,12 @@ const personaWorker = new Worker("persona-generation", processPersonaGeneration,
   drainDelay: 30,
 });
 
+const debateWorker = new Worker("debate-response", processDebateResponse, {
+  connection,
+  concurrency: 3,
+  drainDelay: 5,
+});
+
 evaluationWorker.on("completed", (job) => {
   console.log(`[evaluation] Job ${job.id} completed for ${job.data.evaluationId}`);
 });
@@ -40,12 +47,20 @@ personaWorker.on("failed", (job, err) => {
   console.error(`[persona-gen] Job ${job?.id} failed:`, err.message);
 });
 
+debateWorker.on("completed", (job) => {
+  console.log(`[debate] Job ${job.id} completed for debate ${job.data.debateId}`);
+});
+debateWorker.on("failed", (job, err) => {
+  console.error(`[debate] Job ${job?.id} failed:`, err.message);
+});
+
 evaluationWorker.on("ready", () => console.log("Evaluation worker ready."));
 personaWorker.on("ready", () => console.log("Persona generation worker ready."));
+debateWorker.on("ready", () => console.log("Debate response worker ready."));
 
 async function shutdown() {
   console.log("Shutting down workers...");
-  await Promise.all([evaluationWorker.close(), personaWorker.close()]);
+  await Promise.all([evaluationWorker.close(), personaWorker.close(), debateWorker.close()]);
   process.exit(0);
 }
 

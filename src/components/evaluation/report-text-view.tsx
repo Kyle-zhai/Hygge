@@ -115,6 +115,25 @@ interface ReportData {
       reason: string;
     }>;
   };
+  round_table_debate?: {
+    selected_persona_ids: string[];
+    topic_focus: string;
+    rounds: Array<{
+      round: number;
+      theme: string;
+      messages: Array<{
+        persona_id: string;
+        content: string;
+        responding_to?: string;
+        stance_shift?: string;
+      }>;
+    }>;
+    outcome: {
+      consensus_reached: boolean;
+      key_insights: string[];
+      remaining_disagreements: string[];
+    };
+  } | null;
   opinion_drift?: Array<{
     persona_id: string;
     initial_leaning: string;
@@ -161,6 +180,8 @@ interface ReportTextViewProps {
   locale: string;
   onViewScores?: () => void;
   onViewSimulation?: () => void;
+  onStartDebate?: (personaId: string) => void;
+  evaluationId?: string;
   topicClassification?: TopicClassification | null;
   mode?: "topic" | "product";
 }
@@ -638,6 +659,8 @@ export function ReportTextView({
   locale,
   onViewScores,
   onViewSimulation,
+  onStartDebate,
+  evaluationId,
   topicClassification,
   mode = "product",
 }: ReportTextViewProps) {
@@ -694,6 +717,9 @@ export function ReportTextView({
       { id: "persona-perspectives", label: t("personaPerspectives") },
       { id: "consensus-disagreements", label: t("consensusAndDisagreements") },
     );
+    if (report.round_table_debate) {
+      items.push({ id: "round-table-debate", label: locale === "zh" ? "圆桌辩论" : "Round Table Debate" });
+    }
     if (report.multi_dimensional_analysis?.length > 0) {
       items.push({ id: "deep-analysis", label: t("deepAnalysis") });
     }
@@ -1337,6 +1363,138 @@ export function ReportTextView({
             </p>
           )}
         </AnimatedSection>
+
+        {/* ════════════════════════════════════════════════════════════
+            ROUND TABLE DEBATE (Max only)
+        ════════════════════════════════════════════════════════════ */}
+        {report.round_table_debate && (
+          <AnimatedSection id="round-table-debate">
+            <SectionTitle icon={Users}>
+              {locale === "zh" ? "圆桌辩论" : "Round Table Debate"}
+            </SectionTitle>
+            <p className="mb-2 text-sm text-[#9B9594] leading-relaxed max-w-3xl">
+              {report.round_table_debate.topic_focus}
+            </p>
+
+            <div className="space-y-6 mt-6">
+              {report.round_table_debate.rounds.map((round) => (
+                <div key={round.round}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C4A882]/15 text-[10px] font-bold text-[#C4A882]">
+                      {round.round}
+                    </span>
+                    <span className="text-xs font-medium text-[#666462] uppercase tracking-wide">
+                      {round.theme}
+                    </span>
+                  </div>
+                  <div className="space-y-2 pl-3 border-l border-[#2A2A2A]">
+                    {round.messages.map((msg, mi) => {
+                      const persona = personaMap.get(msg.persona_id);
+                      const name = getPersonaName(persona);
+                      const avatar = getPersonaAvatar(persona);
+                      const respondingTo = msg.responding_to ? personaMap.get(msg.responding_to) : null;
+                      return (
+                        <motion.div
+                          key={`${round.round}-${mi}`}
+                          initial={{ opacity: 0, x: -6 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: mi * 0.05 }}
+                          className="rounded-lg border border-[#2A2A2A] bg-[#141414] p-3"
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-base">{avatar}</span>
+                            <span className="text-xs font-medium text-[#EAEAE8]">{name}</span>
+                            {respondingTo && (
+                              <span className="text-[10px] text-[#666462]">
+                                → {getPersonaName(respondingTo)}
+                              </span>
+                            )}
+                            {msg.stance_shift && (
+                              <Badge variant="secondary" className="ml-auto text-[9px] bg-[#C4A882]/10 text-[#C4A882] border-0">
+                                {msg.stance_shift}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-[#9B9594] leading-relaxed pl-7">
+                            {msg.content}
+                          </p>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Outcome */}
+            <div className="mt-6 rounded-xl border border-[#C4A882]/20 bg-[#C4A882]/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`h-2 w-2 rounded-full ${report.round_table_debate.outcome.consensus_reached ? "bg-[#4ADE80]" : "bg-[#F87171]"}`} />
+                <span className="text-xs font-medium text-[#EAEAE8]">
+                  {report.round_table_debate.outcome.consensus_reached
+                    ? (locale === "zh" ? "达成共识" : "Consensus Reached")
+                    : (locale === "zh" ? "分歧未消" : "Disagreements Remain")}
+                </span>
+              </div>
+              {report.round_table_debate.outcome.key_insights.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] font-medium text-[#666462] uppercase mb-1.5">
+                    {locale === "zh" ? "关键洞见" : "Key Insights"}
+                  </p>
+                  <ul className="space-y-1">
+                    {report.round_table_debate.outcome.key_insights.map((insight, i) => (
+                      <li key={i} className="text-xs text-[#9B9594] flex items-start gap-2">
+                        <Lightbulb className="h-3 w-3 shrink-0 mt-0.5 text-[#C4A882]" />
+                        <span>{insight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {report.round_table_debate.outcome.remaining_disagreements.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-medium text-[#666462] uppercase mb-1.5">
+                    {locale === "zh" ? "未解决分歧" : "Unresolved"}
+                  </p>
+                  <ul className="space-y-1">
+                    {report.round_table_debate.outcome.remaining_disagreements.map((d, i) => (
+                      <li key={i} className="text-xs text-[#9B9594] flex items-start gap-2">
+                        <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5 text-[#F87171]/70" />
+                        <span>{d}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Challenge CTA */}
+            {onStartDebate && (
+              <div className="mt-6">
+                <p className="text-[10px] font-medium text-[#666462] uppercase tracking-wide mb-2">
+                  {locale === "zh" ? "发起 1v1 辩论" : "Challenge to 1v1"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {report.round_table_debate.selected_persona_ids.map((pid) => {
+                    const p = personaMap.get(pid);
+                    if (!p) return null;
+                    return (
+                      <button
+                        key={pid}
+                        onClick={() => onStartDebate(pid)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#C4A882]/20 bg-[#C4A882]/5 px-3 py-1.5 text-xs font-medium text-[#C4A882] transition-colors hover:border-[#C4A882]/40 hover:bg-[#C4A882]/10"
+                      >
+                        <span>{getPersonaAvatar(p)}</span>
+                        <span>{getPersonaName(p)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </AnimatedSection>
+        )}
 
         {/* ════════════════════════════════════════════════════════════
             DEEP ANALYSIS

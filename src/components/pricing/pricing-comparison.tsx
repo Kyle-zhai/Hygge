@@ -46,10 +46,9 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
       name: t("free"),
       price: "$0",
       base: [
-        t("feat_discussions_1"),
-        t("feat_personas_3"),
+        t("feat_discussions_free"),
+        t("feat_personas_free"),
         t("feat_brief_report"),
-        t("feat_basic_analysis"),
       ],
       extras: [] as string[],
     },
@@ -59,32 +58,32 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
       price: "$20",
       isPopular: true,
       base: [
-        t("feat_discussions_10"),
-        t("feat_personas_10"),
-        t("feat_brief_report"),
-        t("feat_basic_analysis"),
+        t("feat_discussions_pro"),
+        t("feat_personas_pro"),
       ],
       extras: [
         t("feat_full_report"),
-        t("feat_deep_analysis"),
+        t("feat_opinion_drift"),
+        t("feat_custom_personas"),
+        t("feat_marketplace"),
         t("feat_export"),
+        t("feat_compare"),
       ],
     },
     {
       key: "max",
       name: t("max"),
-      price: "$100",
+      price: "$50",
       base: [
-        t("feat_discussions_40"),
-        t("feat_personas_20"),
-        t("feat_brief_report"),
-        t("feat_basic_analysis"),
+        t("feat_discussions_max"),
+        t("feat_personas_max"),
       ],
       extras: [
-        t("feat_full_report_plus"),
-        t("feat_deep_analysis"),
-        t("feat_export"),
-        t("feat_priority_support"),
+        t("feat_custom_personas_unlimited"),
+        t("feat_scenario_sim"),
+        t("feat_round_table"),
+        t("feat_1v1_debate"),
+        t("feat_marketplace_featured"),
       ],
     },
   ];
@@ -144,16 +143,20 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
                 ))}
               </ul>
 
-              {/* Extras: features new in this tier — visually "grow" out */}
               {plan.extras.length > 0 && (
-                <ul className="mt-3 space-y-3 border-t border-[#C4A882]/20 pt-3">
-                  {plan.extras.map((extra, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#C4A882]" />
-                      <span className="text-[#EAEAE8] font-medium">{extra}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-3 border-t border-[#C4A882]/20 pt-3">
+                  <p className="mb-2.5 text-xs text-[#C4A882]">
+                    {t("includedIn", { plan: plan.key === "max" ? t("pro") : t("free") })}
+                  </p>
+                  <ul className="space-y-3">
+                    {plan.extras.map((extra, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#C4A882]" />
+                        <span className="text-[#EAEAE8] font-medium">{extra}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 

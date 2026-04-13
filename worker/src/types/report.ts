@@ -71,6 +71,30 @@ export interface DebateHighlight {
   significance: string;
 }
 
+export interface DebateMessage {
+  persona_id: string;
+  content: string;
+  responding_to?: string;
+  stance_shift?: string;
+}
+
+export interface DebateRound {
+  round: number;
+  theme: string;
+  messages: DebateMessage[];
+}
+
+export interface RoundTableDebateResult {
+  selected_persona_ids: string[];
+  topic_focus: string;
+  rounds: DebateRound[];
+  outcome: {
+    consensus_reached: boolean;
+    key_insights: string[];
+    remaining_disagreements: string[];
+  };
+}
+
 export interface ScenarioSimulationResult {
   initial_adoption: { persona_id: string; stance: "positive" | "neutral" | "negative" }[];
   influence_events: { influencer_id: string; influenced_id: string; shift: string; reason: string }[];
@@ -116,6 +140,7 @@ export interface SummaryReport {
   readiness_label_en?: string;
   readiness_label_zh?: string;
   scenario_simulation: ScenarioSimulationResult | null;
+  round_table_debate: RoundTableDebateResult | null;
   opinion_drift: OpinionDriftEntry[] | null;
   // Topic mode only
   consensus_score?: number | null;
