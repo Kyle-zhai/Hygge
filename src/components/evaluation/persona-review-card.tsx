@@ -70,14 +70,15 @@ export function PersonaReviewCard({
 }: PersonaReviewCardProps) {
   const t = useTranslations("evaluation");
   const [expanded, setExpanded] = useState(false);
+  const safeScores = (scores && typeof scores === "object" && !Array.isArray(scores)) ? scores : {};
 
   let headerBadge: { className: string; label: string };
   if (stanceMode) {
-    const overall = overallStance || getOverallStance(scores);
+    const overall = overallStance || getOverallStance(safeScores);
     const cfg = stanceBadgeConfig[overall] || stanceBadgeConfig.neutral;
     headerBadge = { className: `border ${cfg.color}`, label: locale === "zh" ? cfg.labelZh : cfg.label };
   } else {
-    const scoreValues = Object.values(scores).map(Number);
+    const scoreValues = Object.values(safeScores).map(Number).filter((n) => !isNaN(n));
     const avgScore = scoreValues.length > 0 ? scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length : 0;
     const scoreBadgeColor =
       avgScore >= 7
@@ -113,7 +114,7 @@ export function PersonaReviewCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ScoreBar scores={scores} compact topicDimensions={topicDimensions} locale={locale} stanceMode={stanceMode} />
+        <ScoreBar scores={safeScores} compact topicDimensions={topicDimensions} locale={locale} stanceMode={stanceMode} />
 
         <AnimatePresence>
           {expanded && (

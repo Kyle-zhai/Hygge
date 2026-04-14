@@ -49,8 +49,14 @@ const stanceConfig: Record<string, { position: number; color: string; label: str
   strongly_support: { position: 95, color: "#34D399", label: "Strongly Positive", labelZh: "强烈正面" },
 };
 
+function safeTr(t: ReturnType<typeof useTranslations>, key: string | undefined | null, fallback?: string): string {
+  if (!key) return fallback ?? "";
+  try { return t(key as any); } catch { return fallback ?? key; }
+}
+
 export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode }: ScoreBarProps) {
   const t = useTranslations("evaluation");
+  const safeScores = (scores && typeof scores === "object" && !Array.isArray(scores)) ? scores : {};
 
   const dimKeys = topicDimensions
     ? topicDimensions.map(d => d.key)
@@ -65,14 +71,14 @@ export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode 
     return (
       <div className={compact ? "space-y-2.5" : "space-y-3.5"}>
         {dimKeys.map((dim, i) => {
-          const stance = String(scores[dim] ?? "neutral");
+          const stance = String(safeScores[dim] ?? "neutral");
           const config = stanceConfig[stance] || stanceConfig.neutral;
 
           return (
             <div key={dim}>
               <div className="flex items-center justify-between mb-1">
                 <span className={`${compact ? "text-[11px]" : "text-xs"} text-[#666462]`}>
-                  {dimLabelMap ? dimLabelMap.get(dim) ?? dim : t(dim as any)}
+                  {dimLabelMap ? dimLabelMap.get(dim) ?? dim : safeTr(t, dim, dim)}
                 </span>
                 <span className="text-[10px] font-medium" style={{ color: config.color }}>
                   {locale === "zh" ? config.labelZh : config.label}
@@ -98,11 +104,11 @@ export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode 
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>
       {dimKeys.map((dim, i) => {
-        const score = Number(scores[dim]) || 0;
+        const score = Number(safeScores[dim]) || 0;
         return (
           <div key={dim} className="flex items-center gap-2">
             <span className={`${compact ? "w-16 text-[11px]" : "w-24 text-xs"} text-[#666462] truncate`}>
-              {dimLabelMap ? dimLabelMap.get(dim) ?? dim : t(dim as any)}
+              {dimLabelMap ? dimLabelMap.get(dim) ?? dim : safeTr(t, dim, dim)}
             </span>
             <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
               <motion.div
