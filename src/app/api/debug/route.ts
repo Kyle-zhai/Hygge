@@ -39,6 +39,16 @@ export async function GET(request: Request) {
     .select("id")
     .limit(5);
 
+  const { data: summaryReport } = await supabase
+    .from("summary_reports")
+    .select("report_data")
+    .eq("evaluation_id", evalId!)
+    .single();
+
+  const reportEntries = (summaryReport?.report_data as any)?.persona_analysis?.entries || [];
+  const reportEntryIds = reportEntries.map((e: any) => ({ persona_id: e.persona_id, persona_name: e.persona_name }));
+  const consensusPersonas = (summaryReport?.report_data as any)?.persona_analysis?.consensus?.flatMap((c: any) => c.supporting_personas || []) || [];
+
   return NextResponse.json({
     selectedIds,
     selectedIdsTypes: selectedIds?.map((id: any) => typeof id),
@@ -48,5 +58,7 @@ export async function GET(request: Request) {
     personasByReview: { count: personasByReview?.length, data: personasByReview, error: e2 },
     personasByStringIds: { count: personasByStringIds?.length, data: personasByStringIds, error: e3 },
     samplePersonaIds: allPersonas?.map((p: any) => p.id),
+    reportEntryIds,
+    consensusPersonas,
   });
 }
