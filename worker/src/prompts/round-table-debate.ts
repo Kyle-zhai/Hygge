@@ -51,7 +51,7 @@ export function buildDebateRoundPrompt(
   const personaProfiles = selectedPersonas.map((p) => {
     const review = reviews.find((r) => r.persona_id === p.id);
     return `[${p.id}] ${p.identity.name} — ${p.demographics.occupation}
-Psychology: ${p.psychology.personality_type}, decision style: ${p.psychology.decision_making.style}
+Psychology: ${p.psychology?.personality_type ?? "analytical"}, decision style: ${p.psychology?.decision_making?.style ?? "balanced"}
 Initial position: ${review?.review_text.slice(0, 150) || "N/A"}
 Stance: ${review?.overall_stance || "N/A"}`;
   }).join("\n\n");

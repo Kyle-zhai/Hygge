@@ -80,11 +80,11 @@ Respond ONLY with valid JSON:
       const avgScore = review ? computeAverageScore(review.scores as Record<string, number | string>) : 5;
       const stance = avgScore > 6 ? "Positive" : avgScore > 4 ? "Neutral" : "Negative";
       return `### ${p.identity.name} (ID: ${p.id})
-Role: ${p.demographics.occupation}
-Persuadability: ${p.psychology.decision_making.persuadability}
-Community Influence: ${p.social_context.relationships_with_products.community_influence}
-Risk Tolerance: ${p.psychology.risk_tolerance}
-Trust Sources: ${p.social_context.social_circle.trust_sources.join(", ")}
+Role: ${p.demographics?.occupation ?? "Unknown"}
+Persuadability: ${p.psychology?.decision_making?.persuadability ?? "moderate"}
+Community Influence: ${p.social_context?.relationships_with_products?.community_influence ?? "moderate"}
+Risk Tolerance: ${p.psychology?.risk_tolerance ?? "moderate"}
+Trust Sources: ${p.social_context?.social_circle?.trust_sources?.join(", ") ?? "peers, experts"}
 Overall Score Given: ${avgScore.toFixed(1)}
 Stance: ${stance}`;
     })

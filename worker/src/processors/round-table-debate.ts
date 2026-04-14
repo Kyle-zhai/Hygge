@@ -19,7 +19,16 @@ export async function runRoundTableDebate(
   const selection = robustJsonParse<any>(selResponse.text);
 
   const rawIds: string[] = selection.selected_persona_ids || [];
-  const validIds = rawIds.filter((id) => personas.some((p) => p.id === id));
+  let validIds = rawIds.filter((id) => personas.some((p) => p.id === id));
+  if (validIds.length < 2) {
+    const nameMatched = rawIds
+      .map((id) => personas.find((p) => p.identity?.name === id)?.id)
+      .filter((id): id is string => !!id);
+    validIds = Array.from(new Set([...validIds, ...nameMatched]));
+  }
+  if (validIds.length < 2) {
+    validIds = personas.slice(0, Math.min(personas.length, 4)).map((p) => p.id);
+  }
   if (validIds.length < 2) throw new Error(`Debate selection returned ${validIds.length} valid personas (need ≥2)`);
 
   const topicFocus: string = selection.topic_focus;
