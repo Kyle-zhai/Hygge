@@ -46,9 +46,9 @@ export function buildOpinionDriftPrompt(
       const review = reviews.find((r) => r.persona_id === p.id);
       if (!review) return "";
       return `### ${p.identity.name} (ID: ${p.id})
-Role: ${p.demographics.occupation}
-Persuadability: ${p.psychology.decision_making.persuadability}
-Risk Tolerance: ${p.psychology.risk_tolerance}
+Role: ${p.demographics?.occupation ?? "Unknown"}
+Persuadability: ${p.psychology?.decision_making?.persuadability ?? "moderate"}
+Risk Tolerance: ${p.psychology?.risk_tolerance ?? "moderate"}
 Current stance: ${initialLeanings[p.id]}
 Their review (excerpt):
 ${review.review_text.slice(0, 500)}
