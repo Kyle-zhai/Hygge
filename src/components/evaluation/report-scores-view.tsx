@@ -174,6 +174,27 @@ function safeArray<T>(val: unknown): T[] {
   return Array.isArray(val) ? val : [];
 }
 
+function reconstructFromStrings(arr: any[], requiredKey: string): any[] {
+  if (!arr.length || typeof arr[0] !== "string") return arr.filter((e: any) => typeof e === "object" && e !== null);
+  const objects: any[] = [];
+  let current: any = null;
+  for (const s of arr) {
+    if (typeof s !== "string") continue;
+    const colonIdx = s.indexOf(": ");
+    if (colonIdx === -1) continue;
+    const key = s.slice(0, colonIdx).trim();
+    const value = s.slice(colonIdx + 2).trim();
+    if (key === requiredKey) {
+      if (current) objects.push(current);
+      current = { [key]: value };
+    } else if (current) {
+      current[key] = value;
+    }
+  }
+  if (current) objects.push(current);
+  return objects;
+}
+
 export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification, mode = "product" }: ReportScoresViewProps) {
   const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
@@ -251,10 +272,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {report && (
         <>
           {/* Consensus */}
-          {safeArray(report.persona_analysis?.consensus).filter((c: any) => typeof c === "object" && c !== null && c.point).length > 0 && (
+          {reconstructFromStrings(safeArray(report.persona_analysis?.consensus), "point").length > 0 && (
           <ReportSection title={t("consensus")} borderColor="border-l-[#E2DDD5]">
             <ul className="space-y-2">
-              {safeArray<ReportData["persona_analysis"]["consensus"][number]>(report.persona_analysis?.consensus).filter((c: any) => typeof c === "object" && c !== null && c.point).map((c, i) => (
+              {reconstructFromStrings(safeArray(report.persona_analysis?.consensus), "point").map((c: any, i: number) => (
                 <li key={i} className="text-sm">
                   <span className="font-medium text-[#EAEAE8]">{c.point}</span>
                   {safeArray(c.supporting_personas).length > 0 && (
@@ -269,10 +290,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           )}
 
           {/* Disagreements */}
-          {safeArray(report.persona_analysis?.disagreements).filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason)).length > 0 && (
+          {reconstructFromStrings(safeArray(report.persona_analysis?.disagreements), "point").length > 0 && (
             <ReportSection title={t("disagreements")} borderColor="border-l-[#FBBF24]">
               <div className="space-y-3">
-                {safeArray<ReportData["persona_analysis"]["disagreements"][number]>(report.persona_analysis?.disagreements).filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason)).map((d, i) => (
+                {reconstructFromStrings(safeArray(report.persona_analysis?.disagreements), "point").map((d: any, i: number) => (
                   <div key={i} className="text-sm">
                     <p className="font-medium text-[#EAEAE8]">{d.point}</p>
                     {d.reason && <p className="mt-1 text-xs text-[#9B9594]">{d.reason}</p>}
@@ -283,10 +304,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           )}
 
           {/* Multi-Dimensional Analysis */}
-          {safeArray(report.multi_dimensional_analysis).length > 0 && (
+          {safeArray(report.multi_dimensional_analysis).filter((d: any) => typeof d === "object" && d !== null).length > 0 && (
           <ReportSection title={t("dimensionAnalysis")} borderColor="border-l-[#4ADE80]">
             <div className="space-y-6">
-              {safeArray<ReportData["multi_dimensional_analysis"][number]>(report.multi_dimensional_analysis).map((dim, i) => (
+              {safeArray<ReportData["multi_dimensional_analysis"][number]>(report.multi_dimensional_analysis).filter((d: any) => typeof d === "object" && d !== null).map((dim, i) => (
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-[#EAEAE8]">{(locale === "zh" ? dim.label_zh : dim.label_en) || t(dim.dimension as any)}</h3>

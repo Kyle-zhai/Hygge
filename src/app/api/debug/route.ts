@@ -54,11 +54,13 @@ export async function GET(request: Request) {
   const personaAnalysis = summaryReport?.persona_analysis as any;
   const personaAnalysisKeys = personaAnalysis ? Object.keys(personaAnalysis) : [];
   const reportEntries = personaAnalysis?.entries || [];
-  const firstEntry = reportEntries[0] ? Object.keys(reportEntries[0]) : [];
-  const rawEntries = reportEntries.slice(0, 2);
+  const firstEntryType = reportEntries[0] ? typeof reportEntries[0] : null;
+  const firstEntry = reportEntries[0] && typeof reportEntries[0] === "object" ? Object.keys(reportEntries[0]) : reportEntries.slice(0, 4);
   const consensus = personaAnalysis?.consensus;
-  const consensusType = typeof consensus;
-  const firstConsensus = Array.isArray(consensus) && consensus[0] ? { type: typeof consensus[0], keys: typeof consensus[0] === "object" ? Object.keys(consensus[0]) : null, value: consensus[0] } : null;
+  const firstConsensus = Array.isArray(consensus) && consensus[0] ? consensus[0] : null;
+  const mda = summaryReport ? (summaryReport as any).multi_dimensional_analysis : null;
+  const mdaFirstType = Array.isArray(mda) && mda[0] ? typeof mda[0] : null;
+  const mdaFirst = Array.isArray(mda) && mda[0] && typeof mda[0] === "object" ? Object.keys(mda[0]) : (Array.isArray(mda) ? mda.slice(0, 3) : null);
 
   return NextResponse.json({
     selectedIds,
@@ -71,10 +73,12 @@ export async function GET(request: Request) {
     samplePersonaIds: allPersonas?.map((p: any) => p.id),
     overallScore: summaryReport?.overall_score,
     personaAnalysisKeys,
-    firstEntryKeys: firstEntry,
-    rawEntries,
-    consensusType,
+    entriesCount: reportEntries.length,
+    firstEntryType,
+    firstEntry,
     firstConsensus,
+    mdaFirstType,
+    mdaFirst,
     subscriptionPlan: subscription?.plan,
     hasScenarioSimulation: !!summaryReport?.scenario_simulation,
     hasRoundTableDebate: !!summaryReport?.round_table_debate,
