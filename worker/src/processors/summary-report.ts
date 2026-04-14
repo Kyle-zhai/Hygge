@@ -23,6 +23,18 @@ function reconstructFromStrings(arr: string[], requiredKey: string): any[] {
   return objects;
 }
 
+function parseSupportingPersonas(val: unknown): string[] {
+  if (Array.isArray(val)) return val.filter((v) => typeof v === "string" && v.length > 0);
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed.startsWith("[")) {
+      try { const parsed = JSON.parse(trimmed); if (Array.isArray(parsed)) return parsed; } catch {}
+    }
+    return trimmed.split(/,\s*/).filter(Boolean);
+  }
+  return [];
+}
+
 function normalizePersonaAnalysis(raw: any): any {
   if (!raw || typeof raw !== "object") return { entries: [], consensus: [], disagreements: [] };
 
@@ -44,6 +56,10 @@ function normalizePersonaAnalysis(raw: any): any {
       ? raw.consensus.filter((c: any) => typeof c === "object" && c !== null && c.point)
       : [];
   }
+  consensus = consensus.map((c: any) => ({
+    ...c,
+    supporting_personas: parseSupportingPersonas(c.supporting_personas),
+  }));
 
   let disagreements: any[];
   if (Array.isArray(raw.disagreements) && raw.disagreements.length > 0 && typeof raw.disagreements[0] === "string") {

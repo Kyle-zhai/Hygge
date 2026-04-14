@@ -195,6 +195,23 @@ function reconstructFromStrings(arr: any[], requiredKey: string): any[] {
   return objects;
 }
 
+function parseSupportingPersonas(val: unknown): string[] {
+  if (Array.isArray(val)) return val.filter((v) => typeof v === "string" && v.length > 0);
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed.startsWith("[")) {
+      try { const parsed = JSON.parse(trimmed); if (Array.isArray(parsed)) return parsed; } catch {}
+    }
+    return trimmed.split(/,\s*/).filter(Boolean);
+  }
+  return [];
+}
+
+function safeTr(t: ReturnType<typeof useTranslations>, key: string | undefined | null, fallback?: string): string {
+  if (!key) return fallback ?? "";
+  try { return t(key as any); } catch { return fallback ?? key; }
+}
+
 export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification, mode = "product" }: ReportScoresViewProps) {
   const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
@@ -232,7 +249,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           <Badge className={readinessColors[report.market_readiness] || ""}>
             {report.readiness_label_en
               ? (locale === "zh" ? (report.readiness_label_zh || report.readiness_label_en) : report.readiness_label_en)
-              : t("marketReadiness")}: {t(report.market_readiness as "low" | "medium" | "high")}
+              : t("marketReadiness")}: {safeTr(t, report.market_readiness, report.market_readiness || "N/A")}
           </Badge>
         </div>
       )}
@@ -278,9 +295,9 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               {reconstructFromStrings(safeArray(report.persona_analysis?.consensus), "point").map((c: any, i: number) => (
                 <li key={i} className="text-sm">
                   <span className="font-medium text-[#EAEAE8]">{c.point}</span>
-                  {safeArray(c.supporting_personas).length > 0 && (
+                  {parseSupportingPersonas(c.supporting_personas).length > 0 && (
                     <span className="ml-2 text-xs text-[#666462]">
-                      ({safeArray<string>(c.supporting_personas).join(", ")})
+                      ({parseSupportingPersonas(c.supporting_personas).join(", ")})
                     </span>
                   )}
                 </li>
@@ -310,7 +327,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               {safeArray<ReportData["multi_dimensional_analysis"][number]>(report.multi_dimensional_analysis).filter((d: any) => typeof d === "object" && d !== null).map((dim, i) => (
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[#EAEAE8]">{(locale === "zh" ? dim.label_zh : dim.label_en) || t(dim.dimension as any)}</h3>
+                    <h3 className="text-sm font-semibold text-[#EAEAE8]">{(locale === "zh" ? dim.label_zh : dim.label_en) || safeTr(t, dim.dimension, dim.dimension || "Dimension")}</h3>
                     {isTopicMode && dim.overall_leaning ? (
                       <StanceBadge leaning={dim.overall_leaning} locale={locale} />
                     ) : (
@@ -444,13 +461,13 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               {safeArray<ReportData["action_items"][number]>(report.action_items).map((item, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg bg-[#1C1C1C]/50 p-3">
                   <Badge variant="secondary" className={priorityColors[item.priority] || ""}>
-                    {t(item.priority as "critical" | "high" | "medium" | "low")}
+                    {safeTr(t, item.priority, item.priority || "medium")}
                   </Badge>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-[#EAEAE8]">{item.description}</p>
                     <div className="mt-1 flex gap-3 text-xs text-[#666462]">
                       <span>{t("impact")}: {item.expected_impact}</span>
-                      <span>{t("difficulty")}: {t(item.difficulty as "easy" | "medium" | "hard")}</span>
+                      <span>{t("difficulty")}: {safeTr(t, item.difficulty, item.difficulty || "medium")}</span>
                     </div>
                   </div>
                 </div>

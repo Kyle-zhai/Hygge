@@ -77,6 +77,30 @@ export default function DebateChatPage() {
     return () => { supabase.removeChannel(channel); };
   }, [id]);
 
+  useEffect(() => {
+    if (!waiting) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/debates/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const freshMessages: Message[] = data.messages || [];
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMsgs = freshMessages.filter((m: Message) => !existingIds.has(m.id));
+          if (newMsgs.length === 0) return prev;
+          const merged = [...prev, ...newMsgs];
+          if (newMsgs.some((m: Message) => m.role === "persona")) {
+            if (waitingTimer.current) clearTimeout(waitingTimer.current);
+            setWaiting(false);
+          }
+          return merged;
+        });
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [waiting, id]);
+
   async function handleSend() {
     const text = input.trim();
     if (!text || sending) return;
@@ -84,14 +108,21 @@ export default function DebateChatPage() {
     setWaiting(true);
     setInput("");
     if (waitingTimer.current) clearTimeout(waitingTimer.current);
-    waitingTimer.current = setTimeout(() => setWaiting(false), 45_000);
+    waitingTimer.current = setTimeout(() => setWaiting(false), 60_000);
+
+    const optimisticId = `temp-${Date.now()}`;
+    setMessages((prev) => [...prev, { id: optimisticId, role: "user", content: text, created_at: new Date().toISOString() }]);
 
     try {
-      await fetch(`/api/debates/${id}/messages`, {
+      const res = await fetch(`/api/debates/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text }),
       });
+      if (res.ok) {
+        const realMsg = await res.json();
+        setMessages((prev) => prev.map((m) => m.id === optimisticId ? { ...realMsg } : m));
+      }
     } finally {
       setSending(false);
       inputRef.current?.focus();

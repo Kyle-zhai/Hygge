@@ -216,6 +216,18 @@ function reconstructFromStrings(arr: any[], requiredKey: string): any[] {
   return objects;
 }
 
+function parseSupportingPersonas(val: unknown): string[] {
+  if (Array.isArray(val)) return val.filter((v) => typeof v === "string" && v.length > 0);
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed.startsWith("[")) {
+      try { const parsed = JSON.parse(trimmed); if (Array.isArray(parsed)) return parsed; } catch {}
+    }
+    return trimmed.split(/,\s*/).filter(Boolean);
+  }
+  return [];
+}
+
 function scoreColor(score: number) {
   if (score >= 7)
     return {
@@ -829,7 +841,11 @@ export function ReportTextView({
   if (!report) return null;
 
   // ── Derived data (safe access, handles malformed LLM output) ──
-  const entries = reconstructFromStrings(safeArray<any>(report.persona_analysis?.entries), "persona_id");
+  const rawEntries = reconstructFromStrings(safeArray<any>(report.persona_analysis?.entries), "persona_id");
+  const entries = rawEntries.length >= reviews.length ? rawEntries : reviews.map((r) => {
+    const match = rawEntries.find((e: any) => e.persona_id === r.persona_id);
+    return match || { persona_id: r.persona_id, core_viewpoint: r.review_text?.slice(0, 200), scoring_rationale: "" };
+  });
   const consensusPoints = reconstructFromStrings(safeArray<any>(report.persona_analysis?.consensus), "point");
   const disagreements = reconstructFromStrings(safeArray<any>(report.persona_analysis?.disagreements), "point");
   const dimensions = safeArray<any>(report.multi_dimensional_analysis);
@@ -1305,13 +1321,12 @@ export function ReportTextView({
                     <p className="text-sm text-[#EAEAE8] leading-relaxed mb-2">
                       {item.point}
                     </p>
-                    {item.supporting_personas &&
-                      item.supporting_personas.length > 0 && (
+                    {parseSupportingPersonas(item.supporting_personas).length > 0 && (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] text-[#666462]">
                             {t("supportedBy")}:
                           </span>
-                          {safeArray<string>(item.supporting_personas).map((pid) => (
+                          {parseSupportingPersonas(item.supporting_personas).map((pid) => (
                             <PersonaPill
                               key={pid}
                               personaId={pid}
