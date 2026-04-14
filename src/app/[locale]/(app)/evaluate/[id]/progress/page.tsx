@@ -33,7 +33,7 @@ export default async function EvaluationProgressPage({
   const { data: personas } = await supabase
     .from("personas")
     .select("id, identity")
-    .in("id", evaluation.selected_persona_ids);
+    .in("id", (evaluation.selected_persona_ids || []).map(String));
 
   const personaInfos = (personas || []).map((p: any) => ({
     id: p.id,

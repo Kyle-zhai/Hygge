@@ -34,7 +34,7 @@ export default async function EvaluationResultPage({
   const { data: personas } = await supabase
     .from("personas")
     .select("id, identity, demographics, category")
-    .in("id", evaluation.selected_persona_ids);
+    .in("id", (evaluation.selected_persona_ids || []).map(String));
 
   const reviews = (evaluation as any).persona_reviews || [];
   const reportData = (evaluation as any).summary_reports;
@@ -47,7 +47,7 @@ export default async function EvaluationResultPage({
       const { data: basePersonas } = await supabase
         .from("personas")
         .select("id, identity, demographics, category")
-        .in("id", baseEval.selected_persona_ids);
+        .in("id", (baseEval.selected_persona_ids || []).map(String));
 
       const baseReviews = (baseEval as any).persona_reviews || [];
       const baseReportData = (baseEval as any).summary_reports;
