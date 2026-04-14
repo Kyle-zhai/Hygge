@@ -1113,7 +1113,7 @@ export function ReportTextView({
 
                                 {/* Strengths & Weaknesses */}
                                 <div className="grid gap-3 sm:grid-cols-2">
-                                  {review.strengths?.length > 0 && (
+                                  {Array.isArray(review.strengths) && review.strengths.length > 0 && (
                                     <div className="rounded-lg border border-[#4ADE80]/15 bg-[#4ADE80]/[0.03] p-3">
                                       <h5 className="text-[10px] font-semibold text-[#4ADE80] uppercase tracking-wider mb-2">
                                         {t("strengths")}
@@ -1135,7 +1135,7 @@ export function ReportTextView({
                                       </ul>
                                     </div>
                                   )}
-                                  {review.weaknesses?.length > 0 && (
+                                  {Array.isArray(review.weaknesses) && review.weaknesses.length > 0 && (
                                     <div className="rounded-lg border border-[#F87171]/15 bg-[#F87171]/[0.03] p-3">
                                       <h5 className="text-[10px] font-semibold text-[#F87171] uppercase tracking-wider mb-2">
                                         {t("weaknesses")}
@@ -1466,7 +1466,7 @@ export function ReportTextView({
                       </div>
                     ) : (
                       <div className="flex flex-col sm:flex-row gap-4">
-                        {dim.strengths && dim.strengths.length > 0 && (
+                        {Array.isArray(dim.strengths) && dim.strengths.length > 0 && (
                           <div className="flex-1">
                             <ul className="space-y-1">
                               {dim.strengths.map((s, si) => (
@@ -1481,7 +1481,7 @@ export function ReportTextView({
                             </ul>
                           </div>
                         )}
-                        {dim.weaknesses && dim.weaknesses.length > 0 && (
+                        {Array.isArray(dim.weaknesses) && dim.weaknesses.length > 0 && (
                           <div className="flex-1">
                             <ul className="space-y-1">
                               {dim.weaknesses.map((w, wi) => (
