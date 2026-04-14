@@ -17,6 +17,12 @@ export async function GET(request: Request) {
 
   if (evalError) return NextResponse.json({ evalError });
 
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("plan, evaluations_used, evaluations_limit")
+    .eq("user_id", user.id)
+    .single();
+
   const selectedIds = evaluation.selected_persona_ids;
   const reviewPersonaIds = (evaluation as any).persona_reviews?.map((r: any) => r.persona_id) || [];
 
@@ -69,6 +75,7 @@ export async function GET(request: Request) {
     rawEntries,
     consensusType,
     firstConsensus,
+    subscriptionPlan: subscription?.plan,
     hasScenarioSimulation: !!summaryReport?.scenario_simulation,
     hasRoundTableDebate: !!summaryReport?.round_table_debate,
     hasOpinionDrift: !!summaryReport?.opinion_drift,
