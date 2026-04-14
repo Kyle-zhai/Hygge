@@ -30,10 +30,14 @@ export default async function EvaluationProgressPage({
   const topicTitle =
     (evaluation as any).projects?.parsed_data?.name || "Discussion";
 
-  const { data: personas } = await supabase
-    .from("personas")
-    .select("id, identity")
-    .in("id", (evaluation.selected_persona_ids || []).map(String));
+  const existingReviews = (evaluation as any).persona_reviews || [];
+  const allPersonaIds = Array.from(new Set([
+    ...(evaluation.selected_persona_ids || []).map(String),
+    ...existingReviews.map((r: any) => String(r.persona_id)),
+  ]));
+  const { data: personas } = allPersonaIds.length > 0
+    ? await supabase.from("personas").select("id, identity").in("id", allPersonaIds)
+    : { data: [] };
 
   const personaInfos = (personas || []).map((p: any) => ({
     id: p.id,

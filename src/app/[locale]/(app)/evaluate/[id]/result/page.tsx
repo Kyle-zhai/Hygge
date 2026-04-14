@@ -31,12 +31,15 @@ export default async function EvaluationResultPage({
     redirect(`/${locale}/evaluate/new`);
   }
 
-  const { data: personas } = await supabase
-    .from("personas")
-    .select("id, identity, demographics, category")
-    .in("id", (evaluation.selected_persona_ids || []).map(String));
-
   const reviews = (evaluation as any).persona_reviews || [];
+
+  const personaIds = Array.from(new Set([
+    ...(evaluation.selected_persona_ids || []).map(String),
+    ...reviews.map((r: any) => String(r.persona_id)),
+  ]));
+  const { data: personas } = personaIds.length > 0
+    ? await supabase.from("personas").select("id, identity, demographics, category").in("id", personaIds)
+    : { data: [] };
   const reportData = (evaluation as any).summary_reports;
   const report = Array.isArray(reportData) ? reportData[0] ?? null : reportData ?? null;
   const topicClassification = (evaluation as any).topic_classification || null;
@@ -44,12 +47,14 @@ export default async function EvaluationResultPage({
   if (evaluation.comparison_base_id) {
     const baseEval = await fetchEvaluation(supabase, evaluation.comparison_base_id);
     if (baseEval && baseEval.status === "completed") {
-      const { data: basePersonas } = await supabase
-        .from("personas")
-        .select("id, identity, demographics, category")
-        .in("id", (baseEval.selected_persona_ids || []).map(String));
-
       const baseReviews = (baseEval as any).persona_reviews || [];
+      const basePersonaIds = Array.from(new Set([
+        ...(baseEval.selected_persona_ids || []).map(String),
+        ...baseReviews.map((r: any) => String(r.persona_id)),
+      ]));
+      const { data: basePersonas } = basePersonaIds.length > 0
+        ? await supabase.from("personas").select("id, identity, demographics, category").in("id", basePersonaIds)
+        : { data: [] };
       const baseReportData = (baseEval as any).summary_reports;
       const baseReport = Array.isArray(baseReportData) ? baseReportData[0] ?? null : baseReportData ?? null;
       const baseTopicClassification = (baseEval as any).topic_classification || null;
