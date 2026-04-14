@@ -39,8 +39,8 @@ export async function generatePersonaReview(
   return {
     scores,
     review_text: parsed.review_text,
-    strengths: parsed.strengths,
-    weaknesses: parsed.weaknesses,
+    strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+    weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
     llm_model: config.llm.model,
     overall_stance: parsed.overall_stance ?? null,
     cited_references: Array.isArray(parsed.cited_references) ? parsed.cited_references : null,

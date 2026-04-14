@@ -130,7 +130,7 @@ export function PersonaReviewCard({
                 <div className="rounded-lg border border-[#4ADE80]/20 bg-[#4ADE80]/5 p-3">
                   <h4 className="mb-2 text-xs font-semibold text-[#4ADE80]">{t("strengths")}</h4>
                   <ul className="space-y-1">
-                    {strengths.map((s, i) => (
+                    {(Array.isArray(strengths) ? strengths : []).map((s, i) => (
                       <li key={i} className="text-xs text-[#9B9594]">+ {s}</li>
                     ))}
                   </ul>
@@ -138,7 +138,7 @@ export function PersonaReviewCard({
                 <div className="rounded-lg border border-[#F87171]/20 bg-[#F87171]/5 p-3">
                   <h4 className="mb-2 text-xs font-semibold text-[#F87171]">{t("weaknesses")}</h4>
                   <ul className="space-y-1">
-                    {weaknesses.map((w, i) => (
+                    {(Array.isArray(weaknesses) ? weaknesses : []).map((w, i) => (
                       <li key={i} className="text-xs text-[#9B9594]">- {w}</li>
                     ))}
                   </ul>
