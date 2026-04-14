@@ -63,6 +63,10 @@ interface CompareResultViewProps {
   locale: string;
 }
 
+function safeArray<T>(val: unknown): T[] {
+  return Array.isArray(val) ? val : [];
+}
+
 const STANCE_NUMERIC: Record<string, number> = {
   strongly_positive: 5, positive: 4, neutral: 3, negative: 2, strongly_negative: 1,
 };
@@ -116,8 +120,8 @@ export function CompareResultView({
   for (const p of [...basePersonas, ...newPersonas]) personaMap.set(p.id, p);
 
   const allDims = new Set<string>();
-  for (const d of baseReport?.multi_dimensional_analysis || []) allDims.add(d.dimension);
-  for (const d of newReport?.multi_dimensional_analysis || []) allDims.add(d.dimension);
+  for (const d of safeArray<NonNullable<ReportData["multi_dimensional_analysis"]>[number]>(baseReport?.multi_dimensional_analysis)) allDims.add(d.dimension);
+  for (const d of safeArray<NonNullable<ReportData["multi_dimensional_analysis"]>[number]>(newReport?.multi_dimensional_analysis)) allDims.add(d.dimension);
 
   function getDimScore(report: ReportData | null, key: string) {
     const match = report?.multi_dimensional_analysis?.find((d) => d.dimension === key);
@@ -284,14 +288,14 @@ export function CompareResultView({
       )}
 
       {/* Consensus comparison */}
-      {baseReport?.persona_analysis?.consensus && newReport?.persona_analysis?.consensus && (
+      {safeArray(baseReport?.persona_analysis?.consensus).length > 0 && safeArray(newReport?.persona_analysis?.consensus).length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">
               {locale === "zh" ? "基线 — 共识" : "Baseline — Consensus"}
             </p>
             <ul className="space-y-2">
-              {baseReport.persona_analysis.consensus.map((c, i) => (
+              {safeArray<{ point: string }>(baseReport?.persona_analysis?.consensus).map((c, i) => (
                 <li key={i} className="text-xs text-[#9B9594]">• {c.point}</li>
               ))}
             </ul>
@@ -301,7 +305,7 @@ export function CompareResultView({
               {locale === "zh" ? "新版本 — 共识" : "New Version — Consensus"}
             </p>
             <ul className="space-y-2">
-              {newReport.persona_analysis.consensus.map((c, i) => (
+              {safeArray<{ point: string }>(newReport?.persona_analysis?.consensus).map((c, i) => (
                 <li key={i} className="text-xs text-[#9B9594]">• {c.point}</li>
               ))}
             </ul>
@@ -310,14 +314,14 @@ export function CompareResultView({
       )}
 
       {/* Action items comparison */}
-      {baseReport?.action_items && newReport?.action_items && (
+      {safeArray(baseReport?.action_items).length > 0 && safeArray(newReport?.action_items).length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">
               {locale === "zh" ? "基线 — 行动项" : "Baseline — Action Items"}
             </p>
             <ul className="space-y-2">
-              {baseReport.action_items.slice(0, 5).map((a, i) => (
+              {safeArray<{ description: string; priority: string }>(baseReport?.action_items).slice(0, 5).map((a, i) => (
                 <li key={i} className="text-xs text-[#9B9594] flex items-start gap-2">
                   <Badge variant="secondary" className={`shrink-0 text-[9px] ${a.priority === "critical" ? "bg-[#F87171]/10 text-[#F87171]" : "bg-[#1C1C1C] text-[#666462]"}`}>
                     {a.priority}
@@ -332,7 +336,7 @@ export function CompareResultView({
               {locale === "zh" ? "新版本 — 行动项" : "New Version — Action Items"}
             </p>
             <ul className="space-y-2">
-              {newReport.action_items.slice(0, 5).map((a, i) => (
+              {safeArray<{ description: string; priority: string }>(newReport?.action_items).slice(0, 5).map((a, i) => (
                 <li key={i} className="text-xs text-[#9B9594] flex items-start gap-2">
                   <Badge variant="secondary" className={`shrink-0 text-[9px] ${a.priority === "critical" ? "bg-[#F87171]/10 text-[#F87171]" : "bg-[#1C1C1C] text-[#666462]"}`}>
                     {a.priority}

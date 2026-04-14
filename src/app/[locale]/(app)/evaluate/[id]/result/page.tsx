@@ -34,12 +34,20 @@ export default async function EvaluationResultPage({
   const reviews = (evaluation as any).persona_reviews || [];
 
   const personaIds = Array.from(new Set([
-    ...(evaluation.selected_persona_ids || []).map(String),
+    ...(Array.isArray(evaluation.selected_persona_ids) ? evaluation.selected_persona_ids : []).map(String),
     ...reviews.map((r: any) => String(r.persona_id)),
   ]));
-  const { data: personas } = personaIds.length > 0
-    ? await supabase.from("personas").select("id, identity, demographics, category").in("id", personaIds)
-    : { data: [] };
+  let personas: any[] = [];
+  if (personaIds.length > 0) {
+    const { data, error } = await supabase
+      .from("personas")
+      .select("id, identity, demographics, category")
+      .in("id", personaIds);
+    if (error) {
+      console.error("[ResultPage] Persona fetch failed:", error.message, "ids:", personaIds);
+    }
+    personas = data || [];
+  }
   const reportData = (evaluation as any).summary_reports;
   const report = Array.isArray(reportData) ? reportData[0] ?? null : reportData ?? null;
   const topicClassification = (evaluation as any).topic_classification || null;
@@ -49,12 +57,20 @@ export default async function EvaluationResultPage({
     if (baseEval && baseEval.status === "completed") {
       const baseReviews = (baseEval as any).persona_reviews || [];
       const basePersonaIds = Array.from(new Set([
-        ...(baseEval.selected_persona_ids || []).map(String),
+        ...(Array.isArray(baseEval.selected_persona_ids) ? baseEval.selected_persona_ids : []).map(String),
         ...baseReviews.map((r: any) => String(r.persona_id)),
       ]));
-      const { data: basePersonas } = basePersonaIds.length > 0
-        ? await supabase.from("personas").select("id, identity, demographics, category").in("id", basePersonaIds)
-        : { data: [] };
+      let basePersonas: any[] = [];
+      if (basePersonaIds.length > 0) {
+        const { data, error } = await supabase
+          .from("personas")
+          .select("id, identity, demographics, category")
+          .in("id", basePersonaIds);
+        if (error) {
+          console.error("[ResultPage] Base persona fetch failed:", error.message);
+        }
+        basePersonas = data || [];
+      }
       const baseReportData = (baseEval as any).summary_reports;
       const baseReport = Array.isArray(baseReportData) ? baseReportData[0] ?? null : baseReportData ?? null;
       const baseTopicClassification = (baseEval as any).topic_classification || null;
@@ -75,11 +91,11 @@ export default async function EvaluationResultPage({
         <CompareResultView
           baseReport={baseReport}
           baseReviews={baseReviews}
-          basePersonas={basePersonas || []}
+          basePersonas={basePersonas}
           baseTitle={baseProject?.parsed_data?.name || "Baseline"}
           newReport={report}
           newReviews={reviews}
-          newPersonas={personas || []}
+          newPersonas={personas}
           newTitle={newProject?.parsed_data?.name || "New Version"}
           topicClassification={topicClassification || baseTopicClassification}
           mode={evaluation.mode === "topic" ? "topic" : "product"}
@@ -93,7 +109,7 @@ export default async function EvaluationResultPage({
     <ReportView
       report={report}
       reviews={reviews}
-      personas={personas || []}
+      personas={personas}
       locale={locale}
       evaluationId={evaluation.id}
       topicClassification={topicClassification}

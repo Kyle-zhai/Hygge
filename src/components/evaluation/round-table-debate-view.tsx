@@ -41,6 +41,10 @@ interface RoundTableDebateViewProps {
   onStartDebate?: (personaId: string) => void;
 }
 
+function safeArray<T>(val: unknown): T[] {
+  return Array.isArray(val) ? val : [];
+}
+
 export function RoundTableDebateView({ debate, personas, locale, onBack, onStartDebate }: RoundTableDebateViewProps) {
   const t = useTranslations("evaluation");
   const personaMap = new Map(personas.map((p) => [p.id, p]));
@@ -79,7 +83,7 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
 
       {/* Participants */}
       <div className="flex flex-wrap justify-center gap-3">
-        {debate.selected_persona_ids.map((pid) => (
+        {safeArray<string>(debate.selected_persona_ids).map((pid) => (
           <div
             key={pid}
             className="inline-flex items-center gap-2 rounded-full border border-[#2A2A2A] bg-[#141414] px-3 py-1.5"
@@ -92,7 +96,7 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
 
       {/* Rounds */}
       <div className="space-y-8">
-        {debate.rounds.map((round, ri) => (
+        {safeArray<RoundTableDebate["rounds"][number]>(debate.rounds).map((round, ri) => (
           <motion.div
             key={round.round}
             initial={{ opacity: 0, y: 8 }}
@@ -107,7 +111,7 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
             </div>
 
             <div className="space-y-3 ml-3 border-l-2 border-[#2A2A2A] pl-5">
-              {round.messages.map((msg, mi) => {
+              {safeArray<RoundTableDebate["rounds"][number]["messages"][number]>(round.messages).map((msg, mi) => {
                 const respondingTo = msg.responding_to ? getName(msg.responding_to) : null;
                 return (
                   <motion.div
@@ -150,21 +154,21 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
         className="rounded-xl border border-[#C4A882]/20 bg-[#C4A882]/5 p-5"
       >
         <div className="flex items-center gap-2 mb-4">
-          <div className={`h-2.5 w-2.5 rounded-full ${debate.outcome.consensus_reached ? "bg-[#4ADE80]" : "bg-[#F87171]"}`} />
+          <div className={`h-2.5 w-2.5 rounded-full ${debate.outcome?.consensus_reached ? "bg-[#4ADE80]" : "bg-[#F87171]"}`} />
           <span className="text-sm font-semibold text-[#EAEAE8]">
-            {debate.outcome.consensus_reached
+            {debate.outcome?.consensus_reached
               ? (locale === "zh" ? "达成共识" : "Consensus Reached")
               : (locale === "zh" ? "分歧未消" : "Disagreements Remain")}
           </span>
         </div>
 
-        {debate.outcome.key_insights.length > 0 && (
+        {safeArray(debate.outcome?.key_insights).length > 0 && (
           <div className="mb-4">
             <p className="text-xs font-medium text-[#666462] uppercase tracking-wide mb-2">
               {locale === "zh" ? "关键洞见" : "Key Insights"}
             </p>
             <ul className="space-y-2">
-              {debate.outcome.key_insights.map((insight, i) => (
+              {safeArray<string>(debate.outcome?.key_insights).map((insight, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-[#EAEAE8]">
                   <Lightbulb className="h-3.5 w-3.5 shrink-0 mt-0.5 text-[#C4A882]" />
                   <span>{insight}</span>
@@ -174,13 +178,13 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
           </div>
         )}
 
-        {debate.outcome.remaining_disagreements.length > 0 && (
+        {safeArray(debate.outcome?.remaining_disagreements).length > 0 && (
           <div>
             <p className="text-xs font-medium text-[#666462] uppercase tracking-wide mb-2">
               {locale === "zh" ? "未解决分歧" : "Unresolved"}
             </p>
             <ul className="space-y-2">
-              {debate.outcome.remaining_disagreements.map((d, i) => (
+              {safeArray<string>(debate.outcome?.remaining_disagreements).map((d, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-[#9B9594]">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-[#F87171]/70" />
                   <span>{d}</span>
@@ -211,7 +215,7 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
               : "Pick a participant and try to change their mind"}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {debate.selected_persona_ids.map((pid) => {
+            {safeArray<string>(debate.selected_persona_ids).map((pid) => {
               const p = personaMap.get(pid);
               if (!p) return null;
               return (
