@@ -27,7 +27,7 @@ function computeAverageScore(scores: Record<string, number | string>): number {
 export function buildScenarioSimulationPrompt(
   personas: Persona[],
   reviews: ReviewForSimulation[]
-): { system: string; prompt: string } {
+): { system: string; prompt: string; computedStances: Record<string, string> } {
   const system = `You are a social dynamics simulator. You will simulate a real-world scenario where all the given personas are in the same physical space (e.g., a meetup, conference, town hall, workshop, or social gathering) and the topic is being discussed.
 
 The topic could be anything — a product, idea, policy, event, design, creative work, business strategy, etc. Adapt your simulation accordingly:
@@ -74,11 +74,13 @@ Respond ONLY with valid JSON:
   "summary": "<200-300 word narrative of what happened in the simulation>"
 }`;
 
+  const computedStances: Record<string, string> = {};
   const personaProfiles = personas
     .map((p) => {
       const review = reviews.find((r) => r.persona_id === p.id);
       const avgScore = review ? computeAverageScore(review.scores as Record<string, number | string>) : 5;
-      const stance = avgScore > 6 ? "Positive" : avgScore > 4 ? "Neutral" : "Negative";
+      const stance = avgScore >= 7 ? "Positive" : avgScore <= 4 ? "Negative" : "Neutral";
+      computedStances[p.id] = stance.toLowerCase();
       return `### ${p.identity.name} (ID: ${p.id})
 Role: ${p.demographics?.occupation ?? "Unknown"}
 Persuadability: ${p.psychology?.decision_making?.persuadability ?? "moderate"}
@@ -92,5 +94,5 @@ Stance: ${stance}`;
 
   const prompt = `Simulate the social dynamics for these personas discussing the topic:\n\n${personaProfiles}\n\nRun the simulation considering real-world social dynamics, peer pressure, and influence patterns.`;
 
-  return { system, prompt };
+  return { system, prompt, computedStances };
 }

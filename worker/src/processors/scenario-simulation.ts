@@ -18,7 +18,7 @@ export async function runScenarioSimulation(
   personas: Persona[],
   reviews: ReviewForSimulation[]
 ): Promise<ScenarioSimulationResult> {
-  const { system, prompt } = buildScenarioSimulationPrompt(personas, reviews);
+  const { system, prompt, computedStances } = buildScenarioSimulationPrompt(personas, reviews);
   const response = await llm.complete({ system, prompt, maxTokens: 4096, jsonMode: true });
 
   let result: ScenarioSimulationResult;
@@ -27,6 +27,14 @@ export async function runScenarioSimulation(
   } catch (e) {
     console.error("[ScenarioSimulation] JSON parse failed. Raw response:", response.text.slice(0, 500));
     throw e;
+  }
+
+  // Enforce initial_adoption stances from computed values (same thresholds as opinion-drift)
+  if (result.initial_adoption) {
+    result.initial_adoption = result.initial_adoption.map((a) => ({
+      ...a,
+      stance: (computedStances[a.persona_id] ?? a.stance) as "positive" | "neutral" | "negative",
+    }));
   }
 
   // Compute adoption_rate_shift from actual stance data instead of trusting LLM
