@@ -807,10 +807,15 @@ export function ReportTextView({
   // ── Early return ──
   if (!report) return null;
 
-  // ── Derived data (safe access) ──
-  const entries = report.persona_analysis?.entries ?? [];
-  const consensusPoints = safeArray<any>(report.persona_analysis?.consensus);
-  const disagreements = safeArray<any>(report.persona_analysis?.disagreements);
+  // ── Derived data (safe access, handles malformed LLM output) ──
+  const rawEntries = safeArray<any>(report.persona_analysis?.entries);
+  const entries = rawEntries.filter((e: any) => typeof e === "object" && e !== null && e.persona_id);
+  const consensusPoints = safeArray<any>(report.persona_analysis?.consensus).filter(
+    (c: any) => typeof c === "object" && c !== null && c.point
+  );
+  const disagreements = safeArray<any>(report.persona_analysis?.disagreements).filter(
+    (d: any) => typeof d === "object" && d !== null && (d.point || d.reason)
+  );
   const dimensions = safeArray<any>(report.multi_dimensional_analysis);
   const goals = safeArray<any>(report.goal_assessment);
   const actionItems = safeArray<any>(report.action_items);

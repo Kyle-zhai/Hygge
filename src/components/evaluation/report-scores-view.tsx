@@ -251,10 +251,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {report && (
         <>
           {/* Consensus */}
-          {safeArray(report.persona_analysis?.consensus).length > 0 && (
+          {safeArray(report.persona_analysis?.consensus).filter((c: any) => typeof c === "object" && c !== null && c.point).length > 0 && (
           <ReportSection title={t("consensus")} borderColor="border-l-[#E2DDD5]">
             <ul className="space-y-2">
-              {safeArray<ReportData["persona_analysis"]["consensus"][number]>(report.persona_analysis?.consensus).map((c, i) => (
+              {safeArray<ReportData["persona_analysis"]["consensus"][number]>(report.persona_analysis?.consensus).filter((c: any) => typeof c === "object" && c !== null && c.point).map((c, i) => (
                 <li key={i} className="text-sm">
                   <span className="font-medium text-[#EAEAE8]">{c.point}</span>
                   {safeArray(c.supporting_personas).length > 0 && (
@@ -269,10 +269,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           )}
 
           {/* Disagreements */}
-          {safeArray(report.persona_analysis?.disagreements).length > 0 && (
+          {safeArray(report.persona_analysis?.disagreements).filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason)).length > 0 && (
             <ReportSection title={t("disagreements")} borderColor="border-l-[#FBBF24]">
               <div className="space-y-3">
-                {safeArray<ReportData["persona_analysis"]["disagreements"][number]>(report.persona_analysis?.disagreements).map((d, i) => (
+                {safeArray<ReportData["persona_analysis"]["disagreements"][number]>(report.persona_analysis?.disagreements).filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason)).map((d, i) => (
                   <div key={i} className="text-sm">
                     <p className="font-medium text-[#EAEAE8]">{d.point}</p>
                     {d.reason && <p className="mt-1 text-xs text-[#9B9594]">{d.reason}</p>}

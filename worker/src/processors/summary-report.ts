@@ -4,6 +4,20 @@ import type { SummaryReport } from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
 
+function normalizePersonaAnalysis(raw: any): any {
+  if (!raw || typeof raw !== "object") return { entries: [], consensus: [], disagreements: [] };
+  const entries = Array.isArray(raw.entries)
+    ? raw.entries.filter((e: any) => typeof e === "object" && e !== null && e.persona_id)
+    : [];
+  const consensus = Array.isArray(raw.consensus)
+    ? raw.consensus.filter((c: any) => typeof c === "object" && c !== null && c.point)
+    : [];
+  const disagreements = Array.isArray(raw.disagreements)
+    ? raw.disagreements.filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason))
+    : [];
+  return { entries, consensus, disagreements };
+}
+
 export interface ReviewForSummary {
   persona_id: string;
   persona_name: string;
@@ -32,7 +46,7 @@ export async function generateTopicSummaryReport(
   }
   return {
     overall_score: 0,
-    persona_analysis: parsed.persona_analysis,
+    persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
     multi_dimensional_analysis: parsed.multi_dimensional_analysis,
     goal_assessment: [],
     if_not_feasible: { modifications: [], direction: "", priorities: [], reference_cases: [] },
@@ -71,7 +85,7 @@ export async function generateSummaryReport(
   }
   return {
     overall_score: parsed.overall_score,
-    persona_analysis: parsed.persona_analysis,
+    persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
     multi_dimensional_analysis: parsed.multi_dimensional_analysis,
     goal_assessment: parsed.goal_assessment,
     if_not_feasible: parsed.if_not_feasible,
