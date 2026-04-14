@@ -23,7 +23,7 @@ import {
   UserCircle,
   BarChart3,
   ListFilter,
-  MessageSquare,
+  Swords,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -256,7 +256,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
           }`}
         >
-          <MessageSquare className="h-4 w-4" />
+          <Swords className="h-4 w-4" />
           <span>Debate</span>
         </Link>
         <Link
@@ -340,7 +340,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                     {(["topic", "product", "compare", "debate"] as const).map((type) => {
                       const active = typeFilter.has(type);
                       const labels: Record<string, string> = { topic: "Topic", product: "Product", compare: "Compare", debate: "Debate" };
-                      const Icons: Record<string, typeof MessageCircle> = { topic: MessageCircle, product: Package, compare: Scale, debate: MessageSquare };
+                      const Icons: Record<string, typeof MessageCircle> = { topic: MessageCircle, product: Package, compare: Scale, debate: Swords };
                       const Icon = Icons[type];
                       return (
                         <button
@@ -396,7 +396,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
             const active = item.isDebate
               ? item.debateId && pathname.includes(item.debateId)
               : item.evaluationId && pathname.includes(item.evaluationId);
-            const ModeIcon = item.isDebate ? MessageSquare : item.isCompare ? Scale : item.mode === "product" ? Package : MessageCircle;
+            const ModeIcon = item.isDebate ? Swords : item.isCompare ? Scale : item.mode === "product" ? Package : MessageCircle;
             const menuOpen = menu?.itemId === item.id;
             return (
               <div key={item.id} className="group relative">
