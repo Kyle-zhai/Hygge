@@ -195,6 +195,27 @@ function safeArray<T>(val: unknown): T[] {
   return Array.isArray(val) ? val : [];
 }
 
+function reconstructFromStrings(arr: any[], requiredKey: string): any[] {
+  if (!arr.length || typeof arr[0] !== "string") return arr.filter((e: any) => typeof e === "object" && e !== null);
+  const objects: any[] = [];
+  let current: any = null;
+  for (const s of arr) {
+    if (typeof s !== "string") continue;
+    const colonIdx = s.indexOf(": ");
+    if (colonIdx === -1) continue;
+    const key = s.slice(0, colonIdx).trim();
+    const value = s.slice(colonIdx + 2).trim();
+    if (key === requiredKey) {
+      if (current) objects.push(current);
+      current = { [key]: value };
+    } else if (current) {
+      current[key] = value;
+    }
+  }
+  if (current) objects.push(current);
+  return objects;
+}
+
 function scoreColor(score: number) {
   if (score >= 7)
     return {
@@ -808,14 +829,9 @@ export function ReportTextView({
   if (!report) return null;
 
   // ── Derived data (safe access, handles malformed LLM output) ──
-  const rawEntries = safeArray<any>(report.persona_analysis?.entries);
-  const entries = rawEntries.filter((e: any) => typeof e === "object" && e !== null && e.persona_id);
-  const consensusPoints = safeArray<any>(report.persona_analysis?.consensus).filter(
-    (c: any) => typeof c === "object" && c !== null && c.point
-  );
-  const disagreements = safeArray<any>(report.persona_analysis?.disagreements).filter(
-    (d: any) => typeof d === "object" && d !== null && (d.point || d.reason)
-  );
+  const entries = reconstructFromStrings(safeArray<any>(report.persona_analysis?.entries), "persona_id");
+  const consensusPoints = reconstructFromStrings(safeArray<any>(report.persona_analysis?.consensus), "point");
+  const disagreements = reconstructFromStrings(safeArray<any>(report.persona_analysis?.disagreements), "point");
   const dimensions = safeArray<any>(report.multi_dimensional_analysis);
   const goals = safeArray<any>(report.goal_assessment);
   const actionItems = safeArray<any>(report.action_items);

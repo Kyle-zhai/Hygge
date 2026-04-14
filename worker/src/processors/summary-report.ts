@@ -4,17 +4,56 @@ import type { SummaryReport } from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
 
+function reconstructFromStrings(arr: string[], requiredKey: string): any[] {
+  const objects: any[] = [];
+  let current: any = null;
+  for (const s of arr) {
+    const colonIdx = s.indexOf(": ");
+    if (colonIdx === -1) continue;
+    const key = s.slice(0, colonIdx).trim();
+    const value = s.slice(colonIdx + 2).trim();
+    if (key === requiredKey) {
+      if (current) objects.push(current);
+      current = { [key]: value };
+    } else if (current) {
+      current[key] = value;
+    }
+  }
+  if (current) objects.push(current);
+  return objects;
+}
+
 function normalizePersonaAnalysis(raw: any): any {
   if (!raw || typeof raw !== "object") return { entries: [], consensus: [], disagreements: [] };
-  const entries = Array.isArray(raw.entries)
-    ? raw.entries.filter((e: any) => typeof e === "object" && e !== null && e.persona_id)
-    : [];
-  const consensus = Array.isArray(raw.consensus)
-    ? raw.consensus.filter((c: any) => typeof c === "object" && c !== null && c.point)
-    : [];
-  const disagreements = Array.isArray(raw.disagreements)
-    ? raw.disagreements.filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason))
-    : [];
+
+  let entries: any[];
+  if (Array.isArray(raw.entries) && raw.entries.length > 0 && typeof raw.entries[0] === "string") {
+    entries = reconstructFromStrings(raw.entries, "persona_id");
+    console.warn("[normalizePersonaAnalysis] Reconstructed entries from flat strings:", entries.length);
+  } else {
+    entries = Array.isArray(raw.entries)
+      ? raw.entries.filter((e: any) => typeof e === "object" && e !== null && e.persona_id)
+      : [];
+  }
+
+  let consensus: any[];
+  if (Array.isArray(raw.consensus) && raw.consensus.length > 0 && typeof raw.consensus[0] === "string") {
+    consensus = reconstructFromStrings(raw.consensus, "point");
+  } else {
+    consensus = Array.isArray(raw.consensus)
+      ? raw.consensus.filter((c: any) => typeof c === "object" && c !== null && c.point)
+      : [];
+  }
+
+  let disagreements: any[];
+  if (Array.isArray(raw.disagreements) && raw.disagreements.length > 0 && typeof raw.disagreements[0] === "string") {
+    disagreements = reconstructFromStrings(raw.disagreements, "point");
+  } else {
+    disagreements = Array.isArray(raw.disagreements)
+      ? raw.disagreements.filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason))
+      : [];
+  }
+
   return { entries, consensus, disagreements };
 }
 
