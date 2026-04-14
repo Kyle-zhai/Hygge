@@ -36,6 +36,7 @@ interface HistoryItem {
   isCompare: boolean;
   isDebate?: boolean;
   debateId?: string;
+  createdAt?: string;
 }
 
 interface SidebarProps {

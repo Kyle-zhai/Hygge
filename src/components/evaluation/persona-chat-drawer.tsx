@@ -37,6 +37,7 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
   const waitingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composingRef = useRef(false);
 
   const personaName = persona.identity.locale_variants?.[locale]?.name || persona.identity.name;
 
@@ -154,7 +155,7 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !composingRef.current) {
       e.preventDefault();
       handleSend();
     }
@@ -257,6 +258,8 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
                   value={input}
                   onChange={(e) => { setInput(e.target.value); autoResize(); }}
                   onKeyDown={handleKeyDown}
+                  onCompositionStart={() => { composingRef.current = true; }}
+                  onCompositionEnd={() => { composingRef.current = false; }}
                   placeholder={locale === "zh" ? "输入你的观点..." : "Share your thoughts..."}
                   rows={1}
                   className="w-full resize-none bg-transparent text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none"

@@ -296,6 +296,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             value={squadNameDraft}
             onChange={(e) => setSquadNameDraft(e.target.value.slice(0, 60))}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return;
               if (e.key === "Enter") saveCurrentAsSquad();
               if (e.key === "Escape") {
                 setShowSaveSquad(false);
