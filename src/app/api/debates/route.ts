@@ -40,6 +40,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not your evaluation" }, { status: 403 });
   }
 
+  const { data: existing } = await supabase
+    .from("debates")
+    .select("*")
+    .eq("evaluation_id", evaluationId)
+    .eq("persona_id", personaId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return NextResponse.json(existing, { status: 200 });
+
   const { data: debate, error } = await supabase
     .from("debates")
     .insert({

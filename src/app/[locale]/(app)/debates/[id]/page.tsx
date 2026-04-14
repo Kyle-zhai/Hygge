@@ -222,27 +222,32 @@ export default function DebateChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input — Gemini style auto-expanding */}
       <div className="shrink-0 border-t border-[#1C1C1C] p-4">
         <div className="mx-auto max-w-3xl flex items-end gap-2">
-          <div className="flex-1 rounded-xl border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-3">
+          <div className="flex-1 rounded-2xl border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-2.5 focus-within:border-[#C4A882]/40 transition-colors">
             <textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                const el = e.target;
+                el.style.height = "auto";
+                el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+              }}
               onKeyDown={handleKeyDown}
               placeholder={locale === "zh" ? "输入你的论点..." : "Make your argument..."}
               rows={1}
-              className="w-full resize-none bg-transparent text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none max-h-32"
-              style={{ lineHeight: "1.5" }}
+              className="w-full resize-none bg-transparent text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none"
+              style={{ lineHeight: "1.5", maxHeight: "160px" }}
             />
           </div>
           <button
             onClick={handleSend}
             disabled={!input.trim() || sending}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#C4A882] text-[#0C0C0C] transition-all hover:bg-[#D4B892] disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C4A882] text-[#0C0C0C] transition-all hover:bg-[#D4B892] disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
           </button>
         </div>
       </div>

@@ -1135,21 +1135,32 @@ export function ReportTextView({
                     {/* Expandable detail */}
                     {review && (
                       <>
-                        <button
-                          onClick={() => togglePersona(personaId)}
-                          className="flex items-center gap-1.5 px-5 py-2.5 w-full text-left text-xs text-[#666462] hover:text-[#9B9594] transition-colors border-t border-[#2A2A2A]/50 hover:bg-[#1C1C1C]/30"
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronDown className="h-3.5 w-3.5" />
+                        <div className="flex items-center border-t border-[#2A2A2A]/50">
+                          <button
+                            onClick={() => togglePersona(personaId)}
+                            className="flex items-center gap-1.5 flex-1 px-5 py-2.5 text-left text-xs text-[#666462] hover:text-[#9B9594] transition-colors hover:bg-[#1C1C1C]/30"
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            )}
+                            <span>
+                              {isExpanded
+                                ? t("collapseDetails")
+                                : t("expandDetails")}
+                            </span>
+                          </button>
+                          {onStartDebate && (
+                            <button
+                              onClick={() => onStartDebate(personaId)}
+                              className="flex items-center gap-1.5 px-4 py-2.5 text-xs text-[#C4A882] hover:text-[#D4B892] transition-colors hover:bg-[#C4A882]/5 border-l border-[#2A2A2A]/50"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              <span>{locale === "zh" ? "对话" : "Chat"}</span>
+                            </button>
                           )}
-                          <span>
-                            {isExpanded
-                              ? t("collapseDetails")
-                              : t("expandDetails")}
-                          </span>
-                        </button>
+                        </div>
 
                         <AnimatePresence>
                           {isExpanded && (

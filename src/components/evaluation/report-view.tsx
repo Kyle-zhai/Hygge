@@ -7,6 +7,7 @@ import { ReportTextView } from "@/components/evaluation/report-text-view";
 import { ReportScoresView } from "@/components/evaluation/report-scores-view";
 import { ScenarioSimulationView } from "@/components/evaluation/scenario-simulation-view";
 import { RoundTableDebateView } from "@/components/evaluation/round-table-debate-view";
+import { PersonaChatDrawer } from "@/components/evaluation/persona-chat-drawer";
 
 interface PersonaData {
   id: string;
@@ -87,77 +88,91 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
     setView("report");
   }
 
-  async function handleStartDebate(personaId: string) {
-    if (!evaluationId) return;
-    const res = await fetch("/api/debates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ evaluationId, personaId }),
-    });
-    if (res.ok) {
-      const debate = await res.json();
-      router.push(`/${currentLocale}/debates/${debate.id}`);
-    }
+  const [chatPersonaId, setChatPersonaId] = useState<string | null>(null);
+  const chatPersona = chatPersonaId ? personas.find((p) => p.id === chatPersonaId) : null;
+
+  function handleStartDebate(personaId: string) {
+    setChatPersonaId(personaId);
   }
+
+  const drawer = evaluationId && chatPersona ? (
+    <PersonaChatDrawer
+      evaluationId={evaluationId}
+      persona={chatPersona}
+      onClose={() => setChatPersonaId(null)}
+    />
+  ) : null;
 
   if (view === "scores") {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
-        <ReportScoresView
-          report={report}
-          reviews={reviews}
-          personas={personas}
-          locale={locale}
-          onBack={handleBackToReport}
-          topicClassification={topicClassification}
-          mode={mode}
-        />
-      </div>
+      <>
+        <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
+          <ReportScoresView
+            report={report}
+            reviews={reviews}
+            personas={personas}
+            locale={locale}
+            onBack={handleBackToReport}
+            topicClassification={topicClassification}
+            mode={mode}
+          />
+        </div>
+        {drawer}
+      </>
     );
   }
 
   if (view === "debate" && report?.round_table_debate) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
-        <RoundTableDebateView
-          debate={report.round_table_debate}
-          personas={personas}
-          locale={locale}
-          onBack={handleBackToReport}
-          onStartDebate={evaluationId ? handleStartDebate : undefined}
-        />
-      </div>
+      <>
+        <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
+          <RoundTableDebateView
+            debate={report.round_table_debate}
+            personas={personas}
+            locale={locale}
+            onBack={handleBackToReport}
+            onStartDebate={evaluationId ? handleStartDebate : undefined}
+          />
+        </div>
+        {drawer}
+      </>
     );
   }
 
   if (view === "simulation" && report?.scenario_simulation) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
-        <ScenarioSimulationView
-          simulation={report.scenario_simulation}
-          personas={personas}
-          locale={locale}
-          onBack={handleBackToReport}
-        />
-      </div>
+      <>
+        <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
+          <ScenarioSimulationView
+            simulation={report.scenario_simulation}
+            personas={personas}
+            locale={locale}
+            onBack={handleBackToReport}
+          />
+        </div>
+        {drawer}
+      </>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 pb-16">
-      <ReportTextView
-        report={report}
-        reviews={reviews}
-        personas={personas}
-        locale={locale}
-        onViewScores={handleViewScores}
-        onViewSimulation={report?.scenario_simulation ? handleViewSimulation : undefined}
-        onViewDebate={report?.round_table_debate ? handleViewDebate : undefined}
-        onStartDebate={evaluationId ? handleStartDebate : undefined}
-        evaluationId={evaluationId}
-        topicClassification={topicClassification}
-        mode={mode}
-      />
-    </div>
+    <>
+      <div className="mx-auto max-w-5xl px-4 py-8 pb-16">
+        <ReportTextView
+          report={report}
+          reviews={reviews}
+          personas={personas}
+          locale={locale}
+          onViewScores={handleViewScores}
+          onViewSimulation={report?.scenario_simulation ? handleViewSimulation : undefined}
+          onViewDebate={report?.round_table_debate ? handleViewDebate : undefined}
+          onStartDebate={evaluationId ? handleStartDebate : undefined}
+          evaluationId={evaluationId}
+          topicClassification={topicClassification}
+          mode={mode}
+        />
+      </div>
+      {drawer}
+    </>
   );
 }
