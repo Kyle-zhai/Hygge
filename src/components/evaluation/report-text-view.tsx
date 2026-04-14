@@ -191,6 +191,10 @@ interface ReportTextViewProps {
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
+function safeArray<T>(val: unknown): T[] {
+  return Array.isArray(val) ? val : [];
+}
+
 function scoreColor(score: number) {
   if (score >= 7)
     return {
@@ -795,11 +799,11 @@ export function ReportTextView({
 
   // ── Derived data (safe access) ──
   const entries = report.persona_analysis?.entries ?? [];
-  const consensusPoints = report.persona_analysis?.consensus ?? [];
-  const disagreements = report.persona_analysis?.disagreements ?? [];
-  const dimensions = report.multi_dimensional_analysis ?? [];
-  const goals = report.goal_assessment ?? [];
-  const actionItems = report.action_items ?? [];
+  const consensusPoints = safeArray<any>(report.persona_analysis?.consensus);
+  const disagreements = safeArray<any>(report.persona_analysis?.disagreements);
+  const dimensions = safeArray<any>(report.multi_dimensional_analysis);
+  const goals = safeArray<any>(report.goal_assessment);
+  const actionItems = safeArray<any>(report.action_items);
   const ifFeasible = report.if_feasible;
   const ifNotFeasible = report.if_not_feasible;
   const keyTakeaways = consensusPoints.slice(0, 3);
@@ -1267,7 +1271,7 @@ export function ReportTextView({
                           <span className="text-[10px] text-[#666462]">
                             {t("supportedBy")}:
                           </span>
-                          {item.supporting_personas.map((pid) => (
+                          {safeArray<string>(item.supporting_personas).map((pid) => (
                             <PersonaPill
                               key={pid}
                               personaId={pid}
@@ -1305,9 +1309,9 @@ export function ReportTextView({
                     </p>
 
                     {/* Debate sides (if structured data available) */}
-                    {item.sides && item.sides.length >= 2 ? (
+                    {Array.isArray(item.sides) && item.sides.length >= 2 ? (
                       <div className="grid gap-3 sm:grid-cols-2 mb-3">
-                        {item.sides.map((side, si) => (
+                        {item.sides.map((side: any, si: number) => (
                           <div
                             key={si}
                             className={`rounded-lg p-3 ${
@@ -1325,9 +1329,9 @@ export function ReportTextView({
                             >
                               {side.position}
                             </p>
-                            {side.persona_ids && (
+                            {Array.isArray(side.persona_ids) && (
                               <div className="flex flex-wrap gap-1">
-                                {side.persona_ids.map((pid) => (
+                                {side.persona_ids.map((pid: string) => (
                                   <PersonaPill
                                     key={pid}
                                     personaId={pid}
@@ -1469,7 +1473,7 @@ export function ReportTextView({
                         {Array.isArray(dim.strengths) && dim.strengths.length > 0 && (
                           <div className="flex-1">
                             <ul className="space-y-1">
-                              {dim.strengths.map((s, si) => (
+                              {dim.strengths.map((s: string, si: number) => (
                                 <li
                                   key={si}
                                   className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
@@ -1484,7 +1488,7 @@ export function ReportTextView({
                         {Array.isArray(dim.weaknesses) && dim.weaknesses.length > 0 && (
                           <div className="flex-1">
                             <ul className="space-y-1">
-                              {dim.weaknesses.map((w, wi) => (
+                              {dim.weaknesses.map((w: string, wi: number) => (
                                 <li
                                   key={wi}
                                   className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
@@ -1696,13 +1700,13 @@ export function ReportTextView({
                       </p>
                     )}
 
-                    {goal.gaps && goal.gaps.length > 0 && (
+                    {Array.isArray(goal.gaps) && goal.gaps.length > 0 && (
                       <div className="mt-2 ml-[26px]">
                         <span className="text-[10px] text-[#666462] uppercase tracking-wider">
                           {t("gaps")}:
                         </span>
                         <div className="flex flex-wrap gap-1.5 mt-1">
-                          {goal.gaps.map((gap, gi) => (
+                          {goal.gaps.map((gap: string, gi: number) => (
                             <span
                               key={gi}
                               className="inline-block rounded-md border border-[#F87171]/20 bg-[#F87171]/[0.04] px-2 py-0.5 text-[10px] text-[#F87171]"
@@ -1729,7 +1733,7 @@ export function ReportTextView({
                   {t("ifFeasible")}
                 </h4>
 
-                {ifFeasible.next_steps && ifFeasible.next_steps.length > 0 && (
+                {Array.isArray(ifFeasible.next_steps) && ifFeasible.next_steps.length > 0 && (
                   <div className="mb-4">
                     <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
                       {t("nextSteps")}
@@ -1750,7 +1754,7 @@ export function ReportTextView({
                   </div>
                 )}
 
-                {ifFeasible.optimizations &&
+                {Array.isArray(ifFeasible.optimizations) &&
                   ifFeasible.optimizations.length > 0 && (
                     <div className="mb-4">
                       <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
@@ -1770,7 +1774,7 @@ export function ReportTextView({
                     </div>
                   )}
 
-                {ifFeasible.risks && ifFeasible.risks.length > 0 && (
+                {Array.isArray(ifFeasible.risks) && ifFeasible.risks.length > 0 && (
                   <div>
                     <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
                       {t("risks")}
@@ -1810,7 +1814,7 @@ export function ReportTextView({
                   </div>
                 )}
 
-                {ifNotFeasible.modifications &&
+                {Array.isArray(ifNotFeasible.modifications) &&
                   ifNotFeasible.modifications.length > 0 && (
                     <div className="mb-4">
                       <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
@@ -1830,7 +1834,7 @@ export function ReportTextView({
                     </div>
                   )}
 
-                {ifNotFeasible.priorities &&
+                {Array.isArray(ifNotFeasible.priorities) &&
                   ifNotFeasible.priorities.length > 0 && (
                     <div className="mb-4">
                       <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
@@ -1852,7 +1856,7 @@ export function ReportTextView({
                     </div>
                   )}
 
-                {ifNotFeasible.reference_cases &&
+                {Array.isArray(ifNotFeasible.reference_cases) &&
                   ifNotFeasible.reference_cases.length > 0 && (
                     <div>
                       <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">

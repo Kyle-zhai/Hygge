@@ -344,7 +344,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                   <div className="flex-1">
                     <p className="text-sm font-medium text-[#EAEAE8]">{goal.goal}</p>
                     <p className="mt-1 text-xs text-[#9B9594]">{goal.current_status}</p>
-                    {goal.gaps?.length && goal.gaps.length > 0 && (
+                    {Array.isArray(goal.gaps) && goal.gaps.length > 0 && (
                       <ul className="mt-1 space-y-0.5">
                         {goal.gaps.map((g, j) => (
                           <li key={j} className="text-xs text-[#9B9594]">- {g}</li>
