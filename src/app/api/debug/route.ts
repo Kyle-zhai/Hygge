@@ -41,13 +41,11 @@ export async function GET(request: Request) {
 
   const { data: summaryReport } = await supabase
     .from("summary_reports")
-    .select("report_data")
+    .select("persona_analysis, overall_score")
     .eq("evaluation_id", evalId!)
     .single();
 
-  const reportData = summaryReport?.report_data as any;
-  const reportKeys = reportData ? Object.keys(reportData) : [];
-  const personaAnalysis = reportData?.persona_analysis;
+  const personaAnalysis = summaryReport?.persona_analysis as any;
   const personaAnalysisKeys = personaAnalysis ? Object.keys(personaAnalysis) : [];
   const reportEntries = personaAnalysis?.entries || [];
   const reportEntryIds = reportEntries.map((e: any) => ({ persona_id: e.persona_id, persona_name: e.persona_name }));
@@ -63,7 +61,7 @@ export async function GET(request: Request) {
     personasByReview: { count: personasByReview?.length, data: personasByReview, error: e2 },
     personasByStringIds: { count: personasByStringIds?.length, data: personasByStringIds, error: e3 },
     samplePersonaIds: allPersonas?.map((p: any) => p.id),
-    reportKeys,
+    overallScore: summaryReport?.overall_score,
     personaAnalysisKeys,
     reportEntryIds,
     consensus,
