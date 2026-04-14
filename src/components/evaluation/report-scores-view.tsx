@@ -360,7 +360,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                       <div>
                         <span className="text-xs font-medium text-[#4ADE80]">{t("strengths")}:</span>
                         <ul className="mt-1 space-y-0.5">
-                          {dim.strengths?.map((s, j) => (
+                          {safeArray<string>(dim.strengths).map((s, j) => (
                             <li key={j} className="text-xs text-[#9B9594]">+ {s}</li>
                           ))}
                         </ul>
@@ -368,7 +368,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                       <div>
                         <span className="text-xs font-medium text-[#F87171]">{t("weaknesses")}:</span>
                         <ul className="mt-1 space-y-0.5">
-                          {dim.weaknesses?.map((w, j) => (
+                          {safeArray<string>(dim.weaknesses).map((w, j) => (
                             <li key={j} className="text-xs text-[#9B9594]">- {w}</li>
                           ))}
                         </ul>
