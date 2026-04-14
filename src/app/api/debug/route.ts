@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 
   const { data: summaryReport } = await supabase
     .from("summary_reports")
-    .select("persona_analysis, overall_score")
+    .select("persona_analysis, overall_score, scenario_simulation, round_table_debate, opinion_drift")
     .eq("evaluation_id", evalId!)
     .single();
 
@@ -69,5 +69,8 @@ export async function GET(request: Request) {
     rawEntries,
     consensusType,
     firstConsensus,
+    hasScenarioSimulation: !!summaryReport?.scenario_simulation,
+    hasRoundTableDebate: !!summaryReport?.round_table_debate,
+    hasOpinionDrift: !!summaryReport?.opinion_drift,
   });
 }
