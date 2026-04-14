@@ -47,6 +47,10 @@ const stanceDotColors: Record<string, string> = {
   negative: "bg-[#F87171]",
 };
 
+function safeArray<T>(val: unknown): T[] {
+  return Array.isArray(val) ? val : [];
+}
+
 export function ScenarioSimulationView({ simulation, personas, locale, onBack }: ScenarioSimulationViewProps) {
   const t = useTranslations("evaluation");
   const personaMap = new Map(personas.map((p) => [p.id, p]));
@@ -61,8 +65,10 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
     return p?.identity?.avatar || "?";
   }
 
+  const influenceEvents = safeArray<NonNullable<ScenarioSimulation["influence_events"]>[number]>(simulation.influence_events);
+
   // Build a combined stance transition map for the unified view
-  const stanceTransitions = (simulation.initial_adoption || []).map((initial) => {
+  const stanceTransitions = safeArray<NonNullable<ScenarioSimulation["initial_adoption"]>[number]>(simulation.initial_adoption).map((initial) => {
     const final = simulation.final_adoption?.find(
       (f) => f.persona_id === initial.persona_id
     );
@@ -177,7 +183,7 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
       )}
 
       {/* Influence Events Timeline */}
-      {simulation.influence_events && simulation.influence_events.length > 0 && (
+      {influenceEvents.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -189,7 +195,7 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
             <h3 className="text-sm font-semibold text-[#EAEAE8]">Influence Events</h3>
           </div>
           <div className="space-y-0">
-            {simulation.influence_events.map((event, i) => (
+            {influenceEvents.map((event, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, x: -12 }}
@@ -199,7 +205,7 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
               >
                 <div className="flex flex-col items-center">
                   <div className="h-3 w-3 rounded-full border-2 border-[#C4A882] bg-[#0C0C0C]" />
-                  {i < simulation.influence_events!.length - 1 && (
+                  {i < influenceEvents.length - 1 && (
                     <div className="w-px flex-1 bg-[#2A2A2A]" />
                   )}
                 </div>

@@ -435,13 +435,23 @@ function PersonaPill({
   locale: string;
   small?: boolean;
 }) {
-  const persona = personaMap.get(personaId);
-  if (!persona) return null;
+  let persona = personaMap.get(personaId);
 
-  const localized =
-    persona.identity?.locale_variants?.[locale] || persona.identity;
-  const name = localized?.name || "Unknown";
-  const avatar = persona.identity?.avatar || "?";
+  if (!persona) {
+    for (const [, p] of personaMap) {
+      const loc = p.identity?.locale_variants?.[locale] || p.identity;
+      if (loc?.name === personaId || p.identity?.name === personaId) {
+        persona = p;
+        break;
+      }
+    }
+  }
+
+  const localized = persona
+    ? persona.identity?.locale_variants?.[locale] || persona.identity
+    : null;
+  const name = localized?.name || personaId || "Unknown";
+  const avatar = persona?.identity?.avatar || "?";
 
   return (
     <span
@@ -954,9 +964,18 @@ export function ReportTextView({
             {(entries.length > 0 ? entries : reviews).map(
               (item: any, i: number) => {
                 const personaId = item.persona_id;
-                const persona = personaMap.get(personaId);
+                let persona = personaMap.get(personaId);
+                if (!persona) {
+                  for (const [, p] of personaMap) {
+                    const loc = p.identity?.locale_variants?.[locale] || p.identity;
+                    if (loc?.name === personaId || p.identity?.name === personaId) {
+                      persona = p;
+                      break;
+                    }
+                  }
+                }
                 const review = reviews.find(
-                  (r) => r.persona_id === personaId
+                  (r) => r.persona_id === personaId || r.persona_id === persona?.id
                 );
                 const analysisEntry = entries.find(
                   (e: any) => e.persona_id === personaId

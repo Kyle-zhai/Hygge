@@ -170,6 +170,10 @@ function StanceDistribution({ positive, negative, neutral, locale }: { positive:
   );
 }
 
+function safeArray<T>(val: unknown): T[] {
+  return Array.isArray(val) ? val : [];
+}
+
 export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification, mode = "product" }: ReportScoresViewProps) {
   const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
@@ -232,8 +236,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 personaOccupation={occupation}
                 scores={review.scores}
                 reviewText={review.review_text}
-                strengths={review.strengths}
-                weaknesses={review.weaknesses}
+                strengths={safeArray<string>(review.strengths)}
+                weaknesses={safeArray<string>(review.weaknesses)}
                 topicDimensions={topicClassification?.dimensions}
                 locale={locale}
                 stanceMode={isTopicMode}
@@ -247,27 +251,31 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {report && (
         <>
           {/* Consensus */}
+          {safeArray(report.persona_analysis?.consensus).length > 0 && (
           <ReportSection title={t("consensus")} borderColor="border-l-[#E2DDD5]">
             <ul className="space-y-2">
-              {report.persona_analysis?.consensus?.map((c, i) => (
+              {safeArray<ReportData["persona_analysis"]["consensus"][number]>(report.persona_analysis?.consensus).map((c, i) => (
                 <li key={i} className="text-sm">
                   <span className="font-medium text-[#EAEAE8]">{c.point}</span>
-                  <span className="ml-2 text-xs text-[#666462]">
-                    ({c.supporting_personas?.join(", ")})
-                  </span>
+                  {safeArray(c.supporting_personas).length > 0 && (
+                    <span className="ml-2 text-xs text-[#666462]">
+                      ({safeArray<string>(c.supporting_personas).join(", ")})
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           </ReportSection>
+          )}
 
           {/* Disagreements */}
-          {report.persona_analysis?.disagreements?.length > 0 && (
+          {safeArray(report.persona_analysis?.disagreements).length > 0 && (
             <ReportSection title={t("disagreements")} borderColor="border-l-[#FBBF24]">
               <div className="space-y-3">
-                {report.persona_analysis.disagreements.map((d, i) => (
+                {safeArray<ReportData["persona_analysis"]["disagreements"][number]>(report.persona_analysis?.disagreements).map((d, i) => (
                   <div key={i} className="text-sm">
                     <p className="font-medium text-[#EAEAE8]">{d.point}</p>
-                    <p className="mt-1 text-xs text-[#9B9594]">{d.reason}</p>
+                    {d.reason && <p className="mt-1 text-xs text-[#9B9594]">{d.reason}</p>}
                   </div>
                 ))}
               </div>
@@ -275,9 +283,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           )}
 
           {/* Multi-Dimensional Analysis */}
+          {safeArray(report.multi_dimensional_analysis).length > 0 && (
           <ReportSection title={t("dimensionAnalysis")} borderColor="border-l-[#4ADE80]">
             <div className="space-y-6">
-              {report.multi_dimensional_analysis?.map((dim, i) => (
+              {safeArray<ReportData["multi_dimensional_analysis"][number]>(report.multi_dimensional_analysis).map((dim, i) => (
                 <div key={i} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-[#EAEAE8]">{(locale === "zh" ? dim.label_zh : dim.label_en) || t(dim.dimension as any)}</h3>
@@ -332,11 +341,12 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               ))}
             </div>
           </ReportSection>
+          )}
 
           {/* Goal Assessment (product mode only) */}
-          {!isTopicMode && <ReportSection title={t("goalAssessment")} borderColor="border-l-[#FBBF24]">
+          {!isTopicMode && safeArray(report.goal_assessment).length > 0 && <ReportSection title={t("goalAssessment")} borderColor="border-l-[#FBBF24]">
             <div className="space-y-3">
-              {report.goal_assessment?.map((goal, i) => (
+              {safeArray<ReportData["goal_assessment"][number]>(report.goal_assessment).map((goal, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg bg-[#1C1C1C]/50 p-3">
                   <Badge variant="secondary" className={goal.achievable ? "bg-[#4ADE80]/10 text-[#4ADE80]" : "bg-[#F87171]/10 text-[#F87171]"}>
                     {goal.achievable ? t("achievable") : t("notAchievable")}
@@ -367,16 +377,16 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               <div>
                 <h4 className="text-sm font-semibold text-[#EAEAE8]">{t("modifications")}</h4>
                 <ul className="mt-1 space-y-1">
-                  {report.if_not_feasible?.modifications?.map((m, i) => (
+                  {safeArray<string>(report.if_not_feasible?.modifications).map((m, i) => (
                     <li key={i} className="text-sm text-[#9B9594]">- {m}</li>
                   ))}
                 </ul>
               </div>
-              {report.if_not_feasible?.reference_cases && report.if_not_feasible.reference_cases.length > 0 && (
+              {safeArray(report.if_not_feasible?.reference_cases).length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-[#EAEAE8]">{t("referenceCases")}</h4>
                   <ul className="mt-1 space-y-1">
-                    {report.if_not_feasible.reference_cases.map((r, i) => (
+                    {safeArray<string>(report.if_not_feasible?.reference_cases).map((r, i) => (
                       <li key={i} className="text-sm text-[#9B9594]">{r}</li>
                     ))}
                   </ul>
@@ -391,7 +401,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               <div>
                 <h4 className="text-sm font-semibold text-[#EAEAE8]">{t("nextSteps")}</h4>
                 <ul className="mt-1 space-y-1">
-                  {report.if_feasible?.next_steps?.map((s, i) => (
+                  {safeArray<string>(report.if_feasible?.next_steps).map((s, i) => (
                     <li key={i} className="text-sm text-[#9B9594]">- {s}</li>
                   ))}
                 </ul>
@@ -399,7 +409,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               <div>
                 <h4 className="text-sm font-semibold text-[#EAEAE8]">{t("risks")}</h4>
                 <ul className="mt-1 space-y-1">
-                  {report.if_feasible?.risks?.map((r, i) => (
+                  {safeArray<string>(report.if_feasible?.risks).map((r, i) => (
                     <li key={i} className="text-sm text-[#9B9594]">- {r}</li>
                   ))}
                 </ul>
@@ -408,9 +418,9 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           </ReportSection>}
 
           {/* Action Items (product mode only) */}
-          {!isTopicMode && <ReportSection title={t("actionItems")} borderColor="border-l-[#E2DDD5]">
+          {!isTopicMode && safeArray(report.action_items).length > 0 && <ReportSection title={t("actionItems")} borderColor="border-l-[#E2DDD5]">
             <div className="space-y-2">
-              {report.action_items?.map((item, i) => (
+              {safeArray<ReportData["action_items"][number]>(report.action_items).map((item, i) => (
                 <div key={i} className="flex items-start gap-3 rounded-lg bg-[#1C1C1C]/50 p-3">
                   <Badge variant="secondary" className={priorityColors[item.priority] || ""}>
                     {t(item.priority as "critical" | "high" | "medium" | "low")}

@@ -74,7 +74,7 @@ Respond ONLY with valid JSON matching this structure:
       }
     ],
     "consensus": [
-      { "point": "<what they agree on>", "supporting_personas": ["<name1>", "<name2>"] }
+      { "point": "<what they agree on>", "supporting_personas": ["<id1>", "<id2>"] }
     ],
     "disagreements": [
       {
@@ -199,7 +199,7 @@ Respond ONLY with valid JSON matching this structure:
       }
     ],
     "consensus": [
-      { "point": "<what they agree on>", "supporting_personas": ["<name1>", "<name2>"] }
+      { "point": "<what they agree on>", "supporting_personas": ["<id1>", "<id2>"] }
     ],
     "disagreements": [
       {
