@@ -47,6 +47,9 @@ export default async function EvaluationResultPage({
       console.error("[ResultPage] Persona fetch failed:", error.message, "ids:", personaIds);
     }
     personas = data || [];
+    if (personas.length === 0 && personaIds.length > 0) {
+      console.error("[ResultPage] Persona query returned 0 rows. personaIds:", JSON.stringify(personaIds), "selected_persona_ids:", JSON.stringify(evaluation.selected_persona_ids), "review persona_ids:", reviews.map((r: any) => r.persona_id));
+    }
   }
   const reportData = (evaluation as any).summary_reports;
   const report = Array.isArray(reportData) ? reportData[0] ?? null : reportData ?? null;
