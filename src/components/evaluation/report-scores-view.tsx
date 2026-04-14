@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
@@ -171,7 +172,16 @@ function StanceDistribution({ positive, negative, neutral, locale }: { positive:
 }
 
 function safeArray<T>(val: unknown): T[] {
-  return Array.isArray(val) ? val : [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string" && val.trim()) return [val as unknown as T];
+  return [];
+}
+
+function resolvePersonaName(id: string, personaMap: Map<string, PersonaData>, locale: string): string {
+  const p = personaMap.get(id);
+  if (!p) return id.length > 20 ? "" : id;
+  const localized = p.identity?.locale_variants?.[locale] || p.identity;
+  return localized?.name || id;
 }
 
 function reconstructFromStrings(arr: any[], requiredKey: string): any[] {
@@ -215,11 +225,18 @@ function safeTr(t: ReturnType<typeof useTranslations>, key: string | undefined |
 export function ReportScoresView({ report, reviews, personas, locale, onBack, topicClassification, mode = "product" }: ReportScoresViewProps) {
   const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
+  const topRef = useRef<HTMLDivElement>(null);
 
   const personaMap = new Map(personas.map((p) => [p.id, p]));
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    topRef.current?.scrollIntoView();
+  }, []);
+
   return (
     <motion.div
+      ref={topRef}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -297,7 +314,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                   <span className="font-medium text-[#EAEAE8]">{c.point}</span>
                   {parseSupportingPersonas(c.supporting_personas).length > 0 && (
                     <span className="ml-2 text-xs text-[#666462]">
-                      ({parseSupportingPersonas(c.supporting_personas).join(", ")})
+                      ({parseSupportingPersonas(c.supporting_personas).map((id) => resolvePersonaName(id, personaMap, locale)).filter(Boolean).join(", ")})
                     </span>
                   )}
                 </li>
