@@ -48,9 +48,11 @@ export async function GET(request: Request) {
   const personaAnalysis = summaryReport?.persona_analysis as any;
   const personaAnalysisKeys = personaAnalysis ? Object.keys(personaAnalysis) : [];
   const reportEntries = personaAnalysis?.entries || [];
-  const reportEntryIds = reportEntries.map((e: any) => ({ persona_id: e.persona_id, persona_name: e.persona_name }));
-  const consensus = personaAnalysis?.consensus || [];
-  const disagreements = personaAnalysis?.disagreements || [];
+  const firstEntry = reportEntries[0] ? Object.keys(reportEntries[0]) : [];
+  const rawEntries = reportEntries.slice(0, 2);
+  const consensus = personaAnalysis?.consensus;
+  const consensusType = typeof consensus;
+  const firstConsensus = Array.isArray(consensus) && consensus[0] ? { type: typeof consensus[0], keys: typeof consensus[0] === "object" ? Object.keys(consensus[0]) : null, value: consensus[0] } : null;
 
   return NextResponse.json({
     selectedIds,
@@ -63,8 +65,9 @@ export async function GET(request: Request) {
     samplePersonaIds: allPersonas?.map((p: any) => p.id),
     overallScore: summaryReport?.overall_score,
     personaAnalysisKeys,
-    reportEntryIds,
-    consensus,
-    disagreements,
+    firstEntryKeys: firstEntry,
+    rawEntries,
+    consensusType,
+    firstConsensus,
   });
 }
