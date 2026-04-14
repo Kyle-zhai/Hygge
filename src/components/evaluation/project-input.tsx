@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId, type KeyboardEvent } from "react";
+import { useState, useRef, useId, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const inputId = useId() + "-file";
+  const composingRef = useRef(false);
 
   function handleSubmit() {
     if (!text.trim() && files.length === 0) return;
@@ -32,7 +33,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !composingRef.current) {
       e.preventDefault();
       handleSubmit();
     }
@@ -62,6 +63,8 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
+          onCompositionStart={() => { composingRef.current = true; }}
+          onCompositionEnd={() => { composingRef.current = false; }}
           placeholder={t("inputPlaceholder")}
           className="min-h-[140px] resize-none border-0 bg-transparent px-3 py-2 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
           disabled={disabled}

@@ -34,6 +34,7 @@ export default function DebateChatPage() {
   const waitingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const composingRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -130,7 +131,7 @@ export default function DebateChatPage() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !composingRef.current) {
       e.preventDefault();
       handleSend();
     }
@@ -236,6 +237,8 @@ export default function DebateChatPage() {
                 el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
               }}
               onKeyDown={handleKeyDown}
+              onCompositionStart={() => { composingRef.current = true; }}
+              onCompositionEnd={() => { composingRef.current = false; }}
               placeholder={locale === "zh" ? "输入你的论点..." : "Make your argument..."}
               rows={1}
               className="w-full resize-none bg-transparent text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none"

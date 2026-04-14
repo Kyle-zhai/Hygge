@@ -704,6 +704,7 @@ export default function MyPersonasPage() {
                       value={publishTagInput}
                       onChange={(e) => setPublishTagInput(e.target.value)}
                       onKeyDown={(e) => {
+                        if (e.nativeEvent.isComposing) return;
                         if ((e.key === "Enter" || e.key === ",") && publishTagInput.trim()) {
                           e.preventDefault();
                           const tag = publishTagInput.trim().replace(/,$/,"");
