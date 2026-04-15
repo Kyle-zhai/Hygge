@@ -228,6 +228,29 @@ function parseSupportingPersonas(val: unknown): string[] {
   return [];
 }
 
+// Some LLM outputs flatten the object — the `point` ends up containing the
+// supporting_personas array as inline text. Strip that tail and recover the ids.
+function cleanConsensusPoint(raw: any): { point: string; supporting_personas: string[]; [k: string]: any } {
+  const rawPoint = typeof raw?.point === "string" ? raw.point : "";
+  const existing = parseSupportingPersonas(raw?.supporting_personas);
+  const extracted: string[] = [];
+  const cleaned = rawPoint
+    .replace(/[,;]?\s*supporting[_ ]personas\s*:\s*\[([^\]]*)\]/gi, (_m: string, ids: string) => {
+      ids.split(/[,\s]+/)
+        .map((s) => s.trim().replace(/^['"]|['"]$/g, ""))
+        .filter(Boolean)
+        .forEach((id) => extracted.push(id));
+      return "";
+    })
+    .replace(/[\s,;]+$/, "")
+    .trim();
+  return {
+    ...(raw && typeof raw === "object" ? raw : {}),
+    point: cleaned,
+    supporting_personas: existing.length > 0 ? existing : extracted,
+  };
+}
+
 function scoreColor(score: number) {
   if (score >= 7)
     return {
@@ -728,11 +751,11 @@ export function ReportTextView({
 
   // Persona helpers (locale-aware)
   const getPersonaName = useCallback(
-    (persona: PersonaData | undefined): string => {
-      if (!persona) return "Unknown";
+    (persona: PersonaData | undefined, fallback?: string): string => {
+      if (!persona) return fallback ?? "Unknown";
       const localized =
         persona.identity?.locale_variants?.[locale] || persona.identity;
-      return localized?.name || "Unknown";
+      return localized?.name || fallback || "Unknown";
     },
     [locale]
   );
@@ -747,8 +770,8 @@ export function ReportTextView({
   );
 
   const getPersonaAvatar = useCallback(
-    (persona: PersonaData | undefined): string => {
-      return persona?.identity?.avatar || "?";
+    (persona: PersonaData | undefined, fallback: string = "?"): string => {
+      return persona?.identity?.avatar || fallback;
     },
     []
   );
@@ -846,8 +869,8 @@ export function ReportTextView({
     const match = rawEntries.find((e: any) => e.persona_id === r.persona_id);
     return match || { persona_id: r.persona_id, core_viewpoint: r.review_text?.slice(0, 200), scoring_rationale: "" };
   });
-  const consensusPoints = reconstructFromStrings(safeArray<any>(report.persona_analysis?.consensus), "point");
-  const disagreements = reconstructFromStrings(safeArray<any>(report.persona_analysis?.disagreements), "point");
+  const consensusPoints = reconstructFromStrings(safeArray<any>(report.persona_analysis?.consensus), "point").map(cleanConsensusPoint);
+  const disagreements = reconstructFromStrings(safeArray<any>(report.persona_analysis?.disagreements), "point").map(cleanConsensusPoint);
   const dimensions = safeArray<any>(report.multi_dimensional_analysis);
   const goals = safeArray<any>(report.goal_assessment);
   const actionItems = safeArray<any>(report.action_items);
@@ -1019,10 +1042,11 @@ export function ReportTextView({
                 );
                 const isExpanded = expandedPersonas.has(personaId);
 
+                const fallbackName = locale === "zh" ? `参与者 ${i + 1}` : `Participant ${i + 1}`;
                 const name =
                   analysisEntry?.persona_name ??
-                  getPersonaName(persona);
-                const avatar = getPersonaAvatar(persona);
+                  getPersonaName(persona, fallbackName);
+                const avatar = getPersonaAvatar(persona, `${i + 1}`);
                 const occupation = getPersonaOccupation(persona);
 
                 // Average score (product mode) or overall stance (topic mode)

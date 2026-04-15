@@ -67,6 +67,15 @@ function safeArray<T>(val: unknown): T[] {
   return Array.isArray(val) ? val : [];
 }
 
+// Some LLM outputs leak "supporting_personas: [uuid,...]" inline into the
+// `point` string. Strip that tail so consensus/disagreement text is clean.
+function stripInlineUuidMeta(text: string): string {
+  return text
+    .replace(/[,;]?\s*supporting[_ ]personas\s*:\s*\[[^\]]*\]/gi, "")
+    .replace(/[\s,;]+$/, "")
+    .trim();
+}
+
 const STANCE_NUMERIC: Record<string, number> = {
   strongly_positive: 5, positive: 4, neutral: 3, negative: 2, strongly_negative: 1,
 };
@@ -296,7 +305,7 @@ export function CompareResultView({
             </p>
             <ul className="space-y-2">
               {safeArray<{ point: string }>(baseReport?.persona_analysis?.consensus).map((c, i) => (
-                <li key={i} className="text-xs text-[#9B9594]">• {c.point}</li>
+                <li key={i} className="text-xs text-[#9B9594]">• {stripInlineUuidMeta(c.point || "")}</li>
               ))}
             </ul>
           </div>
@@ -306,7 +315,7 @@ export function CompareResultView({
             </p>
             <ul className="space-y-2">
               {safeArray<{ point: string }>(newReport?.persona_analysis?.consensus).map((c, i) => (
-                <li key={i} className="text-xs text-[#9B9594]">• {c.point}</li>
+                <li key={i} className="text-xs text-[#9B9594]">• {stripInlineUuidMeta(c.point || "")}</li>
               ))}
             </ul>
           </div>

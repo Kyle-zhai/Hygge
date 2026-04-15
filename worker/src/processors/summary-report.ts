@@ -35,6 +35,30 @@ function parseSupportingPersonas(val: unknown): string[] {
   return [];
 }
 
+// Some LLM outputs flatten the object — the `point` ends up containing the
+// supporting_personas array as inline text. Strip that tail and recover the ids.
+function cleanConsensusPoint(raw: any): any {
+  if (!raw || typeof raw !== "object") return raw;
+  const rawPoint = typeof raw.point === "string" ? raw.point : "";
+  const existing = parseSupportingPersonas(raw.supporting_personas);
+  const extracted: string[] = [];
+  const cleaned = rawPoint
+    .replace(/[,;]?\s*supporting[_ ]personas\s*:\s*\[([^\]]*)\]/gi, (_m: string, ids: string) => {
+      ids.split(/[,\s]+/)
+        .map((s) => s.trim().replace(/^['"]|['"]$/g, ""))
+        .filter(Boolean)
+        .forEach((id) => extracted.push(id));
+      return "";
+    })
+    .replace(/[\s,;]+$/, "")
+    .trim();
+  return {
+    ...raw,
+    point: cleaned,
+    supporting_personas: existing.length > 0 ? existing : extracted,
+  };
+}
+
 function normalizePersonaAnalysis(raw: any): any {
   if (!raw || typeof raw !== "object") return { entries: [], consensus: [], disagreements: [] };
 
@@ -56,7 +80,7 @@ function normalizePersonaAnalysis(raw: any): any {
       ? raw.consensus.filter((c: any) => typeof c === "object" && c !== null && c.point)
       : [];
   }
-  consensus = consensus.map((c: any) => ({
+  consensus = consensus.map((c: any) => cleanConsensusPoint({
     ...c,
     supporting_personas: parseSupportingPersonas(c.supporting_personas),
   }));
@@ -69,6 +93,7 @@ function normalizePersonaAnalysis(raw: any): any {
       ? raw.disagreements.filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason))
       : [];
   }
+  disagreements = disagreements.map(cleanConsensusPoint);
 
   return { entries, consensus, disagreements };
 }
