@@ -5,7 +5,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2, Bookmark, X, Heart, User } from "lucide-react";
+import { Check, Sparkles, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Filter, Loader2, Bookmark, X, Heart, User } from "lucide-react";
+import {
+  DOMAINS, getSubDomainsForDomain, getSubDomain, localizedLabel,
+  PRODUCT_CATEGORIES, getProductCategory,
+  type DomainKey, type SubDomainKey, type ProductCategoryKey,
+} from "@/lib/personas/taxonomy";
 
 interface PersonaSquad {
   id: string;
@@ -31,7 +36,16 @@ interface PersonaData {
   category: string;
   is_custom?: boolean;
   creator_id?: string;
+  domain?: DomainKey | null;
+  sub_domain?: SubDomainKey | null;
+  dimensions?: string[];
+  product_category?: ProductCategoryKey | null;
+  product_traits?: string[];
 }
+
+type TopicWizardStep = "domain" | "sub_domain" | "dimensions" | "persona";
+type ProductWizardStep = "category" | "persona";
+const PAGE_SIZE = 15;
 
 interface PersonaSelectorProps {
   projectDescription: string;
@@ -40,18 +54,6 @@ interface PersonaSelectorProps {
   disabled?: boolean;
   mode?: "topic" | "product";
 }
-
-const productCategoryOrder = ["technical", "product", "design", "end_user", "business"];
-const generalCategoryOrder = ["general"];
-
-const categoryLabels: Record<string, Record<string, string>> = {
-  technical: { zh: "\u6280\u672F", en: "Technical" },
-  product: { zh: "\u4EA7\u54C1", en: "Product" },
-  design: { zh: "\u8BBE\u8BA1", en: "Design" },
-  end_user: { zh: "\u7528\u6237", en: "End User" },
-  business: { zh: "\u5546\u4E1A", en: "Business" },
-  general: { zh: "\u901A\u7528", en: "General" },
-};
 
 const ageRanges = [
   { label: "18-24", min: 18, max: 24 },
@@ -76,7 +78,6 @@ const incomeLabels: Record<string, Record<string, string>> = {
 };
 
 export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, disabled, mode = "product" }: PersonaSelectorProps) {
-  const categoryOrder = mode === "topic" ? generalCategoryOrder : productCategoryOrder;
   const t = useTranslations("evaluation");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -99,6 +100,21 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [showSaveSquad, setShowSaveSquad] = useState(false);
   const [squadNameDraft, setSquadNameDraft] = useState("");
   const [savingSquad, setSavingSquad] = useState(false);
+
+  // Topic-mode hierarchical wizard
+  const [wizardStep, setWizardStep] = useState<TopicWizardStep>("domain");
+  const [selectedDomain, setSelectedDomain] = useState<DomainKey | null>(null);
+  const [selectedSubDomain, setSelectedSubDomain] = useState<SubDomainKey | null>(null);
+  const [selectedDimensions, setSelectedDimensions] = useState<Set<string>>(new Set());
+  const isTopic = mode === "topic";
+
+  // Product-mode 2-step wizard (category → persona grid with optional trait filter)
+  const [productWizardStep, setProductWizardStep] = useState<ProductWizardStep>("category");
+  const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategoryKey | null>(null);
+  const [selectedProductTraits, setSelectedProductTraits] = useState<Set<string>>(new Set());
+
+  // Pagination: only render this many personas; "Show more" reveals PAGE_SIZE more.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     async function load() {
@@ -171,14 +187,34 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   // Filtering logic
   const filtered = useMemo(() => {
     return personas.filter((p) => {
-      if (activeCategory === "my_saved") {
-        if (!savedIds.has(p.id)) return false;
-      } else if (activeCategory === "my_custom") {
-        if (!p.is_custom) return false;
-      } else if (activeCategory) {
-        if (p.category !== activeCategory) return false;
+      // Topic mode uses hierarchical wizard; product mode uses 4-category wizard.
+      if (isTopic) {
+        if (activeCategory === "my_saved") {
+          if (!savedIds.has(p.id)) return false;
+        } else if (activeCategory === "my_custom") {
+          if (!p.is_custom) return false;
+        } else {
+          if (selectedSubDomain && p.sub_domain !== selectedSubDomain) return false;
+          if (selectedDimensions.size > 0) {
+            const personaDims = new Set(p.dimensions ?? []);
+            const anyMatch = Array.from(selectedDimensions).some((d) => personaDims.has(d));
+            if (!anyMatch) return false;
+          }
+        }
       } else {
-        if (p.category === "custom") return false;
+        if (activeCategory === "my_saved") {
+          if (!savedIds.has(p.id)) return false;
+        } else if (activeCategory === "my_custom") {
+          if (!p.is_custom) return false;
+        } else {
+          if (p.category === "custom") return false;
+          if (selectedProductCategory && p.product_category !== selectedProductCategory) return false;
+          if (selectedProductTraits.size > 0) {
+            const personaTraits = new Set(p.product_traits ?? []);
+            const anyMatch = Array.from(selectedProductTraits).some((tr) => personaTraits.has(tr));
+            if (!anyMatch) return false;
+          }
+        }
       }
       if (ageFilters.size > 0) {
         const matchesAge = Array.from(ageFilters).some((label) => {
@@ -191,7 +227,58 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       if (incomeFilters.size > 0 && !incomeFilters.has(p.demographics.income_level)) return false;
       return true;
     });
-  }, [personas, activeCategory, savedIds, ageFilters, genderFilters, incomeFilters]);
+  }, [personas, isTopic, activeCategory, savedIds, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [isTopic, activeCategory, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
+
+  function goToSubDomain(domain: DomainKey) {
+    setSelectedDomain(domain);
+    setSelectedSubDomain(null);
+    setSelectedDimensions(new Set());
+    setWizardStep("sub_domain");
+  }
+  function goToDimensions(subDomain: SubDomainKey) {
+    setSelectedSubDomain(subDomain);
+    setSelectedDimensions(new Set());
+    setWizardStep("dimensions");
+  }
+  function goToPersonaGrid() {
+    setWizardStep("persona");
+  }
+  function wizardBack() {
+    if (wizardStep === "persona") setWizardStep("dimensions");
+    else if (wizardStep === "dimensions") { setSelectedDimensions(new Set()); setWizardStep("sub_domain"); }
+    else if (wizardStep === "sub_domain") { setSelectedSubDomain(null); setSelectedDomain(null); setWizardStep("domain"); }
+  }
+  function toggleDimension(key: string) {
+    setSelectedDimensions((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function goToProductPersonas(cat: ProductCategoryKey) {
+    setSelectedProductCategory(cat);
+    setSelectedProductTraits(new Set());
+    setProductWizardStep("persona");
+  }
+  function productWizardBack() {
+    setSelectedProductCategory(null);
+    setSelectedProductTraits(new Set());
+    setProductWizardStep("category");
+  }
+  function toggleProductTrait(key: string) {
+    setSelectedProductTraits((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function togglePersona(id: string) {
     setActiveSquadId(null);
@@ -328,65 +415,60 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         </div>
       )}
 
-      {/* Category tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={activeCategory === null ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveCategory(null)}
-          className={activeCategory === null ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
-        >
-          {t("allCategories")}
-        </Button>
-        {hasSaved && (
-          <Button
-            variant={activeCategory === "my_saved" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
-            className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-          >
-            <Heart className="mr-1 h-3 w-3" />
-            {locale === "zh" ? "已收藏" : "My Saved"}
-          </Button>
-        )}
-        {hasCustom && (
-          <Button
-            variant={activeCategory === "my_custom" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
-            className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-          >
-            <User className="mr-1 h-3 w-3" />
-            {locale === "zh" ? "我的自定义" : "My Custom"}
-          </Button>
-        )}
-        {categoryOrder.length > 1 && (
-          <>
-            <span className="mx-0.5 h-4 w-px bg-[#2A2A2A]" />
-            {categoryOrder.map((cat) => (
-              <Button
-                key={cat}
-                variant={activeCategory === cat ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                className={activeCategory === cat ? "bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7]" : "border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"}
-              >
-                {categoryLabels[cat]?.[locale] || cat}
-              </Button>
-            ))}
-          </>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="ml-auto text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
-        >
-          <Filter className="mr-1 h-3.5 w-3.5" />
-          {t("filterByTrait")}
-          {showFilters ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-        </Button>
-      </div>
+      {/* Filter block — hierarchical wizard for both modes */}
+      {isTopic ? (
+        <TopicWizard
+          step={wizardStep}
+          domain={selectedDomain}
+          subDomain={selectedSubDomain}
+          selectedDimensions={selectedDimensions}
+          activeCategory={activeCategory}
+          hasSaved={hasSaved}
+          hasCustom={hasCustom}
+          locale={locale}
+          onPickDomain={goToSubDomain}
+          onPickSubDomain={goToDimensions}
+          onToggleDimension={toggleDimension}
+          onAdvanceToPersonas={goToPersonaGrid}
+          onBack={wizardBack}
+          onPickCategory={(cat) => {
+            setActiveCategory(cat);
+            if (cat) {
+              setSelectedDomain(null);
+              setSelectedSubDomain(null);
+              setSelectedDimensions(new Set());
+              setWizardStep("persona");
+            } else {
+              setWizardStep("domain");
+            }
+          }}
+        />
+      ) : (
+        <ProductWizard
+          step={productWizardStep}
+          selectedCategory={selectedProductCategory}
+          selectedTraits={selectedProductTraits}
+          activeCategory={activeCategory}
+          hasSaved={hasSaved}
+          hasCustom={hasCustom}
+          locale={locale}
+          showExtraFilters={showFilters}
+          onPickCategory={goToProductPersonas}
+          onToggleTrait={toggleProductTrait}
+          onBack={productWizardBack}
+          onToggleExtraFilters={() => setShowFilters(!showFilters)}
+          onPickShortcut={(cat) => {
+            setActiveCategory(cat);
+            if (cat) {
+              setSelectedProductCategory(null);
+              setSelectedProductTraits(new Set());
+              setProductWizardStep("persona");
+            } else {
+              setProductWizardStep("category");
+            }
+          }}
+        />
+      )}
 
       {/* Expandable filters */}
       {showFilters && (
@@ -450,14 +532,14 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         </div>
       )}
 
-      {/* Persona count */}
+      {/* Persona count + grid — shown once wizard reaches 'persona' step */}
+      {((isTopic && wizardStep === "persona") || (!isTopic && productWizardStep === "persona")) && (<>
       <p className="text-xs text-[#666462]">
         {t("personasFound", { count: filtered.length })}
       </p>
 
-      {/* Persona grid */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((persona) => {
+        {filtered.slice(0, visibleCount).map((persona) => {
           const isSelected = selectedIds.has(persona.id);
           const isRecommended = recommendedIds.has(persona.id);
           const isSaved = savedIds.has(persona.id);
@@ -521,12 +603,371 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         })}
       </div>
 
+      {filtered.length > visibleCount && (
+        <div className="flex justify-center pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+            className="border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+          >
+            <ChevronDown className="mr-1 h-3.5 w-3.5" />
+            {locale === "zh"
+              ? `显示更多（还有 ${filtered.length - visibleCount} 个）`
+              : `Show more (${filtered.length - visibleCount} left)`}
+          </Button>
+        </div>
+      )}
+      </>)}
+
       {/* Introduction section */}
       <div className="rounded-lg border border-[#2A2A2A] bg-[#141414]/60 px-4 py-3">
         <p className="text-xs text-[#9B9594] leading-relaxed">
           {mode === "product" ? t("personaIntroProduct") : t("personaIntroTopic")}
         </p>
       </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// TopicWizard — 4-step hierarchical filter for topic mode.
+// Steps: domain → sub_domain → dimensions (multi-select) → persona grid.
+// ────────────────────────────────────────────────────────────────────
+
+interface TopicWizardProps {
+  step: TopicWizardStep;
+  domain: DomainKey | null;
+  subDomain: SubDomainKey | null;
+  selectedDimensions: Set<string>;
+  activeCategory: string | null;
+  hasSaved: boolean;
+  hasCustom: boolean;
+  locale: string;
+  onPickDomain: (domain: DomainKey) => void;
+  onPickSubDomain: (subDomain: SubDomainKey) => void;
+  onToggleDimension: (key: string) => void;
+  onAdvanceToPersonas: () => void;
+  onBack: () => void;
+  onPickCategory: (cat: string | null) => void;
+}
+
+function TopicWizard(props: TopicWizardProps) {
+  const { step, domain, subDomain, selectedDimensions, activeCategory, hasSaved, hasCustom, locale,
+    onPickDomain, onPickSubDomain, onToggleDimension, onAdvanceToPersonas, onBack, onPickCategory } = props;
+  const zh = locale === "zh";
+  const subDomainObj = subDomain ? getSubDomain(subDomain) : undefined;
+  const subDomains = domain ? getSubDomainsForDomain(domain) : [];
+
+  // Breadcrumb
+  const crumbs: { label: string; key: string }[] = [];
+  if (domain) crumbs.push({ key: `d-${domain}`, label: localizedLabel(DOMAINS.find(d => d.key === domain)!, locale) });
+  if (subDomainObj) crumbs.push({ key: `s-${subDomainObj.key}`, label: localizedLabel(subDomainObj, locale) });
+  if (step === "persona" && selectedDimensions.size > 0) crumbs.push({ key: "dims", label: `${selectedDimensions.size} ${zh ? "个维度" : "dims"}` });
+
+  // "My saved / My custom" shortcuts are always visible
+  const shortcuts = (
+    <div className="flex flex-wrap items-center gap-2">
+      {hasSaved && (
+        <Button
+          variant={activeCategory === "my_saved" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onPickCategory(activeCategory === "my_saved" ? null : "my_saved")}
+          className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+        >
+          <Heart className="mr-1 h-3 w-3" />
+          {zh ? "已收藏" : "My Saved"}
+        </Button>
+      )}
+      {hasCustom && (
+        <Button
+          variant={activeCategory === "my_custom" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onPickCategory(activeCategory === "my_custom" ? null : "my_custom")}
+          className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+        >
+          <User className="mr-1 h-3 w-3" />
+          {zh ? "我的自定义" : "My Custom"}
+        </Button>
+      )}
+    </div>
+  );
+
+  // Header with back button + breadcrumb
+  const header = (
+    <div className="flex items-center gap-2">
+      {step !== "domain" && !activeCategory && (
+        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-[#9B9594] hover:text-[#EAEAE8]">
+          <ChevronLeft className="h-4 w-4" />
+          {zh ? "返回" : "Back"}
+        </Button>
+      )}
+      {crumbs.length > 0 && !activeCategory && (
+        <div className="flex items-center gap-1.5 text-xs text-[#9B9594]">
+          {crumbs.map((c, i) => (
+            <span key={c.key} className="flex items-center gap-1.5">
+              {i > 0 && <ChevronRight className="h-3 w-3 text-[#666462]" />}
+              <span className="text-[#C4A882]">{c.label}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="ml-auto">{shortcuts}</div>
+    </div>
+  );
+
+  if (activeCategory) {
+    // User jumped to saved/custom — show nothing else, persona grid will render.
+    return <div className="space-y-3">{header}</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {header}
+
+      {step === "domain" && (
+        <div>
+          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2.5">
+            {zh ? "第 1 步 · 选择大方向" : "Step 1 · Pick a domain"}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {DOMAINS.map((d) => (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => onPickDomain(d.key)}
+                className="text-left rounded-lg border border-[#2A2A2A] bg-[#141414] px-4 py-3.5 hover:border-[#E2DDD5]/50 hover:bg-[#1C1C1C] transition-colors"
+              >
+                <p className="text-sm font-semibold text-[#EAEAE8]">{localizedLabel(d, locale)}</p>
+                <p className="mt-1 text-[11px] text-[#666462]">
+                  {getSubDomainsForDomain(d.key).length} {zh ? "个小方向" : "sub-domains"}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === "sub_domain" && (
+        <div>
+          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2.5">
+            {zh ? "第 2 步 · 选择小方向" : "Step 2 · Pick a sub-domain"}
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {subDomains.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => onPickSubDomain(s.key)}
+                className="text-left rounded-lg border border-[#2A2A2A] bg-[#141414] px-3.5 py-3 hover:border-[#E2DDD5]/50 hover:bg-[#1C1C1C] transition-colors"
+              >
+                <p className="text-sm font-medium text-[#EAEAE8]">{localizedLabel(s, locale)}</p>
+                <p className="mt-0.5 text-[11px] text-[#666462] truncate">
+                  {s.dimensions.map((d) => localizedLabel(d, locale)).slice(0, 3).join(" · ")}
+                  {s.dimensions.length > 3 ? " …" : ""}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === "dimensions" && subDomainObj && (
+        <div>
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide">
+              {zh ? `第 3 步 · 选择维度（可多选，不选则全部）` : "Step 3 · Pick dimensions (multi-select, optional)"}
+            </p>
+            <Button
+              size="sm"
+              onClick={onAdvanceToPersonas}
+              className="bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7] h-7 text-xs"
+            >
+              {zh ? "查看 persona" : "View personas"}
+              <ChevronRight className="ml-1 h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {subDomainObj.dimensions.map((d) => {
+              const active = selectedDimensions.has(d.key);
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  onClick={() => onToggleDimension(d.key)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    active
+                      ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                      : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                  }`}
+                >
+                  {active && <Check className="h-3 w-3" />}
+                  {localizedLabel(d, locale)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// ProductWizard — 2-step filter for product mode.
+// Step 1: pick one of the 4 categories (产品力/市场力/创新力/生命线).
+// Step 2: persona grid with optional trait chips for further filtering.
+// ────────────────────────────────────────────────────────────────────
+
+interface ProductWizardProps {
+  step: ProductWizardStep;
+  selectedCategory: ProductCategoryKey | null;
+  selectedTraits: Set<string>;
+  activeCategory: string | null;
+  hasSaved: boolean;
+  hasCustom: boolean;
+  locale: string;
+  showExtraFilters: boolean;
+  onPickCategory: (cat: ProductCategoryKey) => void;
+  onToggleTrait: (key: string) => void;
+  onBack: () => void;
+  onToggleExtraFilters: () => void;
+  onPickShortcut: (cat: string | null) => void;
+}
+
+function ProductWizard(props: ProductWizardProps) {
+  const { step, selectedCategory, selectedTraits, activeCategory, hasSaved, hasCustom, locale,
+    showExtraFilters, onPickCategory, onToggleTrait, onBack, onToggleExtraFilters, onPickShortcut } = props;
+  const zh = locale === "zh";
+  const categoryObj = selectedCategory ? getProductCategory(selectedCategory) : undefined;
+
+  const shortcuts = (
+    <div className="flex flex-wrap items-center gap-2">
+      {hasSaved && (
+        <Button
+          variant={activeCategory === "my_saved" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onPickShortcut(activeCategory === "my_saved" ? null : "my_saved")}
+          className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+        >
+          <Heart className="mr-1 h-3 w-3" />
+          {zh ? "已收藏" : "My Saved"}
+        </Button>
+      )}
+      {hasCustom && (
+        <Button
+          variant={activeCategory === "my_custom" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onPickShortcut(activeCategory === "my_custom" ? null : "my_custom")}
+          className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+        >
+          <User className="mr-1 h-3 w-3" />
+          {zh ? "我的自定义" : "My Custom"}
+        </Button>
+      )}
+    </div>
+  );
+
+  const crumbs: { label: string; key: string }[] = [];
+  if (categoryObj) crumbs.push({ key: `c-${categoryObj.key}`, label: localizedLabel(categoryObj, locale) });
+  if (step === "persona" && selectedTraits.size > 0) {
+    crumbs.push({ key: "tr", label: `${selectedTraits.size} ${zh ? "个标签" : "traits"}` });
+  }
+
+  const header = (
+    <div className="flex items-center gap-2">
+      {step !== "category" && !activeCategory && (
+        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-[#9B9594] hover:text-[#EAEAE8]">
+          <ChevronLeft className="h-4 w-4" />
+          {zh ? "返回" : "Back"}
+        </Button>
+      )}
+      {crumbs.length > 0 && !activeCategory && (
+        <div className="flex items-center gap-1.5 text-xs text-[#9B9594]">
+          {crumbs.map((c, i) => (
+            <span key={c.key} className="flex items-center gap-1.5">
+              {i > 0 && <ChevronRight className="h-3 w-3 text-[#666462]" />}
+              <span className="text-[#C4A882]">{c.label}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="ml-auto flex items-center gap-2">
+        {shortcuts}
+        {step === "persona" && !activeCategory && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleExtraFilters}
+            className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+          >
+            <Filter className="mr-1 h-3.5 w-3.5" />
+            {zh ? "更多筛选" : "More filters"}
+            {showExtraFilters ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  if (activeCategory) {
+    return <div className="space-y-3">{header}</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {header}
+
+      {step === "category" && (
+        <div>
+          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2.5">
+            {zh ? "第 1 步 · 选择视角" : "Step 1 · Pick a lens"}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {PRODUCT_CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => onPickCategory(c.key)}
+                className="text-left rounded-lg border border-[#2A2A2A] bg-[#141414] px-4 py-3.5 hover:border-[#E2DDD5]/50 hover:bg-[#1C1C1C] transition-colors"
+              >
+                <p className="text-sm font-semibold text-[#EAEAE8]">{localizedLabel(c, locale)}</p>
+                <p className="mt-1 text-[11px] text-[#666462] leading-relaxed">
+                  {zh ? c.description_zh : c.description_en}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step === "persona" && categoryObj && (
+        <div>
+          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2">
+            {zh ? "可选：按标签细化（多选）" : "Optional: refine by trait (multi-select)"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {categoryObj.traits.map((tr) => {
+              const active = selectedTraits.has(tr.key);
+              return (
+                <button
+                  key={tr.key}
+                  type="button"
+                  onClick={() => onToggleTrait(tr.key)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    active
+                      ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                      : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                  }`}
+                >
+                  {active && <Check className="h-3 w-3" />}
+                  {localizedLabel(tr, locale)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
