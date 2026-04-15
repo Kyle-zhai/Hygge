@@ -75,6 +75,15 @@ function getStanceLabel(
   };
 }
 
+// Some LLM outputs leak "supporting_personas: [uuid,...]" inline into the
+// `point` string. Strip that tail so the excerpt doesn't display raw UUIDs.
+function stripInlineUuidMeta(text: string): string {
+  return text
+    .replace(/[,;]?\s*supporting[_ ]personas\s*:\s*\[[^\]]*\]/gi, "")
+    .replace(/[\s,;]+$/, "")
+    .trim();
+}
+
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   return text.slice(0, maxLen).trimEnd() + "...";
@@ -247,12 +256,12 @@ function SummaryCard({
 
   const consensusPoints: string[] =
     (summaryReport?.persona_analysis?.consensus || [])
-      .map((c: any) => c?.point)
-      .filter((p: unknown): p is string => typeof p === "string" && p.length > 0);
+      .map((c: any) => (typeof c?.point === "string" ? stripInlineUuidMeta(c.point) : ""))
+      .filter((p: string) => p.length > 0);
 
   const excerpt =
     mode === "topic" && typeof summaryReport?.synthesis === "string"
-      ? truncate(summaryReport.synthesis, 300)
+      ? truncate(stripInlineUuidMeta(summaryReport.synthesis), 300)
       : consensusPoints.slice(0, 2).join(" ") || t("reportReady");
 
   const consensusScore = summaryReport?.consensus_score;
