@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Filter, Loader2, Bookmark, X, Heart, User } from "lucide-react";
+import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2, Bookmark, X, Heart, User } from "lucide-react";
 import {
   DOMAINS, getSubDomainsForDomain, getSubDomain, localizedLabel,
   PRODUCT_CATEGORIES, getProductCategory,
@@ -43,8 +43,6 @@ interface PersonaData {
   product_traits?: string[];
 }
 
-type TopicWizardStep = "domain" | "sub_domain" | "dimensions" | "persona";
-type ProductWizardStep = "category" | "persona";
 const PAGE_SIZE = 15;
 
 interface PersonaSelectorProps {
@@ -101,15 +99,13 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [squadNameDraft, setSquadNameDraft] = useState("");
   const [savingSquad, setSavingSquad] = useState(false);
 
-  // Topic-mode hierarchical wizard
-  const [wizardStep, setWizardStep] = useState<TopicWizardStep>("domain");
+  // Topic-mode hierarchical filter (progressive, personas always visible)
   const [selectedDomain, setSelectedDomain] = useState<DomainKey | null>(null);
   const [selectedSubDomain, setSelectedSubDomain] = useState<SubDomainKey | null>(null);
   const [selectedDimensions, setSelectedDimensions] = useState<Set<string>>(new Set());
   const isTopic = mode === "topic";
 
-  // Product-mode 2-step wizard (category → persona grid with optional trait filter)
-  const [productWizardStep, setProductWizardStep] = useState<ProductWizardStep>("category");
+  // Product-mode progressive filter (category → optional traits)
   const [selectedProductCategory, setSelectedProductCategory] = useState<ProductCategoryKey | null>(null);
   const [selectedProductTraits, setSelectedProductTraits] = useState<Set<string>>(new Set());
 
@@ -184,16 +180,16 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const hasSaved = savedIds.size > 0;
   const hasCustom = personas.some((p) => p.is_custom);
 
-  // Filtering logic
+  // Filtering logic — category tags and demographic filters apply together.
   const filtered = useMemo(() => {
-    return personas.filter((p) => {
-      // Topic mode uses hierarchical wizard; product mode uses 4-category wizard.
+    const pool = personas.filter((p) => {
       if (isTopic) {
         if (activeCategory === "my_saved") {
           if (!savedIds.has(p.id)) return false;
         } else if (activeCategory === "my_custom") {
           if (!p.is_custom) return false;
         } else {
+          if (selectedDomain && p.domain !== selectedDomain) return false;
           if (selectedSubDomain && p.sub_domain !== selectedSubDomain) return false;
           if (selectedDimensions.size > 0) {
             const personaDims = new Set(p.dimensions ?? []);
@@ -227,30 +223,39 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       if (incomeFilters.size > 0 && !incomeFilters.has(p.demographics.income_level)) return false;
       return true;
     });
-  }, [personas, isTopic, activeCategory, savedIds, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
+    // Sort: recommended first (AI picks are what the user wants to see on entry),
+    // then saved, then the rest — stable within each bucket.
+    return pool.slice().sort((a, b) => {
+      const score = (p: PersonaData) =>
+        (recommendedIds.has(p.id) ? 2 : 0) + (savedIds.has(p.id) ? 1 : 0);
+      return score(b) - score(a);
+    });
+  }, [personas, isTopic, activeCategory, savedIds, recommendedIds, selectedDomain, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [isTopic, activeCategory, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
+  }, [isTopic, activeCategory, selectedDomain, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
 
-  function goToSubDomain(domain: DomainKey) {
-    setSelectedDomain(domain);
-    setSelectedSubDomain(null);
-    setSelectedDimensions(new Set());
-    setWizardStep("sub_domain");
+  // Topic drill-down: clicking an already-selected item deselects it and clears deeper levels.
+  function pickDomain(domain: DomainKey) {
+    if (selectedDomain === domain) {
+      setSelectedDomain(null);
+      setSelectedSubDomain(null);
+      setSelectedDimensions(new Set());
+    } else {
+      setSelectedDomain(domain);
+      setSelectedSubDomain(null);
+      setSelectedDimensions(new Set());
+    }
   }
-  function goToDimensions(subDomain: SubDomainKey) {
-    setSelectedSubDomain(subDomain);
-    setSelectedDimensions(new Set());
-    setWizardStep("dimensions");
-  }
-  function goToPersonaGrid() {
-    setWizardStep("persona");
-  }
-  function wizardBack() {
-    if (wizardStep === "persona") setWizardStep("dimensions");
-    else if (wizardStep === "dimensions") { setSelectedDimensions(new Set()); setWizardStep("sub_domain"); }
-    else if (wizardStep === "sub_domain") { setSelectedSubDomain(null); setSelectedDomain(null); setWizardStep("domain"); }
+  function pickSubDomain(subDomain: SubDomainKey) {
+    if (selectedSubDomain === subDomain) {
+      setSelectedSubDomain(null);
+      setSelectedDimensions(new Set());
+    } else {
+      setSelectedSubDomain(subDomain);
+      setSelectedDimensions(new Set());
+    }
   }
   function toggleDimension(key: string) {
     setSelectedDimensions((prev) => {
@@ -261,15 +266,14 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
     });
   }
 
-  function goToProductPersonas(cat: ProductCategoryKey) {
-    setSelectedProductCategory(cat);
-    setSelectedProductTraits(new Set());
-    setProductWizardStep("persona");
-  }
-  function productWizardBack() {
-    setSelectedProductCategory(null);
-    setSelectedProductTraits(new Set());
-    setProductWizardStep("category");
+  function pickProductCategory(cat: ProductCategoryKey) {
+    if (selectedProductCategory === cat) {
+      setSelectedProductCategory(null);
+      setSelectedProductTraits(new Set());
+    } else {
+      setSelectedProductCategory(cat);
+      setSelectedProductTraits(new Set());
+    }
   }
   function toggleProductTrait(key: string) {
     setSelectedProductTraits((prev) => {
@@ -302,12 +306,21 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
   function clearAllFilters() {
     setActiveCategory(null);
+    setSelectedDomain(null);
+    setSelectedSubDomain(null);
+    setSelectedDimensions(new Set());
+    setSelectedProductCategory(null);
+    setSelectedProductTraits(new Set());
     setAgeFilters(new Set());
     setGenderFilters(new Set());
     setIncomeFilters(new Set());
   }
 
-  const hasActiveFilters = activeCategory || ageFilters.size > 0 || genderFilters.size > 0 || incomeFilters.size > 0;
+  const hasActiveFilters = !!(
+    activeCategory || selectedDomain || selectedSubDomain || selectedDimensions.size > 0 ||
+    selectedProductCategory || selectedProductTraits.size > 0 ||
+    ageFilters.size > 0 || genderFilters.size > 0 || incomeFilters.size > 0
+  );
 
   if (loading) {
     return (
@@ -415,59 +428,75 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         </div>
       )}
 
-      {/* Filter block — hierarchical wizard for both modes */}
-      {isTopic ? (
-        <TopicWizard
-          step={wizardStep}
-          domain={selectedDomain}
-          subDomain={selectedSubDomain}
-          selectedDimensions={selectedDimensions}
-          activeCategory={activeCategory}
-          hasSaved={hasSaved}
-          hasCustom={hasCustom}
-          locale={locale}
-          onPickDomain={goToSubDomain}
-          onPickSubDomain={goToDimensions}
-          onToggleDimension={toggleDimension}
-          onAdvanceToPersonas={goToPersonaGrid}
-          onBack={wizardBack}
-          onPickCategory={(cat) => {
-            setActiveCategory(cat);
-            if (cat) {
-              setSelectedDomain(null);
-              setSelectedSubDomain(null);
-              setSelectedDimensions(new Set());
-              setWizardStep("persona");
-            } else {
-              setWizardStep("domain");
-            }
-          }}
-        />
-      ) : (
-        <ProductWizard
-          step={productWizardStep}
-          selectedCategory={selectedProductCategory}
-          selectedTraits={selectedProductTraits}
-          activeCategory={activeCategory}
-          hasSaved={hasSaved}
-          hasCustom={hasCustom}
-          locale={locale}
-          showExtraFilters={showFilters}
-          onPickCategory={goToProductPersonas}
-          onToggleTrait={toggleProductTrait}
-          onBack={productWizardBack}
-          onToggleExtraFilters={() => setShowFilters(!showFilters)}
-          onPickShortcut={(cat) => {
-            setActiveCategory(cat);
-            if (cat) {
-              setSelectedProductCategory(null);
-              setSelectedProductTraits(new Set());
-              setProductWizardStep("persona");
-            } else {
-              setProductWizardStep("category");
-            }
-          }}
-        />
+      {/* Shortcuts + demographic filter toggle — always visible at top */}
+      <div className="flex flex-wrap items-center gap-2">
+        {hasSaved && (
+          <Button
+            variant={activeCategory === "my_saved" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
+            className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+          >
+            <Heart className="mr-1 h-3 w-3" />
+            {locale === "zh" ? "已收藏" : "My Saved"}
+          </Button>
+        )}
+        {hasCustom && (
+          <Button
+            variant={activeCategory === "my_custom" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
+            className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
+          >
+            <User className="mr-1 h-3 w-3" />
+            {locale === "zh" ? "我的自定义" : "My Custom"}
+          </Button>
+        )}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+            className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+          >
+            <X className="mr-1 h-3.5 w-3.5" />
+            {locale === "zh" ? "清除筛选" : "Clear filters"}
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="ml-auto text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+        >
+          <Filter className="mr-1 h-3.5 w-3.5" />
+          {locale === "zh" ? "更多筛选" : "More filters"}
+          {showFilters ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+        </Button>
+      </div>
+
+      {/* Category tag rows — progressive drill-down, personas always visible below.
+          Hidden when user jumps to My Saved / My Custom so those lists aren't further filtered. */}
+      {!activeCategory && (
+        isTopic ? (
+          <TopicFilterRows
+            selectedDomain={selectedDomain}
+            selectedSubDomain={selectedSubDomain}
+            selectedDimensions={selectedDimensions}
+            locale={locale}
+            onPickDomain={pickDomain}
+            onPickSubDomain={pickSubDomain}
+            onToggleDimension={toggleDimension}
+          />
+        ) : (
+          <ProductFilterRows
+            selectedCategory={selectedProductCategory}
+            selectedTraits={selectedProductTraits}
+            locale={locale}
+            onPickCategory={pickProductCategory}
+            onToggleTrait={toggleProductTrait}
+          />
+        )
       )}
 
       {/* Expandable filters */}
@@ -532,8 +561,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         </div>
       )}
 
-      {/* Persona count + grid — shown once wizard reaches 'persona' step */}
-      {((isTopic && wizardStep === "persona") || (!isTopic && productWizardStep === "persona")) && (<>
+      {/* Persona count + grid — always visible, filtered in real time */}
       <p className="text-xs text-[#666462]">
         {t("personasFound", { count: filtered.length })}
       </p>
@@ -618,7 +646,6 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           </Button>
         </div>
       )}
-      </>)}
 
       {/* Introduction section */}
       <div className="rounded-lg border border-[#2A2A2A] bg-[#141414]/60 px-4 py-3">
@@ -631,182 +658,100 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 }
 
 // ────────────────────────────────────────────────────────────────────
-// TopicWizard — 4-step hierarchical filter for topic mode.
-// Steps: domain → sub_domain → dimensions (multi-select) → persona grid.
+// TopicFilterRows — inline progressive filter for topic mode.
+// Each row reveals the next level; personas stay visible in the grid below.
 // ────────────────────────────────────────────────────────────────────
 
-interface TopicWizardProps {
-  step: TopicWizardStep;
-  domain: DomainKey | null;
-  subDomain: SubDomainKey | null;
+interface TopicFilterRowsProps {
+  selectedDomain: DomainKey | null;
+  selectedSubDomain: SubDomainKey | null;
   selectedDimensions: Set<string>;
-  activeCategory: string | null;
-  hasSaved: boolean;
-  hasCustom: boolean;
   locale: string;
   onPickDomain: (domain: DomainKey) => void;
   onPickSubDomain: (subDomain: SubDomainKey) => void;
   onToggleDimension: (key: string) => void;
-  onAdvanceToPersonas: () => void;
-  onBack: () => void;
-  onPickCategory: (cat: string | null) => void;
 }
 
-function TopicWizard(props: TopicWizardProps) {
-  const { step, domain, subDomain, selectedDimensions, activeCategory, hasSaved, hasCustom, locale,
-    onPickDomain, onPickSubDomain, onToggleDimension, onAdvanceToPersonas, onBack, onPickCategory } = props;
+function TopicFilterRows({
+  selectedDomain, selectedSubDomain, selectedDimensions, locale,
+  onPickDomain, onPickSubDomain, onToggleDimension,
+}: TopicFilterRowsProps) {
   const zh = locale === "zh";
-  const subDomainObj = subDomain ? getSubDomain(subDomain) : undefined;
-  const subDomains = domain ? getSubDomainsForDomain(domain) : [];
-
-  // Breadcrumb
-  const crumbs: { label: string; key: string }[] = [];
-  if (domain) crumbs.push({ key: `d-${domain}`, label: localizedLabel(DOMAINS.find(d => d.key === domain)!, locale) });
-  if (subDomainObj) crumbs.push({ key: `s-${subDomainObj.key}`, label: localizedLabel(subDomainObj, locale) });
-  if (step === "persona" && selectedDimensions.size > 0) crumbs.push({ key: "dims", label: `${selectedDimensions.size} ${zh ? "个维度" : "dims"}` });
-
-  // "My saved / My custom" shortcuts are always visible
-  const shortcuts = (
-    <div className="flex flex-wrap items-center gap-2">
-      {hasSaved && (
-        <Button
-          variant={activeCategory === "my_saved" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onPickCategory(activeCategory === "my_saved" ? null : "my_saved")}
-          className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-        >
-          <Heart className="mr-1 h-3 w-3" />
-          {zh ? "已收藏" : "My Saved"}
-        </Button>
-      )}
-      {hasCustom && (
-        <Button
-          variant={activeCategory === "my_custom" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onPickCategory(activeCategory === "my_custom" ? null : "my_custom")}
-          className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-        >
-          <User className="mr-1 h-3 w-3" />
-          {zh ? "我的自定义" : "My Custom"}
-        </Button>
-      )}
-    </div>
-  );
-
-  // Header with back button + breadcrumb
-  const header = (
-    <div className="flex items-center gap-2">
-      {step !== "domain" && !activeCategory && (
-        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-[#9B9594] hover:text-[#EAEAE8]">
-          <ChevronLeft className="h-4 w-4" />
-          {zh ? "返回" : "Back"}
-        </Button>
-      )}
-      {crumbs.length > 0 && !activeCategory && (
-        <div className="flex items-center gap-1.5 text-xs text-[#9B9594]">
-          {crumbs.map((c, i) => (
-            <span key={c.key} className="flex items-center gap-1.5">
-              {i > 0 && <ChevronRight className="h-3 w-3 text-[#666462]" />}
-              <span className="text-[#C4A882]">{c.label}</span>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="ml-auto">{shortcuts}</div>
-    </div>
-  );
-
-  if (activeCategory) {
-    // User jumped to saved/custom — show nothing else, persona grid will render.
-    return <div className="space-y-3">{header}</div>;
-  }
+  const subDomains = selectedDomain ? getSubDomainsForDomain(selectedDomain) : [];
+  const subDomainObj = selectedSubDomain ? getSubDomain(selectedSubDomain) : undefined;
 
   return (
-    <div className="space-y-4">
-      {header}
+    <div className="space-y-2.5">
+      {/* Level 1: Domains — always visible */}
+      <div className="flex flex-wrap gap-1.5">
+        {DOMAINS.map((d) => {
+          const active = selectedDomain === d.key;
+          return (
+            <button
+              key={d.key}
+              type="button"
+              onClick={() => onPickDomain(d.key)}
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                active
+                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                  : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+              }`}
+            >
+              {active && <Check className="h-3 w-3" />}
+              {localizedLabel(d, locale)}
+            </button>
+          );
+        })}
+      </div>
 
-      {step === "domain" && (
-        <div>
-          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2.5">
-            {zh ? "第 1 步 · 选择大方向" : "Step 1 · Pick a domain"}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {DOMAINS.map((d) => (
-              <button
-                key={d.key}
-                type="button"
-                onClick={() => onPickDomain(d.key)}
-                className="text-left rounded-lg border border-[#2A2A2A] bg-[#141414] px-4 py-3.5 hover:border-[#E2DDD5]/50 hover:bg-[#1C1C1C] transition-colors"
-              >
-                <p className="text-sm font-semibold text-[#EAEAE8]">{localizedLabel(d, locale)}</p>
-                <p className="mt-1 text-[11px] text-[#666462]">
-                  {getSubDomainsForDomain(d.key).length} {zh ? "个小方向" : "sub-domains"}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === "sub_domain" && (
-        <div>
-          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2.5">
-            {zh ? "第 2 步 · 选择小方向" : "Step 2 · Pick a sub-domain"}
-          </p>
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {subDomains.map((s) => (
+      {/* Level 2: Sub-domains — visible once a domain is picked */}
+      {selectedDomain && subDomains.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pl-3 border-l-2 border-[#2A2A2A]">
+          {subDomains.map((s) => {
+            const active = selectedSubDomain === s.key;
+            return (
               <button
                 key={s.key}
                 type="button"
                 onClick={() => onPickSubDomain(s.key)}
-                className="text-left rounded-lg border border-[#2A2A2A] bg-[#141414] px-3.5 py-3 hover:border-[#E2DDD5]/50 hover:bg-[#1C1C1C] transition-colors"
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                  active
+                    ? "border-[#C4A882] bg-[#C4A882]/10 text-[#EAEAE8]"
+                    : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                }`}
               >
-                <p className="text-sm font-medium text-[#EAEAE8]">{localizedLabel(s, locale)}</p>
-                <p className="mt-0.5 text-[11px] text-[#666462] truncate">
-                  {s.dimensions.map((d) => localizedLabel(d, locale)).slice(0, 3).join(" · ")}
-                  {s.dimensions.length > 3 ? " …" : ""}
-                </p>
+                {active && <Check className="h-3 w-3" />}
+                {localizedLabel(s, locale)}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {step === "dimensions" && subDomainObj && (
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide">
-              {zh ? `第 3 步 · 选择维度（可多选，不选则全部）` : "Step 3 · Pick dimensions (multi-select, optional)"}
-            </p>
-            <Button
-              size="sm"
-              onClick={onAdvanceToPersonas}
-              className="bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7] h-7 text-xs"
-            >
-              {zh ? "查看 persona" : "View personas"}
-              <ChevronRight className="ml-1 h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {subDomainObj.dimensions.map((d) => {
-              const active = selectedDimensions.has(d.key);
-              return (
-                <button
-                  key={d.key}
-                  type="button"
-                  onClick={() => onToggleDimension(d.key)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                    active
-                      ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
-                      : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
-                  }`}
-                >
-                  {active && <Check className="h-3 w-3" />}
-                  {localizedLabel(d, locale)}
-                </button>
-              );
-            })}
-          </div>
+      {/* Level 3: Dimensions (multi-select) — visible once a sub-domain is picked */}
+      {subDomainObj && subDomainObj.dimensions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pl-3 border-l-2 border-[#2A2A2A]">
+          <span className="text-[10px] uppercase tracking-wide text-[#666462]">
+            {zh ? "维度（可多选）" : "Dimensions (multi)"}
+          </span>
+          {subDomainObj.dimensions.map((d) => {
+            const active = selectedDimensions.has(d.key);
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => onToggleDimension(d.key)}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                  active
+                    ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                    : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                }`}
+              >
+                {active && <Check className="h-3 w-3" />}
+                {localizedLabel(d, locale)}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -814,160 +759,75 @@ function TopicWizard(props: TopicWizardProps) {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// ProductWizard — 2-step filter for product mode.
-// Step 1: pick one of the 4 categories (产品力/市场力/创新力/生命线).
-// Step 2: persona grid with optional trait chips for further filtering.
+// ProductFilterRows — inline progressive filter for product mode.
 // ────────────────────────────────────────────────────────────────────
 
-interface ProductWizardProps {
-  step: ProductWizardStep;
+interface ProductFilterRowsProps {
   selectedCategory: ProductCategoryKey | null;
   selectedTraits: Set<string>;
-  activeCategory: string | null;
-  hasSaved: boolean;
-  hasCustom: boolean;
   locale: string;
-  showExtraFilters: boolean;
   onPickCategory: (cat: ProductCategoryKey) => void;
   onToggleTrait: (key: string) => void;
-  onBack: () => void;
-  onToggleExtraFilters: () => void;
-  onPickShortcut: (cat: string | null) => void;
 }
 
-function ProductWizard(props: ProductWizardProps) {
-  const { step, selectedCategory, selectedTraits, activeCategory, hasSaved, hasCustom, locale,
-    showExtraFilters, onPickCategory, onToggleTrait, onBack, onToggleExtraFilters, onPickShortcut } = props;
+function ProductFilterRows({
+  selectedCategory, selectedTraits, locale, onPickCategory, onToggleTrait,
+}: ProductFilterRowsProps) {
   const zh = locale === "zh";
   const categoryObj = selectedCategory ? getProductCategory(selectedCategory) : undefined;
 
-  const shortcuts = (
-    <div className="flex flex-wrap items-center gap-2">
-      {hasSaved && (
-        <Button
-          variant={activeCategory === "my_saved" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onPickShortcut(activeCategory === "my_saved" ? null : "my_saved")}
-          className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-        >
-          <Heart className="mr-1 h-3 w-3" />
-          {zh ? "已收藏" : "My Saved"}
-        </Button>
-      )}
-      {hasCustom && (
-        <Button
-          variant={activeCategory === "my_custom" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onPickShortcut(activeCategory === "my_custom" ? null : "my_custom")}
-          className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-        >
-          <User className="mr-1 h-3 w-3" />
-          {zh ? "我的自定义" : "My Custom"}
-        </Button>
-      )}
-    </div>
-  );
-
-  const crumbs: { label: string; key: string }[] = [];
-  if (categoryObj) crumbs.push({ key: `c-${categoryObj.key}`, label: localizedLabel(categoryObj, locale) });
-  if (step === "persona" && selectedTraits.size > 0) {
-    crumbs.push({ key: "tr", label: `${selectedTraits.size} ${zh ? "个标签" : "traits"}` });
-  }
-
-  const header = (
-    <div className="flex items-center gap-2">
-      {step !== "category" && !activeCategory && (
-        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-[#9B9594] hover:text-[#EAEAE8]">
-          <ChevronLeft className="h-4 w-4" />
-          {zh ? "返回" : "Back"}
-        </Button>
-      )}
-      {crumbs.length > 0 && !activeCategory && (
-        <div className="flex items-center gap-1.5 text-xs text-[#9B9594]">
-          {crumbs.map((c, i) => (
-            <span key={c.key} className="flex items-center gap-1.5">
-              {i > 0 && <ChevronRight className="h-3 w-3 text-[#666462]" />}
-              <span className="text-[#C4A882]">{c.label}</span>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="ml-auto flex items-center gap-2">
-        {shortcuts}
-        {step === "persona" && !activeCategory && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleExtraFilters}
-            className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
-          >
-            <Filter className="mr-1 h-3.5 w-3.5" />
-            {zh ? "更多筛选" : "More filters"}
-            {showExtraFilters ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-
-  if (activeCategory) {
-    return <div className="space-y-3">{header}</div>;
-  }
-
   return (
-    <div className="space-y-4">
-      {header}
+    <div className="space-y-2.5">
+      {/* Level 1: Categories — always visible, slightly richer pills with description */}
+      <div className="flex flex-wrap gap-1.5">
+        {PRODUCT_CATEGORIES.map((c) => {
+          const active = selectedCategory === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => onPickCategory(c.key)}
+              title={zh ? c.description_zh : c.description_en}
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                active
+                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                  : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+              }`}
+            >
+              {active && <Check className="h-3 w-3" />}
+              {localizedLabel(c, locale)}
+            </button>
+          );
+        })}
+      </div>
 
-      {step === "category" && (
-        <div>
-          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2.5">
-            {zh ? "第 1 步 · 选择视角" : "Step 1 · Pick a lens"}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {PRODUCT_CATEGORIES.map((c) => (
+      {/* Level 2: Traits (multi-select) — visible once a category is picked */}
+      {categoryObj && (
+        <div className="flex flex-wrap items-center gap-1.5 pl-3 border-l-2 border-[#2A2A2A]">
+          <span className="text-[10px] uppercase tracking-wide text-[#666462]">
+            {zh ? "细化标签（可多选）" : "Traits (multi)"}
+          </span>
+          {categoryObj.traits.map((tr) => {
+            const active = selectedTraits.has(tr.key);
+            return (
               <button
-                key={c.key}
+                key={tr.key}
                 type="button"
-                onClick={() => onPickCategory(c.key)}
-                className="text-left rounded-lg border border-[#2A2A2A] bg-[#141414] px-4 py-3.5 hover:border-[#E2DDD5]/50 hover:bg-[#1C1C1C] transition-colors"
+                onClick={() => onToggleTrait(tr.key)}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                  active
+                    ? "border-[#C4A882] bg-[#C4A882]/10 text-[#EAEAE8]"
+                    : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                }`}
               >
-                <p className="text-sm font-semibold text-[#EAEAE8]">{localizedLabel(c, locale)}</p>
-                <p className="mt-1 text-[11px] text-[#666462] leading-relaxed">
-                  {zh ? c.description_zh : c.description_en}
-                </p>
+                {active && <Check className="h-3 w-3" />}
+                {localizedLabel(tr, locale)}
               </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === "persona" && categoryObj && (
-        <div>
-          <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide mb-2">
-            {zh ? "可选：按标签细化（多选）" : "Optional: refine by trait (multi-select)"}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {categoryObj.traits.map((tr) => {
-              const active = selectedTraits.has(tr.key);
-              return (
-                <button
-                  key={tr.key}
-                  type="button"
-                  onClick={() => onToggleTrait(tr.key)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                    active
-                      ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
-                      : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
-                  }`}
-                >
-                  {active && <Check className="h-3 w-3" />}
-                  {localizedLabel(tr, locale)}
-                </button>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
+
