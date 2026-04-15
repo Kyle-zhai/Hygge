@@ -54,10 +54,19 @@ export function buildTopicSummaryReportPrompt(
 
   const system = `You are synthesizing a multi-perspective discussion on a topic. Multiple AI personas with different backgrounds have independently shared their views. Your job is to produce a comprehensive synthesis report.
 
-CRITICAL RULES:
-- Every claim must reference SPECIFIC details from the personas' reviews. No generic platitudes.
-- The synthesis should directly answer the user's topic/question with a substantive, well-reasoned conclusion.
-- The consensus_score (0-100) measures how much the personas agree: 0 = completely divergent views, 100 = total agreement. Evaluate based on their actual positions, not just their scores. If there is only ONE persona, consensus_score MUST be 100 since there is no disagreement possible.
+═══════════════════════════════════════════════
+CONTENT QUALITY REQUIREMENTS (apply to EVERY text field and array item)
+═══════════════════════════════════════════════
+
+1. PERSONA VOICE — every recommendation, risk, next step, and modification must be grounded in a specific persona's stated view. Attribute explicitly: "{PersonaName} argued...", "Following {PersonaName}'s concern about {the exact concern they raised}, ...", "Per {PersonaName}'s point that {X}, ...". Never use anonymous voice like "the team thinks" or "experts say".
+
+2. TIE TO THE USER'S SUBMISSION — reference the topic's actual name, description, stated goals, success metrics, target users, or comparables (by exact wording) where relevant. If the user named a feature, price point, timeline, or competitor, quote it. Do not invent details not present in the submission or persona reviews.
+
+3. REAL-WORLD GROUNDING — when citing comparable cases, companies, products, studies, industry benchmarks, or historical precedents, name them specifically from your training knowledge (e.g., "Figma's browser-first pivot", "Stripe's iterative launch in 7 countries before global", "the 2023 EU AI Act's risk-tier framework"). Only cite what you are confident is real. If you are not sure a specific reference exists, describe the pattern without fabricating a name. NEVER invent studies, reports, or company initiatives.
+
+4. NO PLATITUDES — banned phrases and any variant of them: "improve marketing", "gather more user feedback", "build community", "enhance user experience", "iterate based on data", "refine messaging", "explore partnerships", "leverage synergies", "prioritize quality", "focus on growth". If a sentence could apply to ANY topic, rewrite it with specifics. If you cannot think of something specific, say fewer words — brevity beats fluff.
+
+5. CONSENSUS SCORE — consensus_score (0-100) measures how much the personas agree: 0 = completely divergent views, 100 = total agreement. Base this on their actual positions, not their numeric scores. If there is only ONE persona, consensus_score MUST be 100.
 
 IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.
 
@@ -114,14 +123,35 @@ Respond ONLY with valid JSON matching this structure:
       "source": "<origin: persona name, study, report, or industry data>",
       "persona_name": "<persona who cited or would cite this, if applicable>"
     }
-  ]
+  ],
+  "if_feasible": {
+    "next_steps": ["<concrete step to take if this topic/idea/proposal is adopted or moves forward — cite specific persona feedback>"],
+    "optimizations": ["<specific refinement that would improve execution if pursued — reference persona concerns>"],
+    "risks": ["<specific risk to monitor during execution — tie to a persona's stated concern>"]
+  },
+  "if_not_feasible": {
+    "modifications": ["<specific change needed to make this workable — cite which persona raised the blocker>"],
+    "direction": "<recommended pivot or alternative framing if the current direction cannot work>",
+    "priorities": ["<what to address first to salvage this — concrete and specific>"],
+    "reference_cases": ["<analogous topic/effort that succeeded with the pivoted approach>"]
+  }
 }
 
 IMPORTANT for debate_highlights:
 - Include 2-4 highlights
 - Perspectives are NOT limited to pro/con — they can be multiple distinct angles on the same point
 - If all personas agree on a point, still include it as a highlight and explain the consensus and its significance
-- Each persona's stance should capture their unique angle, not just "agrees" or "disagrees"`;
+- Each persona's stance should capture their unique angle, not just "agrees" or "disagrees"
+
+CRITICAL for if_feasible and if_not_feasible:
+- BOTH paths MUST be fully populated regardless of market_readiness. The user sees both scenarios side-by-side.
+- Each array must contain at least 3 items. No empty arrays. No placeholder text.
+- Every item MUST open with attribution to a specific persona and then state the specific move/risk/change. Example format: "Following {PersonaName}'s concern about {exact concern from their review}, {specific action tied to the topic's named feature/goal/metric}."
+- Every item must cite AT LEAST ONE of: (a) a specific persona's exact concern or phrasing; (b) a named feature, price, goal, or metric from the user's submission; (c) a real named company/product/study from your training knowledge.
+- BANNED: generic advice ("improve communication", "do more research", "gather feedback", "iterate", "build community"). If you catch yourself writing generic text, replace with persona-attributed specifics or omit.
+- "reference_cases" entries must be REAL companies/products/initiatives you know from training data, with a one-line reason why the analogy applies. Not "a similar successful pivot" — name it.
+- "if_feasible" describes the path assuming the topic IS pursued/adopted. "if_not_feasible" describes what must change OR an alternative direction if the current form cannot succeed.
+- Even when you are confident the topic is viable, still fill "if_not_feasible" with the modifications required under the dissenting personas' objections. Even when confident it is not, still fill "if_feasible" with what pursuing anyway would look like.`;
 
   const reviewsSummary = reviews
     .map(
@@ -178,9 +208,19 @@ export function buildSummaryReportPrompt(
 
   const system = `You are a senior consultant generating a comprehensive discussion synthesis report. You are synthesizing perspectives from multiple AI personas into an actionable analysis. The topic may be a product, idea, policy, event, design, creative work, business strategy, or any other subject.
 
-Your report must be EXTREMELY specific and actionable. Not vague platitudes — concrete, detailed analysis that the user can immediately act on. Adapt your language and framing to suit the topic type.
+═══════════════════════════════════════════════
+CONTENT QUALITY REQUIREMENTS (apply to EVERY text field and array item)
+═══════════════════════════════════════════════
 
-CRITICAL: Every claim in your report must reference SPECIFIC details from the personas' reviews and the original submission. Do NOT produce generic advice like "improve your marketing" — instead say exactly WHAT to improve, WHY (citing persona feedback), and HOW. If personas referenced specific features, data points, or content from the submission, carry those references into your synthesis.
+1. PERSONA VOICE — every recommendation, risk, action item, modification, or next step must be grounded in a specific persona's stated view. Attribute explicitly: "{PersonaName} flagged that...", "Building on {PersonaName}'s point about {exact concern}, ...", "To address {PersonaName}'s objection that {X}, ...". Never use anonymous voice like "the team should" or "experts recommend".
+
+2. TIE TO THE USER'S SUBMISSION — reference the product's actual name, described features, stated goals, success metrics, target users, and named competitors from the user's input. If the user wrote that the product targets "early-stage founders" or priced at "$29/mo" or competes with "Notion", quote those exact details. Do not invent features, metrics, or attributes not present in the submission or persona reviews.
+
+3. REAL-WORLD GROUNDING — when citing comparable products, successful pivots, market benchmarks, or case studies, name them specifically from your training knowledge (e.g., "Superhuman's waitlist-driven launch", "Basecamp's move away from VC funding", "Linear's opinionated UX over flexibility"). Only cite what you are confident is real. NEVER invent companies, studies, reports, or funding rounds. If you are not sure a specific reference exists, describe the pattern without fabricating a name.
+
+4. NO PLATITUDES — banned phrases and any variant: "improve your marketing", "gather more feedback", "build community", "enhance UX", "iterate based on data", "refine messaging", "explore partnerships", "leverage synergies", "prioritize quality", "focus on growth". If a sentence could apply to ANY product, rewrite it with specifics. If you cannot think of something specific, say fewer words — brevity beats fluff.
+
+5. ACTIONABILITY — every action_item and feasibility entry must be something the user could start doing this week. State WHAT to do, WHICH persona's concern it addresses, and WHICH feature/metric it touches.
 
 ${readinessNote}
 
@@ -221,15 +261,15 @@ Respond ONLY with valid JSON matching this structure:
     }
   ],
   "if_not_feasible": {
-    "modifications": ["<specific modification>"],
-    "direction": "<recommended pivot or alternative direction>",
-    "priorities": ["<priority 1>", "<priority 2>"],
-    "reference_cases": ["<similar topic/effort that succeeded with this approach>"]
+    "modifications": ["<specific modification needed — cite which persona flagged the blocker>"],
+    "direction": "<recommended pivot or alternative direction, naming comparables the personas mentioned>",
+    "priorities": ["<priority to address first — concrete and tied to a stated gap>"],
+    "reference_cases": ["<named analogous case that succeeded with this pivot>"]
   },
   "if_feasible": {
-    "next_steps": ["<specific next step>"],
-    "optimizations": ["<specific optimization>"],
-    "risks": ["<specific risk>"]
+    "next_steps": ["<concrete next step tied to a persona's positive feedback or a specific feature/goal>"],
+    "optimizations": ["<specific optimization that would improve an existing part — reference a weakness the personas raised>"],
+    "risks": ["<specific risk to monitor — tie to a persona's concern or a dimension weakness>"]
   },
   "action_items": [
     {
@@ -242,7 +282,17 @@ Respond ONLY with valid JSON matching this structure:
   "market_readiness": "<low|medium|high>"${dimensions ? `,
   "readiness_label_en": "<contextual readiness label in English>",
   "readiness_label_zh": "<contextual readiness label in Chinese>"` : ""}
-}`;
+}
+
+CRITICAL for if_feasible and if_not_feasible:
+- BOTH paths MUST be fully populated regardless of market_readiness. The user sees them side-by-side and needs both scenarios.
+- Each array must contain at least 3 items. No empty arrays. No single-item arrays for the main lists.
+- Every item MUST open with attribution to a specific persona and then state the specific move/risk/change. Example format: "Addressing {PersonaName}'s concern that {exact concern from review}, {specific action tied to a named feature/goal/metric}."
+- Every item must cite AT LEAST ONE of: (a) a specific persona's exact concern or phrasing; (b) a named feature, price, goal, or metric from the user's submission; (c) a real named company/product/study from your training knowledge.
+- BANNED: generic advice ("improve marketing", "gather more feedback", "iterate quickly", "build community"). If you catch yourself writing generic text, replace with persona-attributed specifics or omit.
+- "reference_cases" entries must be REAL companies/products/initiatives you know from training data, with a one-line reason why the analogy applies. Not "a similar SaaS that pivoted" — name it (e.g., "Slack's pivot from game dev to team chat — validated market need before product").
+- "if_feasible" describes what pursuing the product looks like — real next moves, actual optimizations, specific risks.
+- "if_not_feasible" describes what must change OR an alternative direction. Fill it even when the product is high-readiness, reflecting the dissenting personas' objections and what would be required to address them.`;
 
   const reviewsSummary = reviews
     .map(

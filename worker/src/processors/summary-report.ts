@@ -59,6 +59,118 @@ function cleanConsensusPoint(raw: any): any {
   };
 }
 
+function toStringArray(val: unknown): string[] {
+  if (!Array.isArray(val)) return [];
+  return val.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+}
+
+function normalizeIfFeasible(raw: any): { next_steps: string[]; optimizations: string[]; risks: string[] } {
+  const src = raw && typeof raw === "object" ? raw : {};
+  return {
+    next_steps: toStringArray(src.next_steps),
+    optimizations: toStringArray(src.optimizations),
+    risks: toStringArray(src.risks),
+  };
+}
+
+function normalizeIfNotFeasible(raw: any): { modifications: string[]; direction: string; priorities: string[]; reference_cases: string[] } {
+  const src = raw && typeof raw === "object" ? raw : {};
+  return {
+    modifications: toStringArray(src.modifications),
+    direction: typeof src.direction === "string" ? src.direction : "",
+    priorities: toStringArray(src.priorities),
+    reference_cases: toStringArray(src.reference_cases),
+  };
+}
+
+const MIN_FEASIBILITY_ITEMS = 3;
+
+type IfFeasible = { next_steps: string[]; optimizations: string[]; risks: string[] };
+type IfNotFeasible = { modifications: string[]; direction: string; priorities: string[]; reference_cases: string[] };
+
+function isFeasibleSparse(f: IfFeasible): boolean {
+  return f.next_steps.length < MIN_FEASIBILITY_ITEMS
+    || f.optimizations.length < MIN_FEASIBILITY_ITEMS
+    || f.risks.length < MIN_FEASIBILITY_ITEMS;
+}
+
+function isNotFeasibleSparse(f: IfNotFeasible): boolean {
+  return f.modifications.length < MIN_FEASIBILITY_ITEMS
+    || f.direction.trim().length === 0
+    || f.priorities.length < MIN_FEASIBILITY_ITEMS
+    || f.reference_cases.length < MIN_FEASIBILITY_ITEMS;
+}
+
+async function backfillFeasibility(
+  llm: LLMAdapter,
+  project: ProjectParsedData,
+  reviews: ReviewForSummary[],
+  current: { if_feasible: IfFeasible; if_not_feasible: IfNotFeasible }
+): Promise<{ if_feasible: IfFeasible; if_not_feasible: IfNotFeasible }> {
+  const feasibleSparse = isFeasibleSparse(current.if_feasible);
+  const notFeasibleSparse = isNotFeasibleSparse(current.if_not_feasible);
+  if (!feasibleSparse && !notFeasibleSparse) return current;
+
+  const reviewSnippets = reviews
+    .map((r) => `### ${r.persona_name} (${r.persona_id})
+Review: ${r.review_text.slice(0, 500)}
+Strengths: ${r.strengths.join(", ")}
+Weaknesses: ${r.weaknesses.join(", ")}`)
+    .join("\n\n");
+
+  const system = `You are filling in the feasibility scenarios for a discussion synthesis report. The main report came back with the feasibility sections too sparse. You must regenerate both paths with rigorous quality.
+
+CONTENT QUALITY REQUIREMENTS (non-negotiable):
+1. PERSONA VOICE — every item MUST open with attribution to a specific persona from the reviews below, then state the specific action/change. Format: "Following {PersonaName}'s concern that {exact concern}, {specific action tied to a named feature/goal}." or "Addressing {PersonaName}'s point about {X}, ...".
+2. TIE TO THE SUBMISSION — reference the topic's actual name, described features, stated goals, target users, or named comparables by exact wording. Do not invent details not in the submission or reviews.
+3. REAL-WORLD GROUNDING — name real companies/products/initiatives from your training knowledge (e.g., "Figma's browser-first pivot", "Superhuman's waitlist launch"). Only cite what you are confident is real. Do NOT fabricate studies, reports, or company histories.
+4. NO PLATITUDES — banned: "improve marketing", "gather feedback", "iterate quickly", "build community", "refine messaging", "leverage synergies". If generic, rewrite or drop.
+5. EACH array MUST contain AT LEAST 3 items. "direction" MUST be a non-empty 1-2 sentence pivot description.
+6. BOTH paths (if_feasible AND if_not_feasible) must be fully populated regardless of which seems more viable. The user sees them side-by-side.
+
+"if_feasible" = concrete moves if the topic IS pursued. "if_not_feasible" = what must change OR pivot to if the current form cannot succeed.
+
+Respond in English. Respond ONLY with valid JSON matching:
+{
+  "if_feasible": {
+    "next_steps": ["<'{PersonaName} argued X, so do specific action Y tied to named feature Z'>", "<...>", "<...>"],
+    "optimizations": ["<'{PersonaName} flagged weakness X; refine feature Y by...'>", "<...>", "<...>"],
+    "risks": ["<'{PersonaName}'s concern that X may play out as Y, specifically when...'>", "<...>", "<...>"]
+  },
+  "if_not_feasible": {
+    "modifications": ["<'{PersonaName} raised blocker X; change Y to address it'>", "<...>", "<...>"],
+    "direction": "<recommended pivot in 1-2 sentences — name a real analogous case if possible>",
+    "priorities": ["<specific first move tied to a named gap or persona concern>", "<...>", "<...>"],
+    "reference_cases": ["<Real named company/product (e.g., 'Slack's pivot from game dev') — one-line reason the analogy fits>", "<...>", "<...>"]
+  }
+}`;
+
+  const prompt = `Topic: ${project.name}
+Description: ${project.description}
+Target Audience: ${project.target_users}
+Goals: ${project.goals}
+
+## Persona Reviews
+
+${reviewSnippets}
+
+Generate both feasibility paths. At least 3 concrete, persona-referenced items per array. "direction" must be non-empty.`;
+
+  try {
+    const response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
+    const parsed: any = robustJsonParse(response.text);
+    const refilledFeasible = normalizeIfFeasible(parsed.if_feasible);
+    const refilledNotFeasible = normalizeIfNotFeasible(parsed.if_not_feasible);
+    return {
+      if_feasible: feasibleSparse && !isFeasibleSparse(refilledFeasible) ? refilledFeasible : current.if_feasible,
+      if_not_feasible: notFeasibleSparse && !isNotFeasibleSparse(refilledNotFeasible) ? refilledNotFeasible : current.if_not_feasible,
+    };
+  } catch (e) {
+    console.warn("[backfillFeasibility] Retry failed, keeping original:", (e as Error).message);
+    return current;
+  }
+}
+
 function normalizePersonaAnalysis(raw: any): any {
   if (!raw || typeof raw !== "object") return { entries: [], consensus: [], disagreements: [] };
 
@@ -124,13 +236,18 @@ export async function generateTopicSummaryReport(
     console.error("[TopicSummary] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
     throw new Error(`Topic summary JSON parse failed: ${(e as Error).message}`);
   }
+  const feasibility = await backfillFeasibility(llm, project, reviews, {
+    if_feasible: normalizeIfFeasible(parsed.if_feasible),
+    if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),
+  });
+
   return {
     overall_score: 0,
     persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
     multi_dimensional_analysis: parsed.multi_dimensional_analysis,
     goal_assessment: [],
-    if_not_feasible: { modifications: [], direction: "", priorities: [], reference_cases: [] },
-    if_feasible: { next_steps: [], optimizations: [], risks: [] },
+    if_not_feasible: feasibility.if_not_feasible,
+    if_feasible: feasibility.if_feasible,
     action_items: [],
     market_readiness: parsed.market_readiness,
     readiness_label_en: parsed.readiness_label_en,
@@ -163,13 +280,18 @@ export async function generateSummaryReport(
     console.error("[SummaryReport] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
     throw new Error(`Summary report JSON parse failed: ${(e as Error).message}`);
   }
+  const feasibility = await backfillFeasibility(llm, project, reviews, {
+    if_feasible: normalizeIfFeasible(parsed.if_feasible),
+    if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),
+  });
+
   return {
     overall_score: parsed.overall_score,
     persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
     multi_dimensional_analysis: parsed.multi_dimensional_analysis,
     goal_assessment: parsed.goal_assessment,
-    if_not_feasible: parsed.if_not_feasible,
-    if_feasible: parsed.if_feasible,
+    if_not_feasible: feasibility.if_not_feasible,
+    if_feasible: feasibility.if_feasible,
     action_items: parsed.action_items,
     market_readiness: parsed.market_readiness,
     readiness_label_en: parsed.readiness_label_en,
