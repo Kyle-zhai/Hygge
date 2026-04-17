@@ -14,7 +14,7 @@ export async function parseProject(
     system: PARSE_PROJECT_SYSTEM,
     prompt: buildParseProjectPrompt(rawInput, url, attachmentDescriptions),
     media: media?.length ? media : undefined,
-    maxTokens: 1024,
+    maxTokens: 2048,
   });
   return JSON.parse(response.text) as ProjectParsedData;
 }

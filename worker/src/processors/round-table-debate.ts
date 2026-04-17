@@ -1,5 +1,6 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
+import type { ProjectParsedData } from "../types/evaluation.js";
 import type { RoundTableDebateResult, DebateRound } from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import {
@@ -13,8 +14,10 @@ export async function runRoundTableDebate(
   llm: LLMAdapter,
   personas: Persona[],
   reviews: ReviewForDebate[],
+  project: ProjectParsedData,
+  rawInput: string,
 ): Promise<RoundTableDebateResult> {
-  const { system: selSys, prompt: selPrompt } = buildSelectionPrompt(personas, reviews);
+  const { system: selSys, prompt: selPrompt } = buildSelectionPrompt(personas, reviews, project);
   const selResponse = await llm.complete({ system: selSys, prompt: selPrompt, maxTokens: 512, jsonMode: true });
   const selection = robustJsonParse<any>(selResponse.text);
 
@@ -47,6 +50,8 @@ export async function runRoundTableDebate(
       selectedPersonas,
       selectedReviews,
       rawRounds,
+      project,
+      rawInput,
     );
     const response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
     const parsed = robustJsonParse<any>(response.text);
@@ -56,7 +61,7 @@ export async function runRoundTableDebate(
     rawRounds.push({ round: i + 1, messages });
   }
 
-  const { system: outSys, prompt: outPrompt } = buildOutcomePrompt(selectedPersonas, rawRounds);
+  const { system: outSys, prompt: outPrompt } = buildOutcomePrompt(selectedPersonas, rawRounds, project);
   const outResponse = await llm.complete({ system: outSys, prompt: outPrompt, maxTokens: 1024, jsonMode: true });
   const outcome = robustJsonParse<any>(outResponse.text);
 

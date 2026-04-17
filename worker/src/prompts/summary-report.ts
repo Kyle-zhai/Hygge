@@ -151,17 +151,48 @@ CRITICAL for if_feasible and if_not_feasible:
 - BANNED: generic advice ("improve communication", "do more research", "gather feedback", "iterate", "build community"). If you catch yourself writing generic text, replace with persona-attributed specifics or omit.
 - "reference_cases" entries must be REAL companies/products/initiatives you know from training data, with a one-line reason why the analogy applies. Not "a similar successful pivot" — name it.
 - "if_feasible" describes the path assuming the topic IS pursued/adopted. "if_not_feasible" describes what must change OR an alternative direction if the current form cannot succeed.
-- Even when you are confident the topic is viable, still fill "if_not_feasible" with the modifications required under the dissenting personas' objections. Even when confident it is not, still fill "if_feasible" with what pursuing anyway would look like.`;
+- Even when you are confident the topic is viable, still fill "if_not_feasible" with the modifications required under the dissenting personas' objections. Even when confident it is not, still fill "if_feasible" with what pursuing anyway would look like.
+
+EXAMPLES — bad vs. good synthesis writing:
+
+BAD "synthesis" snippet (do NOT write this):
+"Overall, the topic has potential but faces some challenges. The personas raised both positive and negative points. The user should consider gathering more feedback, improving the product, and building community. With iteration and the right strategy, this has a chance to succeed in the market."
+Why it fails: anonymous voice, banned phrases ("potential", "iteration", "build community"), zero specifics — this paragraph would fit any topic ever submitted.
+
+GOOD "synthesis" snippet (this is the bar):
+"Maya (product lead) and Dev (engineer) both flagged the same cost tension — Maya's "$49/month doesn't land for indie founders" directly contradicts the user's stated "affordable for freelancers" positioning, and Dev's point that "Linear ships for $8" sharpens that gap. The room's agreement that the "zero-training onboarding" promise is the real wedge should anchor the first 90 days: ship activation metrics against the user's stated "sub-5% monthly churn" goal, not the signup funnel. Sofia's objection that "compliance-heavy teams won't buy from a three-person shop" is a legitimate ceiling; until SOC 2 is in sight, the ICP should be the indie-founder segment Maya mapped, not the enterprise tier Sofia worried about."
+
+BAD "if_feasible.next_steps" entry (do NOT write this):
+"Improve marketing to reach more customers."
+Why it fails: generic, no persona attribution, no named feature.
+
+GOOD "if_feasible.next_steps" entry (this is the bar):
+"Addressing Maya's concern that "$49/month doesn't land for indie founders", run a 2-tier pricing test ($19 solo / $49 team) against the stated "affordable for freelancers" positioning before the public launch — mirror what Linear did at their $8 entry tier."
+
+BAD "debate_highlights[].significance" entry:
+"This point reveals an important tradeoff that the team should consider."
+Why it fails: empty — no reader learns anything.
+
+GOOD "debate_highlights[].significance" entry:
+"This is the first crack in the 'indie-founder wedge' thesis: if compliance-heavy buyers (Sofia's concern) end up being necessary for unit economics, the zero-training promise Dev praised becomes a liability rather than an asset."
+
+Follow the pattern in the GOOD examples: concrete names, direct quotes from personas or the user's submission, specific products/benchmarks when relevant, and sentences that could only belong to THIS topic.`;
 
   const reviewsSummary = reviews
-    .map(
-      (r) =>
-        `### ${r.persona_name} (ID: ${r.persona_id})
-Stances: ${dimensions.map(d => `${d.key}=${(r.scores as Record<string, string>)[d.key] ?? "N/A"}`).join(", ")}
+    .map((r) => {
+      const refs = Array.isArray(r.cited_references) && r.cited_references.length > 0
+        ? r.cited_references
+            .map((ref) => `  • "${ref.claim}" — ${ref.source ?? "unspecified source"}`)
+            .join("\n")
+        : "  (none)";
+      return `### ${r.persona_name} (ID: ${r.persona_id})
+Stances: ${dimensions.map((d) => `${d.key}=${(r.scores as Record<string, string>)[d.key] ?? "N/A"}`).join(", ")}
 Review: ${r.review_text}
 Strengths: ${r.strengths.join(", ")}
-Weaknesses: ${r.weaknesses.join(", ")}`
-    )
+Weaknesses: ${r.weaknesses.join(", ")}
+Citations they made:
+${refs}`;
+    })
     .join("\n\n");
 
   const prompt = `Generate a comprehensive discussion synthesis report for this topic.
@@ -180,7 +211,7 @@ Weaknesses: ${r.weaknesses.join(", ")}`
 
 ${reviewsSummary}
 
-Generate the synthesis report. Be EXTREMELY specific — cite persona names and their exact points.`;
+Generate the synthesis report. Be EXTREMELY specific — cite persona names and their exact points. When populating the top-level "references" array, prefer the citations the personas themselves made (shown under "Citations they made" for each persona) and attribute them to the persona who cited them. Do NOT fabricate citations that were not in the persona reviews.`;
 
   return { system, prompt };
 }
@@ -292,17 +323,41 @@ CRITICAL for if_feasible and if_not_feasible:
 - BANNED: generic advice ("improve marketing", "gather more feedback", "iterate quickly", "build community"). If you catch yourself writing generic text, replace with persona-attributed specifics or omit.
 - "reference_cases" entries must be REAL companies/products/initiatives you know from training data, with a one-line reason why the analogy applies. Not "a similar SaaS that pivoted" — name it (e.g., "Slack's pivot from game dev to team chat — validated market need before product").
 - "if_feasible" describes what pursuing the product looks like — real next moves, actual optimizations, specific risks.
-- "if_not_feasible" describes what must change OR an alternative direction. Fill it even when the product is high-readiness, reflecting the dissenting personas' objections and what would be required to address them.`;
+- "if_not_feasible" describes what must change OR an alternative direction. Fill it even when the product is high-readiness, reflecting the dissenting personas' objections and what would be required to address them.
+
+EXAMPLES — bad vs. good action_item writing:
+
+BAD "action_items[].description" entry (do NOT write this):
+"Improve onboarding to increase user retention."
+Why it fails: generic, no persona attribution, no named feature, applies to any product.
+
+GOOD "action_items[].description" entry (this is the bar):
+"Addressing Dev's concern that "zero-training onboarding" doesn't hold past day 7, instrument an activation milestone (first shared workspace created) tied to the user's stated "sub-5% monthly churn" goal — then A/B test a guided onboarding against the current silent one."
+
+BAD "goal_assessment[].current_status" entry:
+"The product is on its way to achieving this goal."
+Why it fails: content-free.
+
+GOOD "goal_assessment[].current_status" entry:
+"Maya's review notes the "$49/month" price is 6× Linear's $8 entry, so the "affordable for freelancers" positioning isn't yet credible — current status is 'not yet met', with a pricing test being the cheapest path to change it."
+
+Follow the GOOD pattern: persona name + quoted concern + named feature/metric + concrete move. A sentence that could apply to any topic does not meet the bar.`;
 
   const reviewsSummary = reviews
-    .map(
-      (r) =>
-        `### ${r.persona_name} (ID: ${r.persona_id})
+    .map((r) => {
+      const refs = Array.isArray(r.cited_references) && r.cited_references.length > 0
+        ? r.cited_references
+            .map((ref) => `  • "${ref.claim}" — ${ref.source ?? "unspecified source"}`)
+            .join("\n")
+        : "  (none)";
+      return `### ${r.persona_name} (ID: ${r.persona_id})
 ${buildScoresLine(r, dimensions)}
 Review: ${r.review_text}
 Strengths: ${r.strengths.join(", ")}
-Weaknesses: ${r.weaknesses.join(", ")}`
-    )
+Weaknesses: ${r.weaknesses.join(", ")}
+Citations they made:
+${refs}`;
+    })
     .join("\n\n");
 
   const prompt = `Generate a comprehensive discussion synthesis report for this topic.

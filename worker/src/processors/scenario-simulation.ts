@@ -10,6 +10,9 @@ export interface ReviewForSimulation {
   persona_name: string;
   // Product mode: numeric scores; topic mode: stance strings keyed by dynamic dimension
   scores: EvaluationScores | Record<string, string>;
+  review_text: string;
+  strengths: string[];
+  weaknesses: string[];
 }
 
 /** Simulate social dynamics among personas discussing the topic. */
