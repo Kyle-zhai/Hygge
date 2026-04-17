@@ -13,6 +13,7 @@ import { generateOpinionDrift } from "./opinion-drift.js";
 import { runRoundTableDebate } from "./round-table-debate.js";
 import type { Persona } from "../types/persona.js";
 import type { TopicClassification } from "../types/evaluation.js";
+import { log, withTiming } from "../utils/logger.js";
 
 interface EvaluationJobData {
   evaluationId: string;
@@ -29,6 +30,10 @@ interface EvaluationJobData {
 export async function processEvaluation(job: Job<EvaluationJobData>) {
   const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId } = job.data;
   const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
+  const startedAt = Date.now();
+  const ctx = { evaluationId, projectId, mode, planTier, personaCount: selectedPersonaIds.length };
+
+  log.info("orchestrator.start", { ...ctx, hasAttachments: !!attachments?.length, hasUrl: !!url, isComparison: !!comparisonBaseId });
 
   try {
     // 1. Update status to processing
@@ -69,7 +74,11 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
             const text = ast.toText().slice(0, 8000);
             attachmentDescriptions.push(`[Document: ${filename}]\n${text}`);
           } catch (parseErr) {
-            console.error(`[${evaluationId}] Failed to parse ${filename}:`, parseErr);
+            log.warn("orchestrator.attachment.parse_failed", {
+              ...ctx,
+              filename,
+              error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+            });
             attachmentDescriptions.push(`[Document: ${filename} — could not extract text]`);
           }
         } else {
@@ -102,10 +111,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         throw new Error("Base evaluation has no topic_classification for compare");
       }
       classification = baseEval.topic_classification as TopicClassification;
-      parsedData = await parseTask;
+      parsedData = await withTiming("orchestrator.parse_project", ctx, () => parseTask);
     } else {
-      const classifyTask = classifyTopic(llm, rawInput);
-      const [pd, cl] = await Promise.all([parseTask, classifyTask]);
+      const [pd, cl] = await Promise.all([
+        withTiming("orchestrator.parse_project", ctx, () => parseTask),
+        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(llm, rawInput)),
+      ]);
       parsedData = pd;
       classification = cl;
     }
@@ -113,7 +124,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     await supabase.from("projects").update({ parsed_data: parsedData }).eq("id", projectId);
 
     const dimensions = classification.dimensions;
-    console.log(`[${evaluationId}] Topic type: ${classification.topic_type}, dimensions: ${dimensions.map(d => d.key).join(", ")}${comparisonBaseId ? " (reused from base)" : ""}`);
+    log.info("orchestrator.classified", {
+      ...ctx,
+      topicType: classification.topic_type,
+      dimensions: dimensions.map((d) => d.key),
+      reusedFromBase: !!comparisonBaseId,
+    });
     await supabase.from("evaluations").update({ topic_classification: classification }).eq("id", evaluationId);
 
     // 4. Fetch selected personas
@@ -135,10 +151,15 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     let completedCount = 0;
     const personaList = personas as Persona[];
+    const reviewsStartedAt = Date.now();
 
     const batchResults = await Promise.all(
       personaList.map(async (persona) => {
-        const review = await generatePersonaReview(llm, persona, parsedData, rawInput, dimensions, mode);
+        const review = await withTiming(
+          "orchestrator.persona_review",
+          { ...ctx, personaId: persona.id, personaName: persona.identity.name },
+          () => generatePersonaReview(llm, persona, parsedData, rawInput, dimensions, mode),
+        );
 
         await supabase.from("persona_reviews").insert({
           evaluation_id: evaluationId,
@@ -163,31 +184,56 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       })
     );
     reviews.push(...batchResults);
+    log.info("orchestrator.reviews_done", {
+      ...ctx,
+      reviewCount: reviews.length,
+      durationMs: Date.now() - reviewsStartedAt,
+    });
 
     // 6. Summary report, scenario sim, and opinion drift all depend on reviews
     //    but are independent of each other — run them in parallel.
-    console.log(`[${evaluationId}] Running summary + sim + drift + debate in parallel...`);
-    const summaryTask = mode === "topic" && dimensions
-      ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
-      : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions);
+    log.info("orchestrator.synthesis_start", { ...ctx });
+    const summaryTask = withTiming(
+      mode === "topic" ? "orchestrator.topic_summary" : "orchestrator.summary",
+      ctx,
+      () =>
+        mode === "topic" && dimensions
+          ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
+          : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions),
+    );
 
     const scenarioTask = planTier === "max"
-      ? runScenarioSimulation(llm, personas as Persona[], reviews).catch((simError) => {
-          console.error(`[${evaluationId}] Scenario simulation failed, skipping:`, simError);
+      ? withTiming("orchestrator.scenario_sim", ctx, () =>
+          runScenarioSimulation(llm, personas as Persona[], reviews),
+        ).catch((simError) => {
+          log.warn("orchestrator.scenario_sim.skipped", {
+            ...ctx,
+            error: simError instanceof Error ? simError.message : String(simError),
+          });
           return null;
         })
       : Promise.resolve(null);
 
     const driftTask = planTier === "pro" || planTier === "max"
-      ? generateOpinionDrift(llm, personas as Persona[], reviews).catch((driftError) => {
-          console.error(`[${evaluationId}] Opinion drift failed, skipping:`, driftError);
+      ? withTiming("orchestrator.opinion_drift", ctx, () =>
+          generateOpinionDrift(llm, personas as Persona[], reviews),
+        ).catch((driftError) => {
+          log.warn("orchestrator.opinion_drift.skipped", {
+            ...ctx,
+            error: driftError instanceof Error ? driftError.message : String(driftError),
+          });
           return null;
         })
       : Promise.resolve(null);
 
     const debateTask = planTier === "max"
-      ? runRoundTableDebate(llm, personaList, reviews).catch((debateError) => {
-          console.error(`[${evaluationId}] Round table debate failed, skipping:`, debateError);
+      ? withTiming("orchestrator.round_table", ctx, () =>
+          runRoundTableDebate(llm, personaList, reviews),
+        ).catch((debateError) => {
+          log.warn("orchestrator.round_table.skipped", {
+            ...ctx,
+            error: debateError instanceof Error ? debateError.message : String(debateError),
+          });
           return null;
         })
       : Promise.resolve(null);
@@ -196,7 +242,12 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     summaryReport.scenario_simulation = simulation;
     summaryReport.round_table_debate = debate;
     summaryReport.opinion_drift = drift && drift.length > 0 ? drift : null;
-    console.log(`[${evaluationId}] Summary + sim + drift + debate complete (${drift?.length ?? 0} drift, debate: ${debate ? "yes" : "no"})`);
+    log.info("orchestrator.synthesis_done", {
+      ...ctx,
+      driftCount: drift?.length ?? 0,
+      hasDebate: !!debate,
+      hasSimulation: !!simulation,
+    });
 
     await job.updateProgress(95);
 
@@ -213,10 +264,15 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     await supabase.from("evaluations").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", evaluationId);
 
     await job.updateProgress(100);
+    log.info("orchestrator.complete", { ...ctx, durationMs: Date.now() - startedAt });
     return { success: true, evaluationId };
   } catch (error: any) {
-    console.error(`[${evaluationId}] EVALUATION FAILED:`, error?.message || error);
-    console.error(`[${evaluationId}] Stack:`, error?.stack);
+    log.error("orchestrator.failed", {
+      ...ctx,
+      durationMs: Date.now() - startedAt,
+      error: error?.message ?? String(error),
+      stack: error?.stack,
+    });
     await supabase.from("evaluations").update({ status: "failed" }).eq("id", evaluationId);
     throw error;
   }

@@ -4,8 +4,9 @@ import { config } from "./config.js";
 import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
+import { log } from "./utils/logger.js";
 
-console.log("Starting Hygge discussion worker...");
+log.info("worker.starting", { node: process.version, pid: process.pid });
 
 let redisUrl = config.redis.url;
 if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
@@ -33,36 +34,57 @@ const debateWorker = new Worker("debate-response", processDebateResponse, {
   drainDelay: 5,
 });
 
-evaluationWorker.on("completed", (job) => {
-  console.log(`[evaluation] Job ${job.id} completed for ${job.data.evaluationId}`);
-});
-evaluationWorker.on("failed", (job, err) => {
-  console.error(`[evaluation] Job ${job?.id} failed:`, err.message);
-});
+function jobDuration(job: { processedOn?: number; finishedOn?: number }): number | undefined {
+  if (!job.processedOn) return undefined;
+  const end = job.finishedOn ?? Date.now();
+  return end - job.processedOn;
+}
 
-personaWorker.on("completed", (job) => {
-  console.log(`[persona-gen] Job ${job.id} completed`);
-});
-personaWorker.on("failed", (job, err) => {
-  console.error(`[persona-gen] Job ${job?.id} failed:`, err.message);
-});
+function attachLogs(queue: string, worker: Worker) {
+  worker.on("completed", (job) => {
+    log.info("job.completed", {
+      queue,
+      jobId: job.id,
+      durationMs: jobDuration(job),
+      attempts: job.attemptsMade,
+      dataKeys: job.data ? Object.keys(job.data) : [],
+    });
+  });
+  worker.on("failed", (job, err) => {
+    log.error("job.failed", {
+      queue,
+      jobId: job?.id,
+      durationMs: job ? jobDuration(job) : undefined,
+      attempts: job?.attemptsMade,
+      error: err.message,
+    });
+  });
+  worker.on("stalled", (jobId) => {
+    log.warn("job.stalled", { queue, jobId });
+  });
+  worker.on("ready", () => log.info("worker.ready", { queue }));
+  worker.on("error", (err) => log.error("worker.error", { queue, error: err.message }));
+}
 
-debateWorker.on("completed", (job) => {
-  console.log(`[debate] Job ${job.id} completed for debate ${job.data.debateId}`);
-});
-debateWorker.on("failed", (job, err) => {
-  console.error(`[debate] Job ${job?.id} failed:`, err.message);
-});
+attachLogs("evaluations", evaluationWorker);
+attachLogs("persona-generation", personaWorker);
+attachLogs("debate-response", debateWorker);
 
-evaluationWorker.on("ready", () => console.log("Evaluation worker ready."));
-personaWorker.on("ready", () => console.log("Persona generation worker ready."));
-debateWorker.on("ready", () => console.log("Debate response worker ready."));
-
-async function shutdown() {
-  console.log("Shutting down workers...");
+async function shutdown(signal: string) {
+  log.info("worker.shutdown", { signal });
   await Promise.all([evaluationWorker.close(), personaWorker.close(), debateWorker.close()]);
   process.exit(0);
 }
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+process.on("unhandledRejection", (reason) => {
+  log.error("process.unhandled_rejection", {
+    error: reason instanceof Error ? reason.message : String(reason),
+  });
+});
+process.on("uncaughtException", (err) => {
+  log.error("process.uncaught_exception", { error: err.message, stack: err.stack });
+  // Intentionally do NOT exit — BullMQ worker stability matters more than a single bad job
+});
