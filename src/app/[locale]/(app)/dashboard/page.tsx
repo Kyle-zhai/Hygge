@@ -8,6 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
 import { PersonaAvatar } from "@/components/persona-avatar";
+import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay";
 
 type Mode = "topic" | "product";
 
@@ -71,7 +72,7 @@ export default async function DashboardPage() {
   const [subRes, evalsRes, customCountRes, allTimeCountRes] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("plan, evaluations_used, evaluations_limit, current_period_end")
+      .select("plan, evaluations_used, evaluations_limit, current_period_end, onboarding_completed_at")
       .eq("user_id", user.id)
       .single(),
     supabase
@@ -147,8 +148,12 @@ export default async function DashboardPage() {
     ? { free: "免费版", pro: "Pro 版", max: "Max 版" }[planKey]
     : { free: "Free", pro: "Pro", max: "Max" }[planKey];
 
+  const showOnboarding =
+    subRes.data !== null && subRes.data?.onboarding_completed_at == null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-10">
+      {showOnboarding && <OnboardingOverlay />}
       {/* Header */}
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
