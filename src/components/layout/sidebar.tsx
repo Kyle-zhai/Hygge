@@ -728,6 +728,22 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                   <span>Sign out</span>
                 </button>
               </div>
+
+              <div className="mx-3 border-t border-[#2A2A2A]" />
+
+              <div className="flex items-center justify-center gap-3 px-3 py-2 text-[10px] text-[#666462]">
+                <Link href={`/${locale}/legal/terms`} className="hover:text-[#9B9594]" onClick={() => setUserMenuOpen(false)}>
+                  Terms
+                </Link>
+                <span>·</span>
+                <Link href={`/${locale}/legal/privacy`} className="hover:text-[#9B9594]" onClick={() => setUserMenuOpen(false)}>
+                  Privacy
+                </Link>
+                <span>·</span>
+                <Link href={`/${locale}/legal/cookies`} className="hover:text-[#9B9594]" onClick={() => setUserMenuOpen(false)}>
+                  Cookies
+                </Link>
+              </div>
             </motion.div>
           </>
         )}

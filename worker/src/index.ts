@@ -1,3 +1,4 @@
+import { Sentry, sentryEnabled } from "./sentry.js";
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
 import { config } from "./config.js";
@@ -5,6 +6,7 @@ import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
 import { startHttpServer } from "./http-server.js";
+import { supabase } from "./supabase.js";
 import { log } from "./utils/logger.js";
 
 log.info("worker.starting", { node: process.version, pid: process.pid });
@@ -59,6 +61,35 @@ function attachLogs(queue: string, worker: Worker) {
       attempts: job?.attemptsMade,
       error: err.message,
     });
+
+    if (sentryEnabled) {
+      Sentry.captureException(err, {
+        tags: { queue, jobId: String(job?.id ?? "unknown") },
+        extra: { attempts: job?.attemptsMade, data: job?.data },
+      });
+    }
+
+    if (queue === "evaluations" && job?.data?.evaluationId) {
+      const evaluationId = job.data.evaluationId as string;
+      supabase
+        .from("evaluations")
+        .update({
+          status: "failed",
+          error_message: err.message.slice(0, 2000),
+          failed_at: new Date().toISOString(),
+        })
+        .eq("id", evaluationId)
+        .then(({ error }) => {
+          if (error) {
+            log.error("job.failed.db_update_failed", {
+              queue,
+              jobId: job.id,
+              evaluationId,
+              error: error.message,
+            });
+          }
+        });
+    }
   });
   worker.on("stalled", (jobId) => {
     log.warn("job.stalled", { queue, jobId });
@@ -91,8 +122,12 @@ process.on("unhandledRejection", (reason) => {
   log.error("process.unhandled_rejection", {
     error: reason instanceof Error ? reason.message : String(reason),
   });
+  if (sentryEnabled) {
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+  }
 });
 process.on("uncaughtException", (err) => {
   log.error("process.uncaught_exception", { error: err.message, stack: err.stack });
+  if (sentryEnabled) Sentry.captureException(err);
   // Intentionally do NOT exit — BullMQ worker stability matters more than a single bad job
 });
