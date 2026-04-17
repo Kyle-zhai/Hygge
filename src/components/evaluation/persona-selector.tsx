@@ -10,6 +10,7 @@ import {
   Wrench, TrendingUp, Lightbulb, Shield,
   HeartPulse, Users, Brain, Cog,
   SlidersHorizontal, CalendarRange, UserRound, Wallet,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -104,6 +105,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [recommendedIds, setRecommendedIds] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [preferredIds, setPreferredIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // Filters — special values: "my_saved", "my_custom"
@@ -144,12 +146,13 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         }),
         fetch("/api/squads"),
       ]);
-      const { personas: rawPersonas, savedIds: fetchedSavedIds } = await personasRes.json();
+      const { personas: rawPersonas, savedIds: fetchedSavedIds, preferredIds: fetchedPreferredIds } = await personasRes.json();
       const { recommended_ids } = await recommendRes.json();
       const validCategories = mode === "topic" ? ["general", "custom"] : ["technical", "product", "design", "end_user", "business", "custom"];
       const allPersonas = (rawPersonas || []).filter((p: PersonaData) => validCategories.includes(p.category));
       setPersonas(allPersonas);
       setSavedIds(new Set<string>(fetchedSavedIds || []));
+      setPreferredIds(new Set<string>(fetchedPreferredIds || []));
       const recSet = new Set<string>(recommended_ids || []);
       setRecommendedIds(recSet);
       setSelectedIds(new Set((recommended_ids || []).slice(0, maxPersonas)));
@@ -244,14 +247,16 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       if (incomeFilters.size > 0 && !incomeFilters.has(p.demographics.income_level)) return false;
       return true;
     });
-    // Sort: recommended first (AI picks are what the user wants to see on entry),
+    // Sort: preferred personas (thumbs-up history) first, then recommended,
     // then saved, then the rest — stable within each bucket.
     return pool.slice().sort((a, b) => {
       const score = (p: PersonaData) =>
-        (recommendedIds.has(p.id) ? 2 : 0) + (savedIds.has(p.id) ? 1 : 0);
+        (preferredIds.has(p.id) ? 4 : 0) +
+        (recommendedIds.has(p.id) ? 2 : 0) +
+        (savedIds.has(p.id) ? 1 : 0);
       return score(b) - score(a);
     });
-  }, [personas, isTopic, activeCategory, savedIds, recommendedIds, selectedDomain, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
+  }, [personas, isTopic, activeCategory, savedIds, preferredIds, recommendedIds, selectedDomain, selectedSubDomain, selectedDimensions, selectedProductCategory, selectedProductTraits, ageFilters, genderFilters, incomeFilters]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -651,6 +656,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           const isSelected = selectedIds.has(persona.id);
           const isRecommended = recommendedIds.has(persona.id);
           const isSaved = savedIds.has(persona.id);
+          const isPreferred = preferredIds.has(persona.id);
           const isCustom = persona.is_custom;
           const localized = persona.identity.locale_variants[locale as "zh" | "en"] || persona.identity.locale_variants.en;
           const tags = persona.identity.tags;
@@ -671,6 +677,12 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-sm text-[#EAEAE8] truncate">{localized.name}</span>
                       {isCustom && <User className="h-3 w-3 shrink-0 text-[#C4A882]" />}
+                      {isPreferred && (
+                        <Star
+                          className="h-3 w-3 shrink-0 fill-[#C4A882] text-[#C4A882]"
+                          aria-label={locale === "zh" ? "你偏好的视角" : "You preferred"}
+                        />
+                      )}
                       {isSaved && <Heart className="h-3 w-3 shrink-0 text-[#C4A882]" />}
                       {isRecommended && <Sparkles className="h-3 w-3 shrink-0 text-[#E2DDD5]" />}
                       {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}

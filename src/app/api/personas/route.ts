@@ -16,14 +16,21 @@ export async function GET() {
   }
 
   let savedIds: string[] = [];
+  let preferredIds: string[] = [];
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
-    const { data: saves } = await supabase
-      .from("persona_saves")
-      .select("persona_id")
-      .eq("user_id", user.id);
-    savedIds = (saves || []).map((s: { persona_id: string }) => s.persona_id);
+    const [savesRes, prefsRes] = await Promise.all([
+      supabase.from("persona_saves").select("persona_id").eq("user_id", user.id),
+      supabase
+        .from("persona_user_preferences")
+        .select("persona_id, net_score")
+        .eq("user_id", user.id)
+        .gt("net_score", 0)
+        .order("net_score", { ascending: false }),
+    ]);
+    savedIds = (savesRes.data || []).map((s: { persona_id: string }) => s.persona_id);
+    preferredIds = (prefsRes.data || []).map((p: { persona_id: string }) => p.persona_id);
   }
 
-  return NextResponse.json({ personas, savedIds });
+  return NextResponse.json({ personas, savedIds, preferredIds });
 }
