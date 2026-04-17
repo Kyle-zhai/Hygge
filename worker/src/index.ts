@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
+import { startHttpServer } from "./http-server.js";
 import { log } from "./utils/logger.js";
 
 log.info("worker.starting", { node: process.version, pid: process.pid });
@@ -70,9 +71,16 @@ attachLogs("evaluations", evaluationWorker);
 attachLogs("persona-generation", personaWorker);
 attachLogs("debate-response", debateWorker);
 
+const httpServer = startHttpServer();
+
 async function shutdown(signal: string) {
   log.info("worker.shutdown", { signal });
-  await Promise.all([evaluationWorker.close(), personaWorker.close(), debateWorker.close()]);
+  await Promise.all([
+    evaluationWorker.close(),
+    personaWorker.close(),
+    debateWorker.close(),
+    new Promise<void>((resolve) => httpServer.close(() => resolve())),
+  ]);
   process.exit(0);
 }
 

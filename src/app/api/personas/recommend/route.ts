@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
   const { data: personas } = await supabase
     .from("personas")
-    .select("*")
+    .select("id, identity, demographics, evaluation_lens")
     .eq("is_active", true)
     .in("category", validCategories);
 
@@ -29,41 +29,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ recommended_ids: [], reasoning: "No personas available" });
   }
 
+  const personaSummaries = personas.map((p: any) => ({
+    id: p.id,
+    name: p.identity.name,
+    occupation: p.demographics.occupation,
+    primary_question: p.evaluation_lens.primary_question,
+  }));
+
+  const workerUrl = process.env.WORKER_URL;
+  const workerSecret = process.env.WORKER_SHARED_SECRET;
+
+  if (!workerUrl || !workerSecret) {
+    return NextResponse.json({
+      recommended_ids: personas.slice(0, 5).map((p: any) => p.id),
+      reasoning: "Default recommendation (worker not configured)",
+    });
+  }
+
   try {
-    const baseURL = process.env.LLM_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1";
-    const apiKey = process.env.LLM_API_KEY || "";
-    const model = process.env.LLM_MODEL || "qwen-max";
-
-    const personaList = personas.map((p: any) =>
-      `- ID: ${p.id} | ${p.identity.name} | ${p.demographics.occupation} | Focus: ${p.evaluation_lens.primary_question}`
-    ).join("\n");
-
-    const llmResponse = await fetch(`${baseURL}/chat/completions`, {
+    const workerRes = await fetch(`${workerUrl.replace(/\/$/, "")}/recommend`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "x-worker-secret": workerSecret,
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1024,
-        messages: [
-          { role: "system", content: `You are a focus group coordinator. Given a project description and a list of available personas, recommend 5-8 of the most relevant personas.\nConsider: target audience match, diverse perspectives, relevant expertise.\nRespond ONLY with valid JSON: { "recommended_ids": ["id1", "id2", ...], "reasoning": "brief explanation" }` },
-          { role: "user", content: `Project: ${projectDescription}\n\nAvailable personas:\n${personaList}` },
-        ],
-      }),
+      body: JSON.stringify({ projectDescription, personas: personaSummaries }),
+      signal: AbortSignal.timeout(30_000),
     });
 
-    if (!llmResponse.ok) throw new Error(`LLM error ${llmResponse.status}`);
-    const data = await llmResponse.json();
-    let text = data.choices?.[0]?.message?.content ?? "";
-    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) text = fenceMatch[1].trim();
-    return NextResponse.json(JSON.parse(text));
-  } catch (error) {
+    if (!workerRes.ok) throw new Error(`Worker error ${workerRes.status}`);
+    return NextResponse.json(await workerRes.json());
+  } catch {
     return NextResponse.json({
       recommended_ids: personas.slice(0, 5).map((p: any) => p.id),
-      reasoning: "Default recommendation (LLM unavailable)",
+      reasoning: "Default recommendation (worker unavailable)",
     });
   }
 }
