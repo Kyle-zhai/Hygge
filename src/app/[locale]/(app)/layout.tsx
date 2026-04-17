@@ -60,8 +60,9 @@ export default async function AppLayout({
   let evaluationsUsed = 0;
   let evaluationsLimit = PLANS.free.evaluationsLimit;
 
+  let isBYOK = false;
   if (user) {
-    const [{ data: projects }, { data: subscription }, { data: debates }] = await Promise.all([
+    const [{ data: projects }, { data: subscription }, { data: debates }, { data: llm }] = await Promise.all([
       supabase
         .from("projects")
         .select("id, raw_input, parsed_data, created_at, evaluations (id, status, mode, comparison_base_id)")
@@ -79,7 +80,13 @@ export default async function AppLayout({
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
         .limit(10),
+      supabase
+        .from("user_llm_settings")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
+    isBYOK = !!llm;
 
     if (projects) {
       history = (projects as unknown as ProjectRow[]).map((p) => {
@@ -160,9 +167,10 @@ export default async function AppLayout({
       <Sidebar
         userEmail={user?.email ?? null}
         history={history}
-        plan={plan}
+        plan={isBYOK ? "byok" : plan}
         evaluationsUsed={evaluationsUsed}
         evaluationsLimit={evaluationsLimit}
+        isBYOK={isBYOK}
       />
       <main className="min-w-0 flex-1 md:ml-[260px] transition-[margin-left] duration-300">
         {children}

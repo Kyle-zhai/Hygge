@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { PLANS } from "@/lib/stripe/plans";
+import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
@@ -51,24 +51,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "rawInput and selectedPersonaIds are required" }, { status: 400 });
   }
 
-  // Check subscription limits
-  const { data: subscription } = await supabase
-    .from("subscriptions").select("*").eq("user_id", user.id).single();
-
-  if (!subscription) {
+  const effective = await fetchEffectivePlan(supabase, user.id);
+  if (!effective) {
     return NextResponse.json({ error: "No subscription found" }, { status: 403 });
   }
 
-  if (subscription.evaluations_used >= subscription.evaluations_limit) {
+  if (!effective.skipQuota && effective.evaluationsUsed >= effective.evaluationsLimit) {
     return NextResponse.json({ error: "Monthly evaluation limit reached" }, { status: 429 });
   }
 
-  const planConfig = PLANS[subscription.plan as keyof typeof PLANS];
-  if (!planConfig) {
-    return NextResponse.json({ error: `Unknown plan: ${subscription.plan}` }, { status: 500 });
-  }
-  if (selectedPersonaIds.length > planConfig.maxPersonas) {
-    return NextResponse.json({ error: `Maximum ${planConfig.maxPersonas} personas allowed on ${subscription.plan} plan` }, { status: 400 });
+  if (selectedPersonaIds.length > effective.maxPersonas) {
+    return NextResponse.json(
+      { error: `Maximum ${effective.maxPersonas} personas allowed on ${effective.name} plan` },
+      { status: 400 },
+    );
   }
 
   // Create project
@@ -87,8 +83,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: evalError.message }, { status: 500 });
   }
 
-  // Increment usage
-  await supabase.from("subscriptions").update({ evaluations_used: subscription.evaluations_used + 1 }).eq("id", subscription.id);
+  if (!effective.skipQuota) {
+    await supabase
+      .from("subscriptions")
+      .update({ evaluations_used: effective.evaluationsUsed + 1 })
+      .eq("user_id", user.id);
+  }
 
   const llmOverrides = await fetchUserLLMOverrides(user.id);
 
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       url: url || undefined,
       attachments: attachments || [],
       selectedPersonaIds,
-      planTier: subscription.plan,
+      planTier: effective.name,
       mode: mode || "product",
       llmOverrides: llmOverrides ?? undefined,
     });

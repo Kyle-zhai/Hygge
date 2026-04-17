@@ -1,8 +1,11 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
+export type LLMProviderType = "openai_compatible" | "anthropic" | "google";
+
 export interface LLMOverrides {
+  providerType: LLMProviderType;
   apiKey: string;
-  baseURL: string;
+  baseURL?: string;
   model: string;
   visionModel?: string;
 }
@@ -18,14 +21,17 @@ export async function fetchUserLLMOverrides(userId: string): Promise<LLMOverride
 
   const { data } = await admin
     .from("user_llm_settings")
-    .select("api_key, base_url, model, vision_model")
+    .select("api_key, base_url, model, vision_model, provider_type")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data) return null;
+
+  const providerType = (data.provider_type as LLMProviderType | null) ?? "openai_compatible";
   return {
+    providerType,
     apiKey: data.api_key,
-    baseURL: data.base_url,
+    baseURL: data.base_url || undefined,
     model: data.model,
     visionModel: data.vision_model ?? undefined,
   };

@@ -48,9 +48,10 @@ interface SidebarProps {
   plan: string;
   evaluationsUsed: number;
   evaluationsLimit: number;
+  isBYOK?: boolean;
 }
 
-export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluationsLimit }: SidebarProps) {
+export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluationsLimit, isBYOK }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -664,23 +665,47 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               {/* Plan + Credits */}
               <div className="px-4 py-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs text-[#666462]">Credits Left</span>
-                  <span className="rounded-md bg-[#1C1C1C] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#C4A882]">
-                    {plan}
+                  <span className="text-xs text-[#666462]">
+                    {isBYOK ? (locale === "zh" ? "使用自带密钥" : "Using your own key") : "Credits Left"}
+                  </span>
+                  <span
+                    className={
+                      isBYOK
+                        ? "rounded-md border border-[#C4A882]/40 bg-[#C4A882]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#C4A882]"
+                        : "rounded-md bg-[#1C1C1C] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[#C4A882]"
+                    }
+                  >
+                    {isBYOK ? "BYOK" : plan}
                   </span>
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-lg font-semibold text-[#EAEAE8]">
-                    {evaluationsLimit - evaluationsUsed}
-                  </span>
-                  <span className="text-xs text-[#666462]">/ {evaluationsLimit}</span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1C1C1C]">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#C4A882] to-[#8B7355] transition-all duration-300"
-                    style={{ width: `${Math.max(2, ((evaluationsLimit - evaluationsUsed) / evaluationsLimit) * 100)}%` }}
-                  />
-                </div>
+                {isBYOK ? (
+                  <>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-lg font-semibold text-[#EAEAE8]">∞</span>
+                      <span className="text-xs text-[#666462]">
+                        {locale === "zh" ? "不限次数 · 全部功能解锁" : "Unlimited · all features unlocked"}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1C1C1C]">
+                      <div className="h-full w-full rounded-full bg-gradient-to-r from-[#C4A882] to-[#8B7355]" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-lg font-semibold text-[#EAEAE8]">
+                        {evaluationsLimit - evaluationsUsed}
+                      </span>
+                      <span className="text-xs text-[#666462]">/ {evaluationsLimit}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#1C1C1C]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#C4A882] to-[#8B7355] transition-all duration-300"
+                        style={{ width: `${Math.max(2, ((evaluationsLimit - evaluationsUsed) / evaluationsLimit) * 100)}%` }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mx-3 border-t border-[#2A2A2A]" />

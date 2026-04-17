@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const PROVIDER_TYPES = ["openai_compatible", "anthropic", "google"] as const;
+type ProviderType = (typeof PROVIDER_TYPES)[number];
+
 function maskKey(key: string): string {
   if (!key) return "";
   if (key.length <= 8) return "•".repeat(key.length);
@@ -14,7 +17,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("user_llm_settings")
-    .select("provider_label, base_url, model, vision_model, api_key, updated_at")
+    .select("provider_type, provider_label, base_url, model, vision_model, api_key, updated_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -22,8 +25,9 @@ export async function GET() {
 
   return NextResponse.json({
     settings: {
+      provider_type: (data.provider_type ?? "openai_compatible") as ProviderType,
       provider_label: data.provider_label,
-      base_url: data.base_url,
+      base_url: data.base_url ?? "",
       model: data.model,
       vision_model: data.vision_model,
       api_key_masked: maskKey(data.api_key),
@@ -38,21 +42,30 @@ export async function PUT(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
+  const providerType: ProviderType = PROVIDER_TYPES.includes(body.provider_type)
+    ? body.provider_type
+    : "openai_compatible";
   const providerLabel = typeof body.provider_label === "string" ? body.provider_label.trim() : null;
-  const baseUrl = typeof body.base_url === "string" ? body.base_url.trim() : "";
+  const baseUrlRaw = typeof body.base_url === "string" ? body.base_url.trim() : "";
   const model = typeof body.model === "string" ? body.model.trim() : "";
   const visionModel = typeof body.vision_model === "string" && body.vision_model.trim()
     ? body.vision_model.trim()
     : null;
   const apiKey = typeof body.api_key === "string" ? body.api_key.trim() : "";
 
-  if (!baseUrl || !model || !apiKey) {
+  if (!model || !apiKey) {
     return NextResponse.json(
-      { error: "base_url, model, and api_key are required" },
+      { error: "model and api_key are required" },
       { status: 400 },
     );
   }
-  if (!/^https?:\/\//.test(baseUrl)) {
+  if (providerType === "openai_compatible" && !baseUrlRaw) {
+    return NextResponse.json(
+      { error: "base_url is required for OpenAI-compatible providers" },
+      { status: 400 },
+    );
+  }
+  if (baseUrlRaw && !/^https?:\/\//.test(baseUrlRaw)) {
     return NextResponse.json({ error: "base_url must start with http(s)://" }, { status: 400 });
   }
 
@@ -60,8 +73,9 @@ export async function PUT(request: Request) {
     .from("user_llm_settings")
     .upsert({
       user_id: user.id,
+      provider_type: providerType,
       provider_label: providerLabel,
-      base_url: baseUrl,
+      base_url: baseUrlRaw || null,
       model,
       vision_model: visionModel,
       api_key: apiKey,

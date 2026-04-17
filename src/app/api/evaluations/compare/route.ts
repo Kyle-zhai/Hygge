@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { PLANS } from "@/lib/stripe/plans";
+import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
@@ -53,14 +53,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Base evaluation does not belong to you" }, { status: 403 });
   }
 
-  const { data: subscription } = await supabase
-    .from("subscriptions").select("*").eq("user_id", user.id).single();
-
-  if (!subscription) {
+  const effective = await fetchEffectivePlan(supabase, user.id);
+  if (!effective) {
     return NextResponse.json({ error: "No subscription found" }, { status: 403 });
   }
-
-  if (subscription.evaluations_used >= subscription.evaluations_limit) {
+  if (!effective.skipQuota && effective.evaluationsUsed >= effective.evaluationsLimit) {
     return NextResponse.json({ error: "Monthly evaluation limit reached" }, { status: 429 });
   }
 
@@ -107,7 +104,7 @@ export async function POST(request: Request) {
       url: url || undefined,
       attachments: attachments || [],
       selectedPersonaIds: baseEval.selected_persona_ids,
-      planTier: subscription.plan,
+      planTier: effective.name,
       mode: baseEval.mode || "product",
       comparisonBaseId: baseEvaluationId,
       llmOverrides: llmOverrides ?? undefined,
@@ -119,10 +116,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to enqueue evaluation" }, { status: 500 });
   }
 
-  await supabase
-    .from("subscriptions")
-    .update({ evaluations_used: subscription.evaluations_used + 1 })
-    .eq("id", subscription.id);
+  if (!effective.skipQuota) {
+    await supabase
+      .from("subscriptions")
+      .update({ evaluations_used: effective.evaluationsUsed + 1 })
+      .eq("user_id", user.id);
+  }
 
   return NextResponse.json({ project, evaluation, baseEvaluationId }, { status: 201 });
 }
