@@ -470,7 +470,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       {/* Mobile toggle button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-lg bg-[#0C0C0C]/80 text-[#9B9594] backdrop-blur transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:hidden"
+        className="no-print fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-lg bg-[#0C0C0C]/80 text-[#9B9594] backdrop-blur transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:hidden"
       >
         <PanelLeft className="h-5 w-5" />
       </button>
@@ -479,7 +479,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       {collapsed && (
         <button
           onClick={() => setCollapsed(false)}
-          className="fixed left-3 top-3 z-40 hidden h-9 w-9 items-center justify-center rounded-lg bg-[#0C0C0C]/80 text-[#9B9594] backdrop-blur transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:flex"
+          className="no-print fixed left-3 top-3 z-40 hidden h-9 w-9 items-center justify-center rounded-lg bg-[#0C0C0C]/80 text-[#9B9594] backdrop-blur transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8] md:flex"
         >
           <PanelLeft className="h-5 w-5" />
         </button>
@@ -487,7 +487,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
       {/* Desktop sidebar — fixed */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:flex md:flex-col ${
+        className={`no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:flex md:flex-col ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
       >
@@ -510,7 +510,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               animate={{ x: 0 }}
               exit={{ x: -260 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="fixed inset-y-0 left-0 z-50 w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
+              className="no-print fixed inset-y-0 left-0 z-50 w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
             >
               {sidebarContent}
             </motion.aside>

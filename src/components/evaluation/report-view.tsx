@@ -9,6 +9,7 @@ import { ScenarioSimulationView } from "@/components/evaluation/scenario-simulat
 import { RoundTableDebateView } from "@/components/evaluation/round-table-debate-view";
 import { PersonaChatDrawer } from "@/components/evaluation/persona-chat-drawer";
 import { ShareButton } from "@/components/evaluation/share-button";
+import { PrintButton } from "@/components/evaluation/print-button";
 
 interface PersonaData {
   id: string;
@@ -158,12 +159,11 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
 
   return (
     <>
-      <div className="mx-auto max-w-5xl px-4 py-8 pb-16">
-        {evaluationId && (
-          <div className="flex justify-end mb-4">
-            <ShareButton evaluationId={evaluationId} />
-          </div>
-        )}
+      <div className="mx-auto max-w-5xl px-4 py-8 pb-16 print-page">
+        <div className="flex justify-end gap-2 mb-4 no-print">
+          <PrintButton />
+          {evaluationId && <ShareButton evaluationId={evaluationId} />}
+        </div>
         <ReportTextView
           report={report}
           reviews={reviews}
