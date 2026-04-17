@@ -24,6 +24,7 @@ import {
   BarChart3,
   ListFilter,
   Swords,
+  LayoutDashboard,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -211,6 +212,18 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
       {/* General Discussion + Product Evaluation */}
       <div className="shrink-0 space-y-1 px-3 pt-2 pb-3">
+        <Link
+          href={`/${locale}/dashboard`}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.endsWith("/dashboard") || pathname.includes("/dashboard/")
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
+              : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
+          }`}
+        >
+          <LayoutDashboard className="h-4 w-4" />
+          <span>{locale === "zh" ? "总览" : "Overview"}</span>
+        </Link>
         <Link
           href={`/${locale}/evaluate/new?mode=topic`}
           onClick={() => setMobileOpen(false)}
