@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { useLocale } from "next-intl";
 import { Search, Bookmark, BookmarkCheck, Users, Loader2 } from "lucide-react";
 
 interface MarketplacePersona {
@@ -25,6 +27,7 @@ const TAG_FILTERS = [
 ];
 
 export default function MarketplacePage() {
+  const locale = useLocale();
   const [personas, setPersonas] = useState<MarketplacePersona[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -121,8 +124,9 @@ export default function MarketplacePage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2">
             {personas.map((p) => (
-              <div
+              <Link
                 key={p.id}
+                href={`/${locale}/marketplace/${p.id}`}
                 className="group rounded-xl border border-[#2A2A2A] bg-[#141414] p-5 transition-colors hover:border-[#333]"
               >
                 <div className="mb-3 flex items-start justify-between">
@@ -138,7 +142,11 @@ export default function MarketplacePage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => toggleSave(p.id, p.is_saved)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSave(p.id, p.is_saved);
+                    }}
                     disabled={savingId === p.id}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#C4A882]"
                   >
@@ -169,7 +177,7 @@ export default function MarketplacePage() {
                     {p.uses_count} uses
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
