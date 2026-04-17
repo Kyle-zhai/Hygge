@@ -23,6 +23,7 @@ import {
   Users,
   BookOpen,
 } from "lucide-react";
+import { ReviewFeedback } from "./review-feedback";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Types
@@ -742,6 +743,21 @@ export function ReportTextView({
   const [expandedPersonas, setExpandedPersonas] = useState<Set<string>>(
     new Set()
   );
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, -1 | 0 | 1>>({});
+
+  useEffect(() => {
+    if (!evaluationId) return;
+    let cancelled = false;
+    fetch(`/api/persona-feedback?evaluation_id=${encodeURIComponent(evaluationId)}`)
+      .then((r) => (r.ok ? r.json() : { feedback: {} }))
+      .then((d) => {
+        if (!cancelled && d?.feedback) setFeedbackMap(d.feedback);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [evaluationId]);
 
   // Build persona map once
   const personaMap = useMemo(
@@ -1302,6 +1318,15 @@ export function ReportTextView({
                                       );
                                     })}
                                   </div>
+                                )}
+
+                                {review.id && (
+                                  <ReviewFeedback
+                                    reviewId={review.id}
+                                    personaId={review.persona_id}
+                                    initialValue={feedbackMap[review.id] ?? 0}
+                                    locale={locale}
+                                  />
                                 )}
                               </div>
                             </motion.div>
