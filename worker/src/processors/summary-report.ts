@@ -217,6 +217,7 @@ export interface ReviewForSummary {
   review_text: string;
   strengths: string[];
   weaknesses: string[];
+  cited_references?: Array<{ claim: string; source?: string }> | null;
 }
 
 /** Generate topic-mode synthesis report with consensus_score, synthesis, debate_highlights. */

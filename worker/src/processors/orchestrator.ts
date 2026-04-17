@@ -146,6 +146,8 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       strengths: string[];
       weaknesses: string[];
       llm_model: string;
+      overall_stance?: import("../types/evaluation.js").PersonaStance | null;
+      cited_references?: Array<{ claim: string; source?: string }> | null;
     }> = [];
 
     let completedCount = 0;
@@ -230,7 +232,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     const debateTask = maxLike
       ? withTiming("orchestrator.round_table", ctx, () =>
-          runRoundTableDebate(llm, personaList, reviews),
+          runRoundTableDebate(llm, personaList, reviews, parsedData, rawInput),
         ).catch((debateError) => {
           log.warn("orchestrator.round_table.skipped", {
             ...ctx,
