@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import { OfficeParser } from "officeparser";
 import { supabase } from "../supabase.js";
 import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
+import { buildLLM, buildVisionLLM, type LLMOverrides } from "../llm/factory.js";
 import type { MediaItem } from "../llm/adapter.js";
 import { config } from "../config.js";
 import { parseProject } from "./parse-project.js";
@@ -25,11 +26,12 @@ interface EvaluationJobData {
   planTier: "free" | "pro" | "max";
   mode: "product" | "topic";
   comparisonBaseId?: string;
+  llmOverrides?: LLMOverrides;
 }
 
 export async function processEvaluation(job: Job<EvaluationJobData>) {
-  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId } = job.data;
-  const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
+  const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId, llmOverrides } = job.data;
+  const llm = buildLLM(llmOverrides);
   const startedAt = Date.now();
   const ctx = { evaluationId, projectId, mode, planTier, personaCount: selectedPersonaIds.length };
 
@@ -93,9 +95,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     }
 
     // Use vision model when media attachments are present, text model otherwise
-    const parseLlm = mediaItems.length > 0
-      ? new OpenAICompatibleLLM(config.llm.apiKey, config.llm.visionModel, config.llm.baseURL)
-      : llm;
+    const parseLlm = mediaItems.length > 0 ? buildVisionLLM(llmOverrides) : llm;
     const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems);
 
     let classification: TopicClassification;

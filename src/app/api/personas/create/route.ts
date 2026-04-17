@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 
 let _queue: Queue | null = null;
 function getQueue(): Queue {
@@ -60,6 +61,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "name, occupation, and personality are required" }, { status: 400 });
   }
 
+  const llmOverrides = await fetchUserLLMOverrides(user.id);
+
   try {
     const queue = getQueue();
     const job = await queue.add("generate", {
@@ -70,6 +73,7 @@ export async function POST(request: Request) {
       background,
       importedText,
       avatarUrl,
+      llmOverrides: llmOverrides ?? undefined,
     });
 
     return NextResponse.json({ jobId: job.id, status: "processing" }, { status: 202 });

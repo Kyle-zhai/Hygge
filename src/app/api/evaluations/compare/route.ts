@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 
 let _queue: Queue | null = null;
 function getQueue(): Queue {
@@ -95,6 +96,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: evalError.message }, { status: 500 });
   }
 
+  const llmOverrides = await fetchUserLLMOverrides(user.id);
+
   try {
     const queue = getQueue();
     await queue.add("evaluate", {
@@ -107,6 +110,7 @@ export async function POST(request: Request) {
       planTier: subscription.plan,
       mode: baseEval.mode || "product",
       comparisonBaseId: baseEvaluationId,
+      llmOverrides: llmOverrides ?? undefined,
     });
   } catch (queueError) {
     console.error("Failed to push compare job to queue:", queueError);
