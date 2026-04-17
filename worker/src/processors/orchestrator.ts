@@ -1,7 +1,6 @@
 import type { Job } from "bullmq";
 import { OfficeParser } from "officeparser";
 import { supabase } from "../supabase.js";
-import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
 import { buildLLM, buildVisionLLM, type LLMOverrides } from "../llm/factory.js";
 import type { MediaItem } from "../llm/adapter.js";
 import { config } from "../config.js";
@@ -23,7 +22,7 @@ interface EvaluationJobData {
   url?: string;
   attachments?: string[];
   selectedPersonaIds: string[];
-  planTier: "free" | "pro" | "max";
+  planTier: "free" | "pro" | "max" | "byok";
   mode: "product" | "topic";
   comparisonBaseId?: string;
   llmOverrides?: LLMOverrides;
@@ -202,7 +201,10 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
           : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions),
     );
 
-    const scenarioTask = planTier === "max"
+    const maxLike = planTier === "max" || planTier === "byok";
+    const proLike = maxLike || planTier === "pro";
+
+    const scenarioTask = maxLike
       ? withTiming("orchestrator.scenario_sim", ctx, () =>
           runScenarioSimulation(llm, personas as Persona[], reviews),
         ).catch((simError) => {
@@ -214,7 +216,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         })
       : Promise.resolve(null);
 
-    const driftTask = planTier === "pro" || planTier === "max"
+    const driftTask = proLike
       ? withTiming("orchestrator.opinion_drift", ctx, () =>
           generateOpinionDrift(llm, personas as Persona[], reviews),
         ).catch((driftError) => {
@@ -226,7 +228,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         })
       : Promise.resolve(null);
 
-    const debateTask = planTier === "max"
+    const debateTask = maxLike
       ? withTiming("orchestrator.round_table", ctx, () =>
           runRoundTableDebate(llm, personaList, reviews),
         ).catch((debateError) => {

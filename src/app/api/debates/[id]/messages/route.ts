@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
@@ -23,13 +24,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("plan")
-    .eq("user_id", user.id)
-    .single();
-  if (!sub || sub.plan !== "max") {
-    return NextResponse.json({ error: "1v1 Debate requires Max plan" }, { status: 403 });
+  const effective = await fetchEffectivePlan(supabase, user.id);
+  if (!effective || !effective.features.roundTableDebate) {
+    return NextResponse.json({ error: "1v1 Debate requires Max plan or BYOK" }, { status: 403 });
   }
 
   const { data: debate } = await supabase

@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { Key, Check, Loader2, AlertCircle, Trash2 } from "lucide-react";
 
+type ProviderType = "openai_compatible" | "anthropic" | "google";
+
 interface Preset {
   label: string;
+  providerType: ProviderType;
   baseUrl: string;
   model: string;
   vision?: string;
@@ -14,29 +17,58 @@ interface Preset {
 const PRESETS: Preset[] = [
   {
     label: "Qwen (Aliyun DashScope)",
+    providerType: "openai_compatible",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen-max",
     vision: "qwen3.5-omni-plus",
   },
   {
     label: "DeepSeek",
+    providerType: "openai_compatible",
     baseUrl: "https://api.deepseek.com/v1",
     model: "deepseek-chat",
   },
   {
     label: "OpenAI",
+    providerType: "openai_compatible",
     baseUrl: "https://api.openai.com/v1",
     model: "gpt-4o",
     vision: "gpt-4o",
   },
   {
     label: "OpenRouter",
+    providerType: "openai_compatible",
     baseUrl: "https://openrouter.ai/api/v1",
     model: "openrouter/auto",
   },
+  {
+    label: "Anthropic Claude",
+    providerType: "anthropic",
+    baseUrl: "",
+    model: "claude-sonnet-4-6",
+    vision: "claude-sonnet-4-6",
+  },
+  {
+    label: "Google Gemini",
+    providerType: "google",
+    baseUrl: "",
+    model: "gemini-2.5-pro",
+    vision: "gemini-2.5-pro",
+  },
+];
+
+const PROVIDER_OPTIONS: { value: ProviderType; label: string; hint: string }[] = [
+  {
+    value: "openai_compatible",
+    label: "OpenAI-compatible",
+    hint: "OpenAI / Qwen / DeepSeek / OpenRouter / 自建代理",
+  },
+  { value: "anthropic", label: "Anthropic Claude", hint: "Messages API · x-api-key" },
+  { value: "google", label: "Google Gemini", hint: "Generative Language API · key query param" },
 ];
 
 interface LoadedSettings {
+  provider_type: ProviderType;
   provider_label: string | null;
   base_url: string;
   model: string;
@@ -56,6 +88,7 @@ export default function LLMSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [providerType, setProviderType] = useState<ProviderType>("openai_compatible");
   const [providerLabel, setProviderLabel] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [model, setModel] = useState("");
@@ -68,8 +101,9 @@ export default function LLMSettingsPage() {
       .then((d) => {
         if (d.settings) {
           setSaved(d.settings);
+          setProviderType(d.settings.provider_type ?? "openai_compatible");
           setProviderLabel(d.settings.provider_label ?? "");
-          setBaseUrl(d.settings.base_url);
+          setBaseUrl(d.settings.base_url ?? "");
           setModel(d.settings.model);
           setVisionModel(d.settings.vision_model ?? "");
         }
@@ -78,6 +112,7 @@ export default function LLMSettingsPage() {
   }, []);
 
   function applyPreset(p: Preset) {
+    setProviderType(p.providerType);
     setProviderLabel(p.label);
     setBaseUrl(p.baseUrl);
     setModel(p.model);
@@ -87,8 +122,12 @@ export default function LLMSettingsPage() {
   async function handleSave() {
     setError(null);
     setSuccess(false);
-    if (!baseUrl || !model || !apiKey) {
-      setError(zh ? "请填写 Base URL、Model 和 API Key" : "Base URL, Model, and API Key are required");
+    if (!model || !apiKey) {
+      setError(zh ? "请填写 Model 和 API Key" : "Model and API Key are required");
+      return;
+    }
+    if (providerType === "openai_compatible" && !baseUrl) {
+      setError(zh ? "OpenAI 兼容接口需要填写 Base URL" : "OpenAI-compatible providers require a Base URL");
       return;
     }
     setSaving(true);
@@ -96,6 +135,7 @@ export default function LLMSettingsPage() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        provider_type: providerType,
         provider_label: providerLabel || null,
         base_url: baseUrl,
         model,
@@ -117,11 +157,12 @@ export default function LLMSettingsPage() {
   }
 
   async function handleDelete() {
-    if (!confirm(zh ? "确定要删除自定义 LLM 配置？将恢复为默认 Qwen。" : "Remove your custom LLM config and revert to the default Qwen?")) return;
+    if (!confirm(zh ? "确定要删除自定义 LLM 配置？将恢复为默认并回到免费额度。" : "Remove your custom LLM config and revert to the default plan?")) return;
     setDeleting(true);
     await fetch("/api/settings/llm", { method: "DELETE" });
     setDeleting(false);
     setSaved(null);
+    setProviderType("openai_compatible");
     setProviderLabel("");
     setBaseUrl("");
     setModel("");
@@ -129,6 +170,14 @@ export default function LLMSettingsPage() {
     setApiKey("");
     setSuccess(false);
   }
+
+  const baseUrlRequired = providerType === "openai_compatible";
+  const baseUrlPlaceholder =
+    providerType === "anthropic"
+      ? "https://api.anthropic.com (默认，可留空)"
+      : providerType === "google"
+      ? "https://generativelanguage.googleapis.com (默认，可留空)"
+      : "https://api.example.com/v1";
 
   if (loading) {
     return (
@@ -146,8 +195,13 @@ export default function LLMSettingsPage() {
         </h1>
         <p className="mt-1 text-sm text-[#9B9594]">
           {zh
-            ? "使用你自己的 API 密钥（BYOK）— 支持任何 OpenAI 兼容接口。"
-            : "Bring your own API key (BYOK) — works with any OpenAI-compatible endpoint."}
+            ? "使用你自己的 API 密钥（BYOK）— 支持任何模型：OpenAI 兼容、Anthropic Claude、Google Gemini。"
+            : "Bring your own API key (BYOK) — supports OpenAI-compatible, Anthropic Claude, and Google Gemini."}
+        </p>
+        <p className="mt-2 rounded-lg border border-[#C4A882]/30 bg-[#C4A882]/5 px-3 py-2 text-xs text-[#C4A882]">
+          {zh
+            ? "✨ 配置自己的密钥后即刻解锁全部高级功能，且不占用每月额度。"
+            : "✨ Saving a key unlocks every premium feature and removes the monthly quota."}
         </p>
       </div>
 
@@ -156,10 +210,10 @@ export default function LLMSettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-[#C4A882] mb-1">
-                {zh ? "当前生效" : "Active"}
+                {zh ? "当前生效" : "Active"} · {saved.provider_type}
               </p>
               <p className="text-sm text-[#EAEAE8] truncate">
-                {saved.provider_label || saved.base_url}
+                {saved.provider_label || saved.base_url || saved.provider_type}
               </p>
               <p className="text-xs text-[#9B9594] mt-1">
                 {saved.model} · {zh ? "密钥" : "key"}: {saved.api_key_masked}
@@ -197,37 +251,81 @@ export default function LLMSettingsPage() {
       </div>
 
       <div className="space-y-4">
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-[#9B9594]">
+            {zh ? "供应商类型" : "Provider type"} <span className="text-[#F87171]">*</span>
+          </span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {PROVIDER_OPTIONS.map((opt) => {
+              const active = providerType === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setProviderType(opt.value)}
+                  className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                    active
+                      ? "border-[#C4A882]/60 bg-[#C4A882]/10 text-[#EAEAE8]"
+                      : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{opt.label}</div>
+                  <div className="text-[11px] text-[#666462]">{opt.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+        </label>
+
         <Field
           label={zh ? "标签（可选）" : "Label (optional)"}
           value={providerLabel}
           onChange={setProviderLabel}
-          placeholder="Qwen / OpenAI / DeepSeek ..."
+          placeholder="Qwen / Claude / Gemini ..."
         />
         <Field
           label="Base URL"
           value={baseUrl}
           onChange={setBaseUrl}
-          placeholder="https://api.example.com/v1"
-          required
+          placeholder={baseUrlPlaceholder}
+          required={baseUrlRequired}
         />
         <Field
           label={zh ? "模型" : "Model"}
           value={model}
           onChange={setModel}
-          placeholder="qwen-max"
+          placeholder={
+            providerType === "anthropic"
+              ? "claude-sonnet-4-6"
+              : providerType === "google"
+              ? "gemini-2.5-pro"
+              : "qwen-max"
+          }
           required
         />
         <Field
           label={zh ? "视觉模型（可选）" : "Vision model (optional)"}
           value={visionModel}
           onChange={setVisionModel}
-          placeholder="qwen3.5-omni-plus"
+          placeholder={
+            providerType === "anthropic"
+              ? "claude-sonnet-4-6"
+              : providerType === "google"
+              ? "gemini-2.5-pro"
+              : "qwen3.5-omni-plus"
+          }
         />
         <Field
           label={`API Key${saved ? ` ${zh ? "（留空保留当前）" : "(leave blank to keep current)"}` : ""}`}
           value={apiKey}
           onChange={setApiKey}
-          placeholder="sk-..."
+          placeholder={
+            providerType === "anthropic"
+              ? "sk-ant-..."
+              : providerType === "google"
+              ? "AIza..."
+              : "sk-..."
+          }
           type="password"
           required={!saved}
           icon={<Key className="h-3.5 w-3.5" />}
@@ -249,7 +347,7 @@ export default function LLMSettingsPage() {
         {success && (
           <div className="flex items-start gap-2 rounded-lg border border-[#4ADE80]/30 bg-[#4ADE80]/5 p-3 text-xs text-[#4ADE80]">
             <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>{zh ? "已保存！下次评估将使用你的配置。" : "Saved — next evaluation will use your config."}</span>
+            <span>{zh ? "已保存！下次评估将使用你的配置。BYOK 已激活。" : "Saved — next evaluation will use your config. BYOK is now active."}</span>
           </div>
         )}
 
