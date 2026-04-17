@@ -4,6 +4,7 @@ import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 let _queue: Queue | null = null;
 function getQueue(): Queue {
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
 
   const effective = await fetchEffectivePlan(supabase, user.id);
   if (!effective || !effective.features.customPersonas) {

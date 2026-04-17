@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { decryptLLMKey } from "@/lib/crypto/llm-key";
 
 export type LLMProviderType = "openai_compatible" | "anthropic" | "google";
 
@@ -28,9 +29,19 @@ export async function fetchUserLLMOverrides(userId: string): Promise<LLMOverride
   if (!data) return null;
 
   const providerType = (data.provider_type as LLMProviderType | null) ?? "openai_compatible";
+  let apiKey: string;
+  try {
+    apiKey = decryptLLMKey(data.api_key);
+  } catch (err) {
+    console.error("llm.key_decrypt_failed", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
   return {
     providerType,
-    apiKey: data.api_key,
+    apiKey,
     baseURL: data.base_url || undefined,
     model: data.model,
     visionModel: data.vision_model ?? undefined,

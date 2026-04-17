@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { decryptLLMKey, encryptLLMKey } from "@/lib/crypto/llm-key";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 const PROVIDER_TYPES = ["openai_compatible", "anthropic", "google"] as const;
 type ProviderType = (typeof PROVIDER_TYPES)[number];
@@ -23,6 +25,13 @@ export async function GET() {
 
   if (!data) return NextResponse.json({ settings: null });
 
+  let plainKey = "";
+  try {
+    plainKey = decryptLLMKey(data.api_key);
+  } catch {
+    plainKey = data.api_key;
+  }
+
   return NextResponse.json({
     settings: {
       provider_type: (data.provider_type ?? "openai_compatible") as ProviderType,
@@ -30,7 +39,7 @@ export async function GET() {
       base_url: data.base_url ?? "",
       model: data.model,
       vision_model: data.vision_model,
-      api_key_masked: maskKey(data.api_key),
+      api_key_masked: maskKey(plainKey),
       updated_at: data.updated_at,
     },
   });
@@ -40,6 +49,9 @@ export async function PUT(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const limitResponse = await enforceRateLimit("llmSettings", user.id);
+  if (limitResponse) return limitResponse;
 
   const body = await request.json().catch(() => ({}));
   const providerType: ProviderType = PROVIDER_TYPES.includes(body.provider_type)
@@ -69,6 +81,16 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "base_url must start with http(s)://" }, { status: 400 });
   }
 
+  let encryptedKey: string;
+  try {
+    encryptedKey = encryptLLMKey(apiKey);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "encryption_unavailable" },
+      { status: 500 },
+    );
+  }
+
   const { error } = await supabase
     .from("user_llm_settings")
     .upsert({
@@ -78,7 +100,7 @@ export async function PUT(request: Request) {
       base_url: baseUrlRaw || null,
       model,
       vision_model: visionModel,
-      api_key: apiKey,
+      api_key: encryptedKey,
       updated_at: new Date().toISOString(),
     });
 

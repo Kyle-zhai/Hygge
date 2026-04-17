@@ -269,13 +269,21 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     log.info("orchestrator.complete", { ...ctx, durationMs: Date.now() - startedAt });
     return { success: true, evaluationId };
   } catch (error: any) {
+    const errorMessage = error?.message ?? String(error);
     log.error("orchestrator.failed", {
       ...ctx,
       durationMs: Date.now() - startedAt,
-      error: error?.message ?? String(error),
+      error: errorMessage,
       stack: error?.stack,
     });
-    await supabase.from("evaluations").update({ status: "failed" }).eq("id", evaluationId);
+    await supabase
+      .from("evaluations")
+      .update({
+        status: "failed",
+        error_message: errorMessage.slice(0, 2000),
+        failed_at: new Date().toISOString(),
+      })
+      .eq("id", evaluationId);
     throw error;
   }
 }

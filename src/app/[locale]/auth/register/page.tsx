@@ -130,12 +130,18 @@ export default function RegisterPage() {
             </Button>
           </div>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="flex-col gap-3">
           <p className="text-sm text-[#666462]">
             {t("hasAccount")}{" "}
             <Link href={`/${locale}/auth/login`} className="text-[#E2DDD5] hover:text-[#D4CFC7] underline">
               {tc("login")}
             </Link>
+          </p>
+          <p className="text-xs text-[#666462] text-center">
+            By signing up you agree to our{" "}
+            <Link href={`/${locale}/legal/terms`} className="underline hover:text-[#EAEAE8]">Terms</Link>
+            {" "}and{" "}
+            <Link href={`/${locale}/legal/privacy`} className="underline hover:text-[#EAEAE8]">Privacy Policy</Link>.
           </p>
         </CardFooter>
       </Card>

@@ -2,5 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "regions": ["hkg1"],
-  "crons": []
+  "crons": [
+    {
+      "path": "/api/cron/sweep-stuck-evaluations",
+      "schedule": "*/15 * * * *"
+    }
+  ]
 }

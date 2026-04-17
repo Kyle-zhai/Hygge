@@ -4,6 +4,7 @@ import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 // Module-level singleton: reuse across requests (avoids cold-start per request)
 let _queue: Queue | null = null;
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("evaluations", user.id);
+  if (limitResponse) return limitResponse;
 
   const body = await request.json();
   const { rawInput, url, attachments, selectedPersonaIds, mode } = body;
