@@ -213,3 +213,46 @@ body::after {
   0%, 80%, 100% { transform: translateY(3px); opacity: 0.4; }
   40% { transform: translateY(-3px); opacity: 1; }
 }
+
+/* ── Print styles — clean PDF export via browser Save as PDF ── */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm;
+  }
+
+  body::after { display: none !important; }
+  .no-print { display: none !important; }
+
+  html, body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  main { margin-left: 0 !important; }
+
+  .print-page {
+    background: #ffffff !important;
+    color: #111111 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .print-page * {
+    color: #111111 !important;
+    background: transparent !important;
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+  }
+
+  .print-page h1, .print-page h2, .print-page h3 {
+    page-break-after: avoid;
+  }
+
+  .print-page section, .print-page article, .print-page .rounded-xl,
+  .print-page .rounded-lg, .print-page .rounded-2xl {
+    page-break-inside: avoid;
+  }
+
+  .print-page a { text-decoration: none !important; }
+}

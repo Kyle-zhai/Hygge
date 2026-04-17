@@ -1178,7 +1178,7 @@ export function ReportTextView({
                           {onStartDebate && (
                             <button
                               onClick={() => onStartDebate(personaId)}
-                              className="flex items-center gap-1.5 px-4 py-2.5 text-xs text-[#C4A882] hover:text-[#D4B892] transition-colors hover:bg-[#C4A882]/5 border-l border-[#2A2A2A]/50"
+                              className="no-print flex items-center gap-1.5 px-4 py-2.5 text-xs text-[#C4A882] hover:text-[#D4B892] transition-colors hover:bg-[#C4A882]/5 border-l border-[#2A2A2A]/50"
                             >
                               <MessageSquare className="h-3.5 w-3.5" />
                               <span>{locale === "zh" ? "对话" : "Chat"}</span>
@@ -1317,7 +1317,7 @@ export function ReportTextView({
 
           {/* View Numerical Scores button */}
           {onViewScores && (
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex justify-center no-print">
               <button
                 onClick={onViewScores}
                 className="inline-flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-5 py-2.5 text-sm font-medium text-[#E2DDD5] transition-all duration-200 hover:border-[#3A3A3A] hover:bg-[#222222]"
@@ -2097,7 +2097,7 @@ export function ReportTextView({
             MAX FEATURE CTAs — Scenario Simulation + Round Table Debate
         ════════════════════════════════════════════════════════════ */}
         {(onViewSimulation || onViewDebate) && (
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 no-print">
             {report.scenario_simulation && onViewSimulation && (
               <button
                 onClick={onViewSimulation}
