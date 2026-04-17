@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
     });
   }
 
+  const llmOverrides = await fetchUserLLMOverrides(user.id);
+
   try {
     const workerRes = await fetch(`${workerUrl.replace(/\/$/, "")}/recommend`, {
       method: "POST",
@@ -53,7 +56,11 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         "x-worker-secret": workerSecret,
       },
-      body: JSON.stringify({ projectDescription, personas: personaSummaries }),
+      body: JSON.stringify({
+        projectDescription,
+        personas: personaSummaries,
+        llmOverrides: llmOverrides ?? undefined,
+      }),
       signal: AbortSignal.timeout(30_000),
     });
 

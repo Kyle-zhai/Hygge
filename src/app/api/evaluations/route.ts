@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 
 // Module-level singleton: reuse across requests (avoids cold-start per request)
 let _queue: Queue | null = null;
@@ -89,6 +90,8 @@ export async function POST(request: Request) {
   // Increment usage
   await supabase.from("subscriptions").update({ evaluations_used: subscription.evaluations_used + 1 }).eq("id", subscription.id);
 
+  const llmOverrides = await fetchUserLLMOverrides(user.id);
+
   // Push job to queue (reuses module-level connection)
   try {
     const queue = getQueue();
@@ -101,6 +104,7 @@ export async function POST(request: Request) {
       selectedPersonaIds,
       planTier: subscription.plan,
       mode: mode || "product",
+      llmOverrides: llmOverrides ?? undefined,
     });
   } catch (queueError) {
     console.error("Failed to push to queue:", queueError);

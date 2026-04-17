@@ -25,6 +25,7 @@ import {
   ListFilter,
   Swords,
   LayoutDashboard,
+  Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -307,6 +308,18 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
         >
           <BarChart3 className="h-4 w-4" />
           <span>My Publications</span>
+        </Link>
+        <Link
+          href={`/${locale}/settings/llm`}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.includes("/settings")
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
+              : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
+          }`}
+        >
+          <Settings className="h-4 w-4" />
+          <span>{locale === "zh" ? "LLM 设置" : "LLM Settings"}</span>
         </Link>
       </div>
 

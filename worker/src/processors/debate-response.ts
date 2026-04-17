@@ -1,16 +1,16 @@
 import type { Job } from "bullmq";
 import { supabase } from "../supabase.js";
-import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
-import { config } from "../config.js";
+import { buildLLM, type LLMOverrides } from "../llm/factory.js";
 
 export interface DebateResponseJobData {
   debateId: string;
   userMessageId: string;
+  llmOverrides?: LLMOverrides;
 }
 
 export async function processDebateResponse(job: Job<DebateResponseJobData>) {
-  const { debateId, userMessageId } = job.data;
-  const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
+  const { debateId, userMessageId, llmOverrides } = job.data;
+  const llm = buildLLM(llmOverrides);
 
   const { data: debate } = await supabase
     .from("debates")

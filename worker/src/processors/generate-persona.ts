@@ -1,7 +1,6 @@
 import type { Job } from "bullmq";
 import { supabase } from "../supabase.js";
-import { OpenAICompatibleLLM } from "../llm/openai-compatible.js";
-import { config } from "../config.js";
+import { buildLLM, type LLMOverrides } from "../llm/factory.js";
 
 interface PersonaGenerationInput {
   name: string;
@@ -159,11 +158,12 @@ export interface PersonaJobData {
   background?: string;
   importedText?: string;
   avatarUrl?: string;
+  llmOverrides?: LLMOverrides;
 }
 
 export async function processPersonaGeneration(job: Job<PersonaJobData>) {
-  const { userId, name, occupation, personality, background, importedText, avatarUrl } = job.data;
-  const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
+  const { userId, name, occupation, personality, background, importedText, avatarUrl, llmOverrides } = job.data;
+  const llm = buildLLM(llmOverrides);
 
   console.log(`[persona-gen:${job.id}] Generating persona "${name}" for user ${userId}`);
 

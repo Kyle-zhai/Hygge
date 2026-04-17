@@ -1,9 +1,6 @@
 import http from "node:http";
-import { config } from "./config.js";
-import { OpenAICompatibleLLM } from "./llm/openai-compatible.js";
+import { buildLLM, type LLMOverrides } from "./llm/factory.js";
 import { log } from "./utils/logger.js";
-
-const llm = new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
 
 type PersonaSummary = {
   id: string;
@@ -15,11 +12,13 @@ type PersonaSummary = {
 type RecommendBody = {
   projectDescription?: string;
   personas?: PersonaSummary[];
+  llmOverrides?: LLMOverrides;
 };
 
 async function handleRecommend(body: RecommendBody): Promise<{ recommended_ids: string[]; reasoning: string }> {
   const projectDescription = body.projectDescription?.trim();
   const personas = body.personas ?? [];
+  const llm = buildLLM(body.llmOverrides);
 
   if (!projectDescription) {
     const err = new Error("projectDescription required");

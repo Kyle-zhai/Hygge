@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 
 let _queue: Queue | null = null;
 function getQueue(): Queue {
@@ -53,8 +54,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const llmOverrides = await fetchUserLLMOverrides(user.id);
+
   const queue = getQueue();
-  await queue.add("respond", { debateId, userMessageId: message.id });
+  await queue.add("respond", {
+    debateId,
+    userMessageId: message.id,
+    llmOverrides: llmOverrides ?? undefined,
+  });
 
   return NextResponse.json(message, { status: 201 });
 }
