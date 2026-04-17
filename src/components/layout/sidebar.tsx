@@ -185,7 +185,10 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   }
 
   const sidebarContent = (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div
+      ref={discussionRef}
+      className="scrollbar-sidebar flex h-full flex-col overflow-y-auto overscroll-contain"
+    >
       {/* Header: Logo */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
         <Link href="/en" className="flex items-center gap-2.5">
@@ -340,17 +343,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       <div className="shrink-0 mx-4 border-t border-[#1C1C1C]" />
 
       {/* Your Discussions */}
-      <div
-        ref={discussionRef}
-        className="scrollbar-sidebar min-h-0 flex-1 overflow-y-scroll overscroll-contain px-3 pt-3"
-        onWheel={(e) => {
-          const el = discussionRef.current;
-          if (!el) return;
-          el.scrollTop += e.deltaY;
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-      >
+      <div className="px-3 pt-3 pb-3">
         <div className="mb-2 flex items-center justify-between px-3">
           <p className="text-xs font-medium text-[#666462]">Your Discussions</p>
           <div className="relative">
@@ -472,7 +465,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       </div>
 
       {/* Bottom section */}
-      <div className="shrink-0 border-t border-[#1C1C1C] px-3 py-3">
+      <div className="mt-auto shrink-0 border-t border-[#1C1C1C] px-3 py-3">
         {userEmail && (
           <button
             onClick={() => setUserMenuOpen((v) => !v)}
