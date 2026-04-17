@@ -26,6 +26,7 @@ import {
   Swords,
   LayoutDashboard,
   Settings,
+  Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -313,13 +314,25 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           href={`/${locale}/settings/llm`}
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            pathname.includes("/settings")
+            pathname.includes("/settings/llm")
               ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
               : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
           }`}
         >
           <Settings className="h-4 w-4" />
           <span>{locale === "zh" ? "LLM 设置" : "LLM Settings"}</span>
+        </Link>
+        <Link
+          href={`/${locale}/settings/workspaces`}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.includes("/settings/workspaces")
+              ? "bg-[#1C1C1C] text-[#EAEAE8] font-medium"
+              : "text-[#9B9594] hover:bg-[#1C1C1C]/60 hover:text-[#EAEAE8]"
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span>{locale === "zh" ? "团队工作区" : "Workspaces"}</span>
         </Link>
       </div>
 
