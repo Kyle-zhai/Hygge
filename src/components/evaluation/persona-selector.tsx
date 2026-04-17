@@ -5,12 +5,33 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ChevronDown, ChevronUp, Filter, Loader2, Bookmark, X, Heart, User } from "lucide-react";
+import {
+  Check, Sparkles, ChevronDown, ChevronUp, Loader2, Bookmark, X, Heart, User,
+  Wrench, TrendingUp, Lightbulb, Shield,
+  HeartPulse, Users, Brain, Cog,
+  SlidersHorizontal, CalendarRange, UserRound, Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import {
   DOMAINS, getSubDomainsForDomain, getSubDomain, localizedLabel,
   PRODUCT_CATEGORIES, getProductCategory,
   type DomainKey, type SubDomainKey, type ProductCategoryKey,
 } from "@/lib/personas/taxonomy";
+
+// Module-level icon maps — keep outside the component so they don't recreate on render.
+const PRODUCT_CATEGORY_ICONS: Record<ProductCategoryKey, LucideIcon> = {
+  utility: Wrench,
+  market: TrendingUp,
+  novelty: Lightbulb,
+  reliability: Shield,
+};
+
+const TOPIC_DOMAIN_ICONS: Record<DomainKey, LucideIcon> = {
+  physical: HeartPulse,
+  social: Users,
+  intellectual: Brain,
+  utility: Cog,
+};
 
 interface PersonaSquad {
   id: string;
@@ -316,10 +337,11 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
     setIncomeFilters(new Set());
   }
 
+  const demographicFilterCount = ageFilters.size + genderFilters.size + incomeFilters.size;
   const hasActiveFilters = !!(
     activeCategory || selectedDomain || selectedSubDomain || selectedDimensions.size > 0 ||
     selectedProductCategory || selectedProductTraits.size > 0 ||
-    ageFilters.size > 0 || genderFilters.size > 0 || incomeFilters.size > 0
+    demographicFilterCount > 0
   );
 
   if (loading) {
@@ -430,49 +452,69 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
       {/* Shortcuts + demographic filter toggle — always visible at top */}
       <div className="flex flex-wrap items-center gap-2">
-        {hasSaved && (
-          <Button
-            variant={activeCategory === "my_saved" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
-            className={activeCategory === "my_saved" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-          >
-            <Heart className="mr-1 h-3 w-3" />
-            {locale === "zh" ? "已收藏" : "My Saved"}
-          </Button>
-        )}
-        {hasCustom && (
-          <Button
-            variant={activeCategory === "my_custom" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
-            className={activeCategory === "my_custom" ? "bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892]" : "border-[#C4A882]/30 text-[#C4A882] hover:bg-[#C4A882]/10 hover:text-[#D4B892]"}
-          >
-            <User className="mr-1 h-3 w-3" />
-            {locale === "zh" ? "我的自定义" : "My Custom"}
-          </Button>
+        {(hasSaved || hasCustom) && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[#141414] border border-[#2A2A2A] p-1">
+            {hasSaved && (
+              <button
+                type="button"
+                onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                  activeCategory === "my_saved"
+                    ? "bg-[#C4A882] text-[#0C0C0C] shadow-sm"
+                    : "text-[#C4A882] hover:bg-[#C4A882]/10"
+                }`}
+                aria-pressed={activeCategory === "my_saved"}
+              >
+                <Heart className={`h-3.5 w-3.5 ${activeCategory === "my_saved" ? "fill-current" : ""}`} />
+                {locale === "zh" ? "已收藏" : "My Saved"}
+              </button>
+            )}
+            {hasCustom && (
+              <button
+                type="button"
+                onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                  activeCategory === "my_custom"
+                    ? "bg-[#C4A882] text-[#0C0C0C] shadow-sm"
+                    : "text-[#C4A882] hover:bg-[#C4A882]/10"
+                }`}
+                aria-pressed={activeCategory === "my_custom"}
+              >
+                <User className="h-3.5 w-3.5" />
+                {locale === "zh" ? "我的自定义" : "My Custom"}
+              </button>
+            )}
+          </div>
         )}
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={clearAllFilters}
-            className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors"
           >
-            <X className="mr-1 h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" />
             {locale === "zh" ? "清除筛选" : "Clear filters"}
-          </Button>
+          </button>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className="ml-auto text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+          className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+            showFilters
+              ? "border-[#E2DDD5]/40 bg-[#E2DDD5]/5 text-[#EAEAE8]"
+              : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+          }`}
+          aria-expanded={showFilters}
         >
-          <Filter className="mr-1 h-3.5 w-3.5" />
-          {locale === "zh" ? "更多筛选" : "More filters"}
-          {showFilters ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-        </Button>
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {locale === "zh" ? "人口特征" : "Demographics"}
+          {demographicFilterCount > 0 && (
+            <span className="ml-0.5 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full bg-[#C4A882] text-[10px] font-semibold text-[#0C0C0C] px-1">
+              {demographicFilterCount}
+            </span>
+          )}
+          {showFilters ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
       </div>
 
       {/* Category tag rows — progressive drill-down, personas always visible below.
@@ -499,64 +541,102 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         )
       )}
 
-      {/* Expandable filters */}
+      {/* Expandable filters — demographic overlay (age / gender / income) */}
       {showFilters && (
-        <div className="rounded-lg border border-[#2A2A2A] bg-[#1C1C1C]/50 p-4 space-y-3">
+        <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 space-y-4">
           {/* Age */}
           <div>
-            <span className="text-xs font-semibold text-[#666462] uppercase">{t("ageRange")}</span>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {ageRanges.map((range) => (
-                <Button
-                  key={range.label}
-                  variant={ageFilters.has(range.label) ? "default" : "outline"}
-                  size="sm"
-                  className={`h-7 text-xs ${ageFilters.has(range.label) ? "bg-[#E2DDD5] text-[#0C0C0C]" : "border-[#2A2A2A] text-[#9B9594]"}`}
-                  onClick={() => toggleFilter(ageFilters, range.label, setAgeFilters)}
-                >
-                  {range.label}
-                </Button>
-              ))}
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#9B9594] uppercase tracking-wide">
+              <CalendarRange className="h-3 w-3 text-[#666462]" />
+              {locale === "zh" ? "年龄段" : t("ageRange")}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {ageRanges.map((range) => {
+                const active = ageFilters.has(range.label);
+                return (
+                  <button
+                    key={range.label}
+                    type="button"
+                    onClick={() => toggleFilter(ageFilters, range.label, setAgeFilters)}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      active
+                        ? "border-[#E2DDD5] bg-[#E2DDD5] text-[#0C0C0C]"
+                        : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {/* Gender */}
           <div>
-            <span className="text-xs font-semibold text-[#666462] uppercase">Gender</span>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {["M", "F", "NB"].map((g) => (
-                <Button
-                  key={g}
-                  variant={genderFilters.has(g) ? "default" : "outline"}
-                  size="sm"
-                  className={`h-7 text-xs ${genderFilters.has(g) ? "bg-[#E2DDD5] text-[#0C0C0C]" : "border-[#2A2A2A] text-[#9B9594]"}`}
-                  onClick={() => toggleFilter(genderFilters, g, setGenderFilters)}
-                >
-                  {genderLabels[g]?.[locale] || g}
-                </Button>
-              ))}
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#9B9594] uppercase tracking-wide">
+              <UserRound className="h-3 w-3 text-[#666462]" />
+              {locale === "zh" ? "性别" : "Gender"}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {["M", "F", "NB"].map((g) => {
+                const active = genderFilters.has(g);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => toggleFilter(genderFilters, g, setGenderFilters)}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      active
+                        ? "border-[#E2DDD5] bg-[#E2DDD5] text-[#0C0C0C]"
+                        : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    }`}
+                  >
+                    {genderLabels[g]?.[locale] || g}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {/* Income */}
           <div>
-            <span className="text-xs font-semibold text-[#666462] uppercase">Income</span>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {["low", "medium", "medium_high", "high", "very_high"].map((inc) => (
-                <Button
-                  key={inc}
-                  variant={incomeFilters.has(inc) ? "default" : "outline"}
-                  size="sm"
-                  className={`h-7 text-xs ${incomeFilters.has(inc) ? "bg-[#E2DDD5] text-[#0C0C0C]" : "border-[#2A2A2A] text-[#9B9594]"}`}
-                  onClick={() => toggleFilter(incomeFilters, inc, setIncomeFilters)}
-                >
-                  {incomeLabels[inc]?.[locale] || inc}
-                </Button>
-              ))}
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#9B9594] uppercase tracking-wide">
+              <Wallet className="h-3 w-3 text-[#666462]" />
+              {locale === "zh" ? "收入水平" : "Income"}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {["low", "medium", "medium_high", "high", "very_high"].map((inc) => {
+                const active = incomeFilters.has(inc);
+                return (
+                  <button
+                    key={inc}
+                    type="button"
+                    onClick={() => toggleFilter(incomeFilters, inc, setIncomeFilters)}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      active
+                        ? "border-[#E2DDD5] bg-[#E2DDD5] text-[#0C0C0C]"
+                        : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    }`}
+                  >
+                    {incomeLabels[inc]?.[locale] || inc}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="text-xs text-[#9B9594]" onClick={clearAllFilters}>
-              {t("clearFilters")}
-            </Button>
+          {demographicFilterCount > 0 && (
+            <div className="flex justify-end pt-1 border-t border-[#2A2A2A]">
+              <button
+                type="button"
+                onClick={() => {
+                  setAgeFilters(new Set());
+                  setGenderFilters(new Set());
+                  setIncomeFilters(new Set());
+                }}
+                className="inline-flex items-center gap-1 text-[11px] text-[#9B9594] hover:text-[#EAEAE8] transition-colors"
+              >
+                <X className="h-3 w-3" />
+                {locale === "zh" ? "清除人口特征" : "Clear demographics"}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -686,18 +766,19 @@ function TopicFilterRows({
       <div className="flex flex-wrap gap-1.5">
         {DOMAINS.map((d) => {
           const active = selectedDomain === d.key;
+          const Icon = TOPIC_DOMAIN_ICONS[d.key];
           return (
             <button
               key={d.key}
               type="button"
               onClick={() => onPickDomain(d.key)}
-              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                 active
-                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8] shadow-sm"
                   : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
               }`}
             >
-              {active && <Check className="h-3 w-3" />}
+              {active ? <Check className="h-3 w-3" /> : <Icon className="h-3.5 w-3.5" />}
               {localizedLabel(d, locale)}
             </button>
           );
@@ -782,19 +863,20 @@ function ProductFilterRows({
       <div className="flex flex-wrap gap-1.5">
         {PRODUCT_CATEGORIES.map((c) => {
           const active = selectedCategory === c.key;
+          const Icon = PRODUCT_CATEGORY_ICONS[c.key];
           return (
             <button
               key={c.key}
               type="button"
               onClick={() => onPickCategory(c.key)}
               title={zh ? c.description_zh : c.description_en}
-              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                 active
-                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
+                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8] shadow-sm"
                   : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
               }`}
             >
-              {active && <Check className="h-3 w-3" />}
+              {active ? <Check className="h-3 w-3" /> : <Icon className="h-3.5 w-3.5" />}
               {localizedLabel(c, locale)}
             </button>
           );
