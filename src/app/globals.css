@@ -152,9 +152,9 @@ body::after {
   background-clip: text;
 }
 
-/* Sidebar-style thin scrollbar: invisible by default, visible on hover */
+/* Sidebar-style thin scrollbar: subtly visible at rest, brighter on hover */
 .scrollbar-sidebar {
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 .scrollbar-sidebar::-webkit-scrollbar {
   width: 6px;
@@ -163,24 +163,24 @@ body::after {
   background: transparent;
 }
 .scrollbar-sidebar::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
   transition: background 0.2s;
 }
 .scrollbar-sidebar:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
 }
 .scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
 }
 /* Firefox */
 @supports (scrollbar-width: thin) {
   .scrollbar-sidebar {
     scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
   }
   .scrollbar-sidebar:hover {
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   }
 }
 
