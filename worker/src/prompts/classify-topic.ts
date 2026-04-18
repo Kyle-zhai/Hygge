@@ -42,6 +42,49 @@ Examples of topic_type → dimension families (starting points, not verbatim —
 
 Generate exactly 4-6 dimensions. If the user's submission is too short or vague to reference specifically, still cite whatever phrases or hints are present — do NOT fall back to generic descriptions.`;
 
+export const CLASSIFY_TOPIC_SHORT_SYSTEM = `You are a topic analyzer. The user has asked a short, open-ended question inviting perspectives on a SUBJECT — e.g. "What do you think of X (Twitter)?", "Is remote work good for software teams?", "Should I move to Lisbon?". Identify the TYPE of subject and generate 4-6 evaluation dimensions that capture the most salient tensions, trade-offs, and debated aspects of THAT SUBJECT.
+
+Each dimension must:
+- Target a specific aspect of the SUBJECT — its mechanics, effects, trade-offs, second-order consequences, or the live debates around it.
+- Have a description (1 sentence) that names what is being evaluated on that dimension and gives just enough context for a persona to take a stance.
+- Be distinct from the other dimensions (no overlap).
+
+Dimensions must describe aspects of the SUBJECT, never aspects of how the user phrased the question. NEVER evaluate the question itself.
+
+GOOD dimension examples for "What do you think of X (Twitter)?":
+- content_moderation_efficacy — "Whether the platform's current moderation strategy — fewer trust & safety staff, reinstated banned accounts — meaningfully reduces harmful content."
+- advertiser_confidence — "Whether major brands have enough trust in the platform's brand-safety controls to keep spending at pre-2022 levels."
+- speech_vs_safety — "How the platform balances expansive free-speech framing against the realities of harassment, disinformation, and targeted abuse."
+- blue_check_signal — "Whether the shift to paid verification has strengthened or destroyed the signal value of the blue check."
+
+BAD dimension examples (reject these in your own output):
+- "question_clarity" — evaluates the question, not the subject.
+- "prompt_specificity" — evaluates the question, not the subject.
+- "Measures how well the product satisfies user needs." — generic.
+
+IMPORTANT: Always respond in English regardless of the input language. Keep proper nouns in the user's original spelling.
+
+Respond ONLY with valid JSON matching this structure:
+{
+  "topic_type": "<product|policy|idea|creative|decision|strategy|other>",
+  "dimensions": [
+    {
+      "key": "<snake_case_key>",
+      "label_en": "<English label (3-5 words)>",
+      "label_zh": "<Chinese label>",
+      "description": "<One sentence describing what is being evaluated ABOUT THE SUBJECT — not about the question>"
+    }
+  ],
+  "readiness_label_en": "<Contextual readiness label fitting the subject type>",
+  "readiness_label_zh": "<Chinese translation>"
+}
+
+Generate exactly 4-6 dimensions targeting the SUBJECT of the question.`;
+
 export function buildClassifyTopicPrompt(rawInput: string): string {
   return `Classify this topic and generate tailored evaluation dimensions. Each dimension's description must cite a concrete element (entity, number, quoted phrase, mechanism, or stated goal) from the submission below.\n\nUser submission:\n${rawInput}`;
+}
+
+export function buildClassifyTopicShortPrompt(rawInput: string): string {
+  return `Identify the subject of this short question and generate 4-6 evaluation dimensions about the SUBJECT itself — the aspects reasonable people would debate when discussing it.\n\nUser question:\n${rawInput}`;
 }

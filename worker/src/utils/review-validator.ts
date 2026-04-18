@@ -107,9 +107,19 @@ export function validatePersonaReview(parsed: any, rawInput: string): ReviewVali
   };
 }
 
-export function hasReviewViolations(v: ReviewValidation): boolean {
+export interface ReviewValidationOptions {
+  /**
+   * When true, skip all submission-quote-citation checks. Used for short Topic
+   * queries where the rawInput is a ~6-word question and there is no submission
+   * body for the persona to cite verbatim. The banned-phrase check still runs.
+   */
+  skipSubmissionQuoteChecks?: boolean;
+}
+
+export function hasReviewViolations(v: ReviewValidation, opts?: ReviewValidationOptions): boolean {
+  if (v.bannedHits.length > 0) return true;
+  if (opts?.skipSubmissionQuoteChecks) return false;
   return (
-    v.bannedHits.length > 0 ||
     v.fabricatedQuotes.length > 0 ||
     v.invalidExtractedQuotes.length > 0 ||
     v.extractedCount < 3 ||
@@ -117,29 +127,31 @@ export function hasReviewViolations(v: ReviewValidation): boolean {
   );
 }
 
-export function buildReviewRetryInstructions(v: ReviewValidation): string {
+export function buildReviewRetryInstructions(v: ReviewValidation, opts?: ReviewValidationOptions): string {
   const items: string[] = [];
-  if (v.invalidExtractedQuotes.length) {
-    const list = v.invalidExtractedQuotes.slice(0, 5).map((q) => `"${String(q).slice(0, 80)}"`).join(", ");
-    items.push(`- These extracted_quotes entries do NOT appear verbatim in the submission — replace them with fragments that exist character-for-character: ${list}.`);
-  }
-  if (v.extractedCount < 3) {
-    items.push(`- extracted_quotes must contain at least 3 distinct fragments, each copied verbatim from the submission (3–60 chars each).`);
-  }
-  if (v.fabricatedQuotes.length) {
-    const list = v.fabricatedQuotes.slice(0, 5).map((q) => `"${q.slice(0, 80)}"`).join(", ");
-    items.push(`- review_text contains these quoted phrases that are NOT verbatim in the submission — remove the quote marks or replace with a true verbatim fragment: ${list}.`);
-  }
-  if (v.verbatimReviewCount < 3) {
-    const needed = Math.max(1, 3 - v.verbatimReviewCount);
-    const hint = v.unusedExtractedQuotes.length > 0
-      ? ` Use these unused entries from your extracted_quotes: ${v.unusedExtractedQuotes.slice(0, 5).map((q) => `"${String(q).slice(0, 80)}"`).join(", ")}.`
-      : ` Pull additional verbatim fragments directly from the submission.`;
-    items.push(`- review_text currently contains only ${v.verbatimReviewCount} verbatim double-quoted fragment(s); you need at least 3. Rewrite at least ${needed} sentence(s) in review_text to embed additional verbatim fragments from the submission inside double quotes.${hint}`);
+  if (!opts?.skipSubmissionQuoteChecks) {
+    if (v.invalidExtractedQuotes.length) {
+      const list = v.invalidExtractedQuotes.slice(0, 5).map((q) => `"${String(q).slice(0, 80)}"`).join(", ");
+      items.push(`- These extracted_quotes entries do NOT appear verbatim in the submission — replace them with fragments that exist character-for-character: ${list}.`);
+    }
+    if (v.extractedCount < 3) {
+      items.push(`- extracted_quotes must contain at least 3 distinct fragments, each copied verbatim from the submission (3–60 chars each).`);
+    }
+    if (v.fabricatedQuotes.length) {
+      const list = v.fabricatedQuotes.slice(0, 5).map((q) => `"${q.slice(0, 80)}"`).join(", ");
+      items.push(`- review_text contains these quoted phrases that are NOT verbatim in the submission — remove the quote marks or replace with a true verbatim fragment: ${list}.`);
+    }
+    if (v.verbatimReviewCount < 3) {
+      const needed = Math.max(1, 3 - v.verbatimReviewCount);
+      const hint = v.unusedExtractedQuotes.length > 0
+        ? ` Use these unused entries from your extracted_quotes: ${v.unusedExtractedQuotes.slice(0, 5).map((q) => `"${String(q).slice(0, 80)}"`).join(", ")}.`
+        : ` Pull additional verbatim fragments directly from the submission.`;
+      items.push(`- review_text currently contains only ${v.verbatimReviewCount} verbatim double-quoted fragment(s); you need at least 3. Rewrite at least ${needed} sentence(s) in review_text to embed additional verbatim fragments from the submission inside double quotes.${hint}`);
+    }
   }
   if (v.bannedHits.length) {
     const list = v.bannedHits.map((p) => `"${p}"`).join(", ");
-    items.push(`- Delete these banned phrases from review_text and rewrite the surrounding sentence around a specific number, quote, or lived-experience observation: ${list}.`);
+    items.push(`- Delete these banned phrases from review_text and rewrite the surrounding sentence around a specific observation about the subject or lived-experience detail: ${list}.`);
   }
   return items.join("\n");
 }

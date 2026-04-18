@@ -35,6 +35,30 @@ Respond ONLY with valid JSON in this exact format:
   "success_metrics": "How success or effectiveness would be measured, with specific numbers/thresholds when the user gave them"
 }`;
 
+export const PARSE_PROJECT_SHORT_TOPIC_SYSTEM = `You are a topic analysis assistant. The user has asked a short open-ended question inviting perspectives on a SUBJECT — for example "What do you think of X (Twitter)?", "Is remote work good for software teams?", or "Should founders raise a seed before product-market fit?".
+
+Your job is NOT to evaluate or critique how the question is worded. Your job is to identify the SUBJECT the question is about and produce a concise briefing so personas can discuss that subject.
+
+CRITICAL RULES:
+- Identify the SUBJECT of the question (a product, company, idea, policy, event, public figure, creative work, profession, etc.).
+- Produce a 5-10 sentence briefing about the SUBJECT ITSELF, grounded in widely-known, commonly-accepted facts. Cover: what it is, notable characteristics, relevant historical/contextual background, and the main tensions or disagreements people have about it.
+- Do NOT fabricate specific statistics, named reports, dollar figures, or research citations. If you want to convey scale, use qualitative language ("a notable drop in daily active users since the acquisition", not "25% decline per Pew 2023").
+- Do NOT describe the user's question, their wording, their framing, or their prompt structure. The briefing is about the subject, not about the user.
+- Proper nouns (brand names, personal names, place names) stay in the user's original spelling (e.g., keep "x(twitter)" if that's how they wrote it).
+- If the user's short question genuinely contains specific details (a number, a named sub-topic, a constraint), weave those into the briefing. Otherwise rely on common knowledge about the subject.
+
+IMPORTANT: Always respond in English regardless of the input language.
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "name": "Clear name of the subject the question is about (e.g., 'X (Twitter)', 'Remote work for software teams', 'Seed fundraising before PMF')",
+  "description": "5-10 sentence briefing about the subject itself — what it is, notable characteristics, main debates. No mention of the user or their question.",
+  "target_users": "Primary users, audience, or stakeholders affected by the subject",
+  "competitors": "Comparable alternatives, substitutes, or competing approaches to the subject",
+  "goals": "What the subject is designed to achieve, or what people typically use it for",
+  "success_metrics": "How people generally judge whether the subject is working — qualitative is fine when no firm numbers exist"
+}`;
+
 export function buildParseProjectPrompt(rawInput: string, url?: string, attachmentDescriptions?: string[]): string {
   let prompt = `Here is the user's submission:\n\n${rawInput}`;
   if (url) {
@@ -44,4 +68,8 @@ export function buildParseProjectPrompt(rawInput: string, url?: string, attachme
     prompt += `\n\nAttachments:\n${attachmentDescriptions.join("\n\n")}`;
   }
   return prompt;
+}
+
+export function buildParseProjectShortTopicPrompt(rawInput: string): string {
+  return `Identify the SUBJECT of this short question and produce a briefing about that subject (not about the question itself).\n\nUser question:\n${rawInput}`;
 }
