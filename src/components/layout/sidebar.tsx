@@ -186,10 +186,12 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   }
 
   const sidebarContent = (
-    <div
-      ref={discussionRef}
-      className="flex min-h-full flex-col"
-    >
+    <div className="flex h-full flex-col">
+      <div
+        ref={discussionRef}
+        data-lenis-prevent
+        className="scrollbar-sidebar flex-1 min-h-0 overflow-y-auto overscroll-contain"
+      >
       {/* Header: Logo */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
         <Link href="/en" className="flex items-center gap-2.5">
@@ -465,8 +467,10 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
         </div>
       </div>
 
-      {/* Bottom section */}
-      <div className="mt-auto shrink-0 border-t border-[#1C1C1C] px-3 py-3">
+      </div>
+
+      {/* Bottom section — pinned, never scrolls */}
+      <div className="shrink-0 border-t border-[#1C1C1C] px-3 py-3">
         {userEmail && (
           <button
             onClick={() => setUserMenuOpen((v) => !v)}
@@ -507,8 +511,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
       {/* Desktop sidebar — fixed */}
       <aside
-        data-lenis-prevent
-        className={`scrollbar-sidebar no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] overflow-y-auto overscroll-contain border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:block ${
+        className={`no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:flex ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
       >
@@ -527,12 +530,11 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               className="fixed inset-0 z-40 bg-black/60 md:hidden"
             />
             <motion.aside
-              data-lenis-prevent
               initial={{ x: -260 }}
               animate={{ x: 0 }}
               exit={{ x: -260 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="scrollbar-sidebar no-print fixed inset-y-0 left-0 z-50 w-[260px] overflow-y-auto overscroll-contain border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
+              className="no-print fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
             >
               {sidebarContent}
             </motion.aside>
