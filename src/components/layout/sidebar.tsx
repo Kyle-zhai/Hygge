@@ -507,7 +507,8 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
       {/* Desktop sidebar — fixed */}
       <aside
-        className={`scrollbar-sidebar no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] overflow-y-auto border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:block ${
+        data-lenis-prevent
+        className={`scrollbar-sidebar no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] overflow-y-auto overscroll-contain border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:block ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
       >
@@ -526,11 +527,12 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               className="fixed inset-0 z-40 bg-black/60 md:hidden"
             />
             <motion.aside
+              data-lenis-prevent
               initial={{ x: -260 }}
               animate={{ x: 0 }}
               exit={{ x: -260 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="scrollbar-sidebar no-print fixed inset-y-0 left-0 z-50 w-[260px] overflow-y-auto border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
+              className="scrollbar-sidebar no-print fixed inset-y-0 left-0 z-50 w-[260px] overflow-y-auto overscroll-contain border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
             >
               {sidebarContent}
             </motion.aside>
