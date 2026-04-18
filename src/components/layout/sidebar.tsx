@@ -188,7 +188,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   const sidebarContent = (
     <div
       ref={discussionRef}
-      className="scrollbar-sidebar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+      className="flex min-h-full flex-col"
     >
       {/* Header: Logo */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
@@ -507,7 +507,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
       {/* Desktop sidebar — fixed */}
       <aside
-        className={`no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:flex md:flex-col ${
+        className={`scrollbar-sidebar no-print fixed inset-y-0 left-0 z-30 hidden w-[260px] overflow-y-auto border-r border-[#1C1C1C] bg-[#0C0C0C] transition-transform duration-300 md:block ${
           collapsed ? "-translate-x-full" : "translate-x-0"
         }`}
       >
@@ -530,7 +530,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               animate={{ x: 0 }}
               exit={{ x: -260 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="no-print fixed inset-y-0 left-0 z-50 w-[260px] border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
+              className="scrollbar-sidebar no-print fixed inset-y-0 left-0 z-50 w-[260px] overflow-y-auto border-r border-[#1C1C1C] bg-[#0C0C0C] md:hidden"
             >
               {sidebarContent}
             </motion.aside>
