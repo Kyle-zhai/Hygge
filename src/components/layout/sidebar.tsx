@@ -188,7 +188,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   const sidebarContent = (
     <div
       ref={discussionRef}
-      className="scrollbar-sidebar flex h-full flex-col overflow-y-auto overscroll-contain"
+      className="scrollbar-sidebar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
     >
       {/* Header: Logo */}
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
