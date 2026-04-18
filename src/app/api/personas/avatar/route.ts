@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
+
+const ALLOWED_AVATAR_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const ALLOWED_AVATAR_EXT = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
 
 function getAdminClient() {
   return createSupabaseClient(
@@ -17,6 +21,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
 
@@ -24,15 +31,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "File must be an image" }, { status: 400 });
+  if (!ALLOWED_AVATAR_MIME.has(file.type)) {
+    return NextResponse.json({ error: "File must be an image (png, jpg, webp, gif)" }, { status: 400 });
   }
 
   if (file.size > 2 * 1024 * 1024) {
     return NextResponse.json({ error: "File must be under 2MB" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop() || "png";
+  const rawExt = (file.name.split(".").pop() || "png").toLowerCase();
+  const ext = ALLOWED_AVATAR_EXT.has(rawExt) ? rawExt : "png";
   const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
   const admin = getAdminClient();

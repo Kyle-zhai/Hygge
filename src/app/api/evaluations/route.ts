@@ -6,6 +6,10 @@ import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
+export const maxDuration = 15;
+
+const MAX_RAW_INPUT_BYTES = 32 * 1024;
+
 // Module-level singleton: reuse across requests (avoids cold-start per request)
 let _queue: Queue | null = null;
 function getQueue(): Queue {
@@ -55,6 +59,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "rawInput and selectedPersonaIds are required" }, { status: 400 });
   }
 
+  const rawInputBytes = Buffer.byteLength(String(rawInput), "utf8");
+  if (rawInputBytes > MAX_RAW_INPUT_BYTES) {
+    return NextResponse.json(
+      { error: `rawInput exceeds ${MAX_RAW_INPUT_BYTES} bytes (${rawInputBytes} received)` },
+      { status: 413 },
+    );
+  }
+
   const effective = await fetchEffectivePlan(supabase, user.id);
   if (!effective) {
     return NextResponse.json({ error: "No subscription found" }, { status: 403 });
@@ -96,7 +108,9 @@ export async function POST(request: Request) {
 
   const llmOverrides = await fetchUserLLMOverrides(user.id);
 
-  // Push job to queue (reuses module-level connection)
+  // Push job to queue (reuses module-level connection).
+  // On failure: roll back evaluation + project + refund the quota we just consumed,
+  // so Redis / queue outages never leave the user billed for a non-running job.
   try {
     const queue = getQueue();
     await queue.add("evaluate", {
@@ -111,7 +125,19 @@ export async function POST(request: Request) {
       llmOverrides: llmOverrides ?? undefined,
     });
   } catch (queueError) {
-    console.error("Failed to push to queue:", queueError);
+    console.error("Failed to push to queue, rolling back:", queueError);
+    await supabase.from("evaluations").delete().eq("id", evaluation.id);
+    await supabase.from("projects").delete().eq("id", project.id);
+    if (!effective.skipQuota) {
+      await supabase
+        .from("subscriptions")
+        .update({ evaluations_used: effective.evaluationsUsed })
+        .eq("user_id", user.id);
+    }
+    return NextResponse.json(
+      { error: "Evaluation service temporarily unavailable. Please retry." },
+      { status: 503 },
+    );
   }
 
   return NextResponse.json({ project, evaluation }, { status: 201 });

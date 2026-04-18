@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 function getAdminClient() {
   return createSupabaseClient(
@@ -18,6 +19,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
 
   const { data: subscription } = await supabase
     .from("subscriptions")

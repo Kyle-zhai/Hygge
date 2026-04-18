@@ -3,6 +3,8 @@ import { stripe } from "@/lib/stripe/client";
 import { getPlanByPriceId, PLANS } from "@/lib/stripe/plans";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
+export const maxDuration = 15;
+
 function getAdminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -117,6 +119,43 @@ export async function POST(request: Request) {
           custom_personas_limit: PLANS.free.customPersonasLimit,
         })
         .eq("stripe_subscription_id", subscription.id);
+      break;
+    }
+
+    case "customer.subscription.paused": {
+      const subscription = event.data.object;
+
+      await supabase
+        .from("subscriptions")
+        .update({
+          plan: "free",
+          evaluations_limit: PLANS.free.evaluationsLimit,
+          custom_personas_limit: PLANS.free.customPersonasLimit,
+        })
+        .eq("stripe_subscription_id", subscription.id);
+      break;
+    }
+
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as any;
+      const subscriptionId: string | null = invoice.subscription ?? null;
+      const attemptCount: number = invoice.attempt_count ?? 1;
+      if (!subscriptionId) break;
+
+      // Stripe retries on its own schedule; we downgrade only after the 3rd failure
+      // so dunning flows don't kick a user off their plan on the first transient decline.
+      if (attemptCount >= 3) {
+        await supabase
+          .from("subscriptions")
+          .update({
+            plan: "free",
+            evaluations_limit: PLANS.free.evaluationsLimit,
+            custom_personas_limit: PLANS.free.customPersonasLimit,
+          })
+          .eq("stripe_subscription_id", subscriptionId);
+      } else {
+        console.warn(`Stripe payment failed for subscription ${subscriptionId} (attempt ${attemptCount}/3)`);
+      }
       break;
     }
   }

@@ -80,6 +80,7 @@ export const PLANS: Record<string, PlanConfig> = {
   },
 };
 
-export function getPlanByPriceId(priceId: string): PlanConfig | undefined {
+export function getPlanByPriceId(priceId: string | undefined | null): PlanConfig | undefined {
+  if (!priceId) return undefined;
   return Object.values(PLANS).find((p) => p.stripePriceId === priceId);
 }
