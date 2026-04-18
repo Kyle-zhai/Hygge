@@ -71,6 +71,36 @@ function buildSubmissionPrompt(
 
 You are providing your perspective on a topic submitted for discussion. The topic could be a product, idea, policy, event, design, creative work, business strategy, or anything else. Stay completely in character. Your evaluation should reflect your unique perspective, biases, blind spots, and emotional reactions as defined in your character.
 
+## OUTPUT CONTRACT — enforced by automated validator. Violations reject the response.
+
+1. extracted_quotes: MUST be an array of EXACTLY 3-5 strings. Each string MUST be copied character-for-character from the submission (same words, same order, same punctuation, same capitalization). Paraphrases are rejected.
+   - ✓ "first-year design students"          (exact substring of submission)
+   - ✗ "first year design students"          (hyphen dropped — rejected)
+   - ✗ "design students in their first year" (reordered — rejected)
+
+2. review_text: MUST contain at least 3 double-quoted fragments, each of which is a verbatim substring of the submission (the same fragments you put in extracted_quotes, or additional ones).
+   - ✓ The pitch "first-year design students" narrows the ICP sharply.
+   - ✗ The pitch targets first-year design students. (no quotes — rejected)
+
+3. Every "..." span in review_text MUST appear verbatim in the submission. Never use double quotes for emphasis, paraphrase, or your own descriptors.
+
+4. BANNED PHRASES — review_text MUST NOT contain any of:
+   "has potential", "could be better", "interesting idea", "well thought out", "needs more work", "solid foundation", "great start", "overall good", "generally positive", "compelling vision", "thoughtful approach", "has merit", "a decent chance", "reasonable idea", "promising direction".
+   Replace with a specific observation about the subject or a lived-experience detail.
+
+5. strengths[] and weaknesses[] MUST each contain at least 3 entries, every entry naming a specific element from the submission.
+
+## SELF-CHECK before you emit JSON
+
+Mentally tick:
+[ ] 3-5 exact substrings sit in extracted_quotes?
+[ ] review_text has ≥ 3 double-quoted verbatim substrings?
+[ ] Every "..." span in review_text actually appears in the submission?
+[ ] Zero banned phrases?
+[ ] strengths and weaknesses have ≥ 3 entries each?
+
+If any box fails, rewrite before emitting. You have ONE retry budget — a second rejection wastes tokens and ships a degraded review.
+
 IMPORTANT EVALUATION RULES:
 ${dimensionsInstruction}
 - Your scoring should reflect your scoring_weights — dimensions you care about more should have more detailed analysis.
@@ -147,6 +177,21 @@ function buildShortTopicPrompt(
   const system = `${persona.system_prompt}
 
 Someone has asked you a short, open-ended question inviting your perspective on a SUBJECT (e.g. "What do you think of X (Twitter)?"). This is a conversation — you are sharing your view IN CHARACTER on the subject itself. You are NOT evaluating the wording of their question.
+
+## OUTPUT CONTRACT — enforced by automated validator.
+
+1. extracted_quotes: MUST be an empty array []. The user's question is too short to cite verbatim.
+2. BANNED PHRASES — review_text MUST NOT contain any of:
+   "has potential", "could be better", "interesting idea", "well thought out", "needs more work", "solid foundation", "great start", "overall good", "generally positive", "compelling vision", "thoughtful approach", "has merit", "a decent chance", "reasonable idea", "promising direction".
+3. strengths[] and weaknesses[] MUST each contain at least 3 entries describing the SUBJECT (not the user's question).
+
+## SELF-CHECK before emitting JSON
+
+[ ] extracted_quotes is []?
+[ ] Zero banned phrases in review_text?
+[ ] strengths and weaknesses each have ≥ 3 entries about the SUBJECT?
+
+If any box fails, rewrite before emitting. You have ONE retry budget.
 
 IMPORTANT RULES:
 ${dimensionsInstruction}

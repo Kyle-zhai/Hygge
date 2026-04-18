@@ -16,10 +16,10 @@ const mockProject: ProjectParsedData = {
   competitors: "None", goals: "Get users", success_metrics: "DAU",
 };
 
-function mockLLM(responseText: string): LLMAdapter {
+function mockLLM(responseText: string, model = "mock-model"): LLMAdapter {
   return {
     complete: vi.fn().mockResolvedValue({
-      text: responseText, usage: { inputTokens: 200, outputTokens: 300 },
+      text: responseText, model, usage: { inputTokens: 200, outputTokens: 300 },
     }),
   };
 }
@@ -39,6 +39,19 @@ describe("generatePersonaReview", () => {
     expect(result.review_text).toContain("indie developer");
     expect(result.strengths).toHaveLength(2);
     expect(result.weaknesses).toHaveLength(2);
-    expect(result.llm_model).toBeDefined();
+    expect(result.llm_model).toBe("mock-model");
+  });
+
+  it("records the fallback model when the chain falls through mid-review", async () => {
+    // Simulates FallbackLLM returning the second entry's model on a successful
+    // response: llm_model must reflect the model that actually produced the output.
+    const llm = mockLLM(JSON.stringify({
+      scores: { usability: 7, market_fit: 7, design: 7, tech_quality: 7, innovation: 7, pricing: 7 },
+      review_text: "Review text from the fallback entry.",
+      strengths: ["a"],
+      weaknesses: ["b"],
+    }), "claude-sonnet-4-6");
+    const result = await generatePersonaReview(llm, mockPersona, mockProject, "I made a dev tool");
+    expect(result.llm_model).toBe("claude-sonnet-4-6");
   });
 });

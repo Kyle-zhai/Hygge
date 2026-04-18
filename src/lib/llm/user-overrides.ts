@@ -3,13 +3,16 @@ import { decryptLLMKey } from "@/lib/crypto/llm-key";
 
 export type LLMProviderType = "openai_compatible" | "anthropic" | "google";
 
-export interface LLMOverrides {
+export interface LLMOverrideEntry {
   providerType: LLMProviderType;
   apiKey: string;
   baseURL?: string;
   model: string;
   visionModel?: string;
+  label?: string;
 }
+
+export type LLMOverrides = LLMOverrideEntry[];
 
 export async function fetchUserLLMOverrides(userId: string): Promise<LLMOverrides | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,29 +24,34 @@ export async function fetchUserLLMOverrides(userId: string): Promise<LLMOverride
   });
 
   const { data } = await admin
-    .from("user_llm_settings")
-    .select("api_key, base_url, model, vision_model, provider_type")
+    .from("user_llm_chain_entries")
+    .select("provider_type, label, base_url, model, vision_model, api_key, order_index")
     .eq("user_id", userId)
-    .maybeSingle();
+    .order("order_index", { ascending: true });
 
-  if (!data) return null;
+  if (!data || data.length === 0) return null;
 
-  const providerType = (data.provider_type as LLMProviderType | null) ?? "openai_compatible";
-  let apiKey: string;
-  try {
-    apiKey = decryptLLMKey(data.api_key);
-  } catch (err) {
-    console.error("llm.key_decrypt_failed", {
-      userId,
-      error: err instanceof Error ? err.message : String(err),
+  const entries: LLMOverrideEntry[] = [];
+  for (const row of data) {
+    let apiKey: string;
+    try {
+      apiKey = decryptLLMKey(row.api_key);
+    } catch (err) {
+      console.error("llm.key_decrypt_failed", {
+        userId,
+        orderIndex: row.order_index,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      continue;
+    }
+    entries.push({
+      providerType: (row.provider_type as LLMProviderType | null) ?? "openai_compatible",
+      apiKey,
+      baseURL: row.base_url || undefined,
+      model: row.model,
+      visionModel: row.vision_model ?? undefined,
+      label: row.label ?? undefined,
     });
-    return null;
   }
-  return {
-    providerType,
-    apiKey,
-    baseURL: data.base_url || undefined,
-    model: data.model,
-    visionModel: data.vision_model ?? undefined,
-  };
+  return entries.length > 0 ? entries : null;
 }

@@ -3,7 +3,7 @@ import { OpenAICompatibleLLM } from "../../src/llm/openai-compatible.js";
 
 describe("LLM Adapter", () => {
   it("OpenAICompatibleLLM implements LLMAdapter interface", () => {
-    const llm = new OpenAICompatibleLLM("fake-key", "qwen-max", "https://dashscope.aliyuncs.com/compatible-mode/v1");
+    const llm = new OpenAICompatibleLLM("fake-key", "qwen3.6-plus", "https://dashscope.aliyuncs.com/compatible-mode/v1");
     expect(llm).toHaveProperty("complete");
     expect(typeof llm.complete).toBe("function");
   });
@@ -18,7 +18,7 @@ describe("LLM Adapter", () => {
     };
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as any);
 
-    const llm = new OpenAICompatibleLLM("fake-key", "qwen-max", "https://dashscope.aliyuncs.com/compatible-mode/v1");
+    const llm = new OpenAICompatibleLLM("fake-key", "qwen3.6-plus", "https://dashscope.aliyuncs.com/compatible-mode/v1");
 
     const result = await llm.complete({
       system: "You are a helpful assistant.",
@@ -32,6 +32,7 @@ describe("LLM Adapter", () => {
     );
 
     expect(result.text).toBe('{"result": "test"}');
+    expect(result.model).toBe("qwen3.6-plus");
     expect(result.usage).toEqual({ inputTokens: 100, outputTokens: 50 });
 
     fetchSpy.mockRestore();
@@ -44,7 +45,7 @@ describe("LLM Adapter", () => {
         { status: 200 },
       ),
     );
-    const llm = new OpenAICompatibleLLM("k", "qwen-max", "https://example.com/v1");
+    const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
     await llm.complete({ system: "s", prompt: "p" });
     const init = fetchSpy.mock.calls[0][1] as RequestInit;
     expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -65,7 +66,7 @@ describe("LLM Adapter", () => {
     const originalTimeout = AbortSignal.timeout;
     AbortSignal.timeout = () => originalTimeout.call(AbortSignal, 20);
     try {
-      const llm = new OpenAICompatibleLLM("k", "qwen-max", "https://example.com/v1");
+      const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
       const err = await llm.complete({ system: "s", prompt: "p" }).catch((e: unknown) => e);
       expect(err).toBeInstanceOf(DOMException);
       expect((err as DOMException).name).toBe("TimeoutError");

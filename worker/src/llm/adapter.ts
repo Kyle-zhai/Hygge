@@ -13,6 +13,7 @@ export interface LLMRequest {
 
 export interface LLMResponse {
   text: string;
+  model: string;
   usage: {
     inputTokens: number;
     outputTokens: number;

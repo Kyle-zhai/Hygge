@@ -17,7 +17,7 @@ describe("OpenAICompatibleLLM", () => {
   let llm: OpenAICompatibleLLM;
 
   beforeEach(() => {
-    llm = new OpenAICompatibleLLM("test-key", "qwen-max", "https://example.com/v1");
+    llm = new OpenAICompatibleLLM("test-key", "qwen3.6-plus", "https://example.com/v1");
   });
 
   afterEach(() => {

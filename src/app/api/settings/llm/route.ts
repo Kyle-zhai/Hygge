@@ -6,10 +6,61 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 const PROVIDER_TYPES = ["openai_compatible", "anthropic", "google"] as const;
 type ProviderType = (typeof PROVIDER_TYPES)[number];
 
+const MAX_CHAIN_LEN = 10;
+
 function maskKey(key: string): string {
   if (!key) return "";
   if (key.length <= 8) return "•".repeat(key.length);
   return key.slice(0, 4) + "•".repeat(Math.min(16, key.length - 8)) + key.slice(-4);
+}
+
+interface EntryInput {
+  id?: string;
+  provider_type?: string;
+  label?: string | null;
+  base_url?: string | null;
+  model?: string;
+  vision_model?: string | null;
+  api_key?: string;
+  keep_existing_key?: boolean;
+}
+
+interface NormalizedEntry {
+  provider_type: ProviderType;
+  label: string | null;
+  base_url: string | null;
+  model: string;
+  vision_model: string | null;
+  api_key: string;
+}
+
+function normalizeEntry(raw: EntryInput): NormalizedEntry | { error: string } {
+  const providerType: ProviderType = PROVIDER_TYPES.includes(raw.provider_type as ProviderType)
+    ? (raw.provider_type as ProviderType)
+    : "openai_compatible";
+  const model = typeof raw.model === "string" ? raw.model.trim() : "";
+  const apiKey = typeof raw.api_key === "string" ? raw.api_key.trim() : "";
+  const baseUrl = typeof raw.base_url === "string" ? raw.base_url.trim() : "";
+  if (!model) return { error: "model is required" };
+  if (!apiKey) return { error: "api_key is required" };
+  if (providerType === "openai_compatible" && !baseUrl) {
+    return { error: "base_url is required for OpenAI-compatible providers" };
+  }
+  if (baseUrl && !/^https?:\/\//.test(baseUrl)) {
+    return { error: "base_url must start with http(s)://" };
+  }
+  const visionModel = typeof raw.vision_model === "string" && raw.vision_model.trim()
+    ? raw.vision_model.trim()
+    : null;
+  const label = typeof raw.label === "string" && raw.label.trim() ? raw.label.trim() : null;
+  return {
+    provider_type: providerType,
+    label,
+    base_url: baseUrl || null,
+    model,
+    vision_model: visionModel,
+    api_key: apiKey,
+  };
 }
 
 export async function GET() {
@@ -18,31 +69,32 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data } = await supabase
-    .from("user_llm_settings")
-    .select("provider_type, provider_label, base_url, model, vision_model, api_key, updated_at")
+    .from("user_llm_chain_entries")
+    .select("id, provider_type, label, base_url, model, vision_model, api_key, order_index, updated_at")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .order("order_index", { ascending: true });
 
-  if (!data) return NextResponse.json({ settings: null });
-
-  let plainKey = "";
-  try {
-    plainKey = decryptLLMKey(data.api_key);
-  } catch {
-    plainKey = data.api_key;
-  }
-
-  return NextResponse.json({
-    settings: {
-      provider_type: (data.provider_type ?? "openai_compatible") as ProviderType,
-      provider_label: data.provider_label,
-      base_url: data.base_url ?? "",
-      model: data.model,
-      vision_model: data.vision_model,
+  const entries = (data ?? []).map((row) => {
+    let plainKey = "";
+    try {
+      plainKey = decryptLLMKey(row.api_key);
+    } catch {
+      plainKey = row.api_key;
+    }
+    return {
+      id: row.id as string,
+      provider_type: (row.provider_type ?? "openai_compatible") as ProviderType,
+      label: row.label,
+      base_url: row.base_url ?? "",
+      model: row.model,
+      vision_model: row.vision_model,
       api_key_masked: maskKey(plainKey),
-      updated_at: data.updated_at,
-    },
+      order_index: row.order_index,
+      updated_at: row.updated_at,
+    };
   });
+
+  return NextResponse.json({ entries });
 }
 
 export async function PUT(request: Request) {
@@ -54,58 +106,89 @@ export async function PUT(request: Request) {
   if (limitResponse) return limitResponse;
 
   const body = await request.json().catch(() => ({}));
-  const providerType: ProviderType = PROVIDER_TYPES.includes(body.provider_type)
-    ? body.provider_type
-    : "openai_compatible";
-  const providerLabel = typeof body.provider_label === "string" ? body.provider_label.trim() : null;
-  const baseUrlRaw = typeof body.base_url === "string" ? body.base_url.trim() : "";
-  const model = typeof body.model === "string" ? body.model.trim() : "";
-  const visionModel = typeof body.vision_model === "string" && body.vision_model.trim()
-    ? body.vision_model.trim()
-    : null;
-  const apiKey = typeof body.api_key === "string" ? body.api_key.trim() : "";
-
-  if (!model || !apiKey) {
-    return NextResponse.json(
-      { error: "model and api_key are required" },
-      { status: 400 },
-    );
+  const rawEntries: EntryInput[] = Array.isArray(body?.entries) ? body.entries : [];
+  if (rawEntries.length === 0) {
+    return NextResponse.json({ error: "entries must be a non-empty array" }, { status: 400 });
   }
-  if (providerType === "openai_compatible" && !baseUrlRaw) {
-    return NextResponse.json(
-      { error: "base_url is required for OpenAI-compatible providers" },
-      { status: 400 },
-    );
-  }
-  if (baseUrlRaw && !/^https?:\/\//.test(baseUrlRaw)) {
-    return NextResponse.json({ error: "base_url must start with http(s)://" }, { status: 400 });
+  if (rawEntries.length > MAX_CHAIN_LEN) {
+    return NextResponse.json({ error: `Maximum ${MAX_CHAIN_LEN} entries per chain` }, { status: 400 });
   }
 
-  let encryptedKey: string;
-  try {
-    encryptedKey = encryptLLMKey(apiKey);
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "encryption_unavailable" },
-      { status: 500 },
-    );
+  // keep_existing_key=true reuses the ciphertext of the row identified by `id`,
+  // letting users reorder or edit other fields without retyping every key.
+  const { data: existing } = await supabase
+    .from("user_llm_chain_entries")
+    .select("id, api_key")
+    .eq("user_id", user.id);
+  const keyById = new Map<string, string>();
+  for (const row of existing ?? []) keyById.set(row.id as string, row.api_key as string);
+
+  const normalized: NormalizedEntry[] = [];
+  for (let i = 0; i < rawEntries.length; i++) {
+    const raw = rawEntries[i];
+    const reuseKey = raw.keep_existing_key === true;
+    if (reuseKey) {
+      const existingId = typeof raw.id === "string" ? raw.id : "";
+      if (!existingId) {
+        return NextResponse.json(
+          { error: `entry ${i}: keep_existing_key=true requires id` },
+          { status: 400 },
+        );
+      }
+      const existingCipher = keyById.get(existingId);
+      if (!existingCipher) {
+        return NextResponse.json(
+          { error: `entry ${i}: no existing entry with id=${existingId}` },
+          { status: 400 },
+        );
+      }
+      const prepared = { ...raw, api_key: "__reuse__" };
+      const n = normalizeEntry(prepared);
+      if ("error" in n) {
+        return NextResponse.json({ error: `entry ${i}: ${n.error}` }, { status: 400 });
+      }
+      normalized.push({ ...n, api_key: existingCipher });
+    } else {
+      const n = normalizeEntry(raw);
+      if ("error" in n) {
+        return NextResponse.json({ error: `entry ${i}: ${n.error}` }, { status: 400 });
+      }
+      try {
+        n.api_key = encryptLLMKey(n.api_key);
+      } catch (err) {
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : "encryption_unavailable" },
+          { status: 500 },
+        );
+      }
+      normalized.push(n);
+    }
   }
 
-  const { error } = await supabase
-    .from("user_llm_settings")
-    .upsert({
-      user_id: user.id,
-      provider_type: providerType,
-      provider_label: providerLabel,
-      base_url: baseUrlRaw || null,
-      model,
-      vision_model: visionModel,
-      api_key: encryptedKey,
-      updated_at: new Date().toISOString(),
-    });
+  // Full replace: wipe then insert the new chain. One transaction would be cleaner
+  // but Supabase JS client doesn't expose txns; delete-then-insert is acceptable
+  // because RLS scopes to user_id and the window is milliseconds.
+  const { error: delErr } = await supabase
+    .from("user_llm_chain_entries")
+    .delete()
+    .eq("user_id", user.id);
+  if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  const rows = normalized.map((n, i) => ({
+    user_id: user.id,
+    order_index: i,
+    provider_type: n.provider_type,
+    label: n.label,
+    base_url: n.base_url,
+    model: n.model,
+    vision_model: n.vision_model,
+    api_key: n.api_key,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error: insErr } = await supabase.from("user_llm_chain_entries").insert(rows);
+  if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true, count: rows.length });
 }
 
 export async function DELETE() {
@@ -114,7 +197,7 @@ export async function DELETE() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { error } = await supabase
-    .from("user_llm_settings")
+    .from("user_llm_chain_entries")
     .delete()
     .eq("user_id", user.id);
 
