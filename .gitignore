@@ -48,6 +48,7 @@ next-env.d.ts
 # worker
 worker/.env
 worker/node_modules
+worker/test-output/
 
 # persona pictures (originals too large)
 /persona_picture

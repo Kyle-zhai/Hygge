@@ -1,8 +1,11 @@
+import { writeFileSync } from "node:fs";
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification, PersonaStance, CitedReference } from "../types/evaluation.js";
 import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
 import { config } from "../config.js";
+import { robustJsonParse } from "../utils/json-parse.js";
+import { validatePersonaReview, hasReviewViolations, buildReviewRetryInstructions } from "../utils/review-validator.js";
 
 export interface PersonaReviewResult {
   scores: EvaluationScores;
@@ -24,13 +27,38 @@ export async function generatePersonaReview(
   mode?: "product" | "topic"
 ): Promise<PersonaReviewResult> {
   const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions, mode);
-  const response = await llm.complete({ system, prompt, maxTokens: 2048 });
-  let parsed: any;
-  try {
-    parsed = JSON.parse(response.text);
-  } catch (e) {
-    console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. Raw text (first 300 chars):`, response.text.slice(0, 300));
-    throw new Error(`Persona review JSON parse failed for ${persona.identity.name}: ${(e as Error).message}`);
+  const parseResponse = (text: string): any => {
+    try {
+      return robustJsonParse(text);
+    } catch (e) {
+      try {
+        const dumpPath = `/tmp/persona-review-fail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.txt`;
+        writeFileSync(dumpPath, text);
+        console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. Full response at ${dumpPath}. First 300:`, text.slice(0, 300));
+      } catch {
+        console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. First 300:`, text.slice(0, 300));
+      }
+      throw new Error(`Persona review JSON parse failed for ${persona.identity.name}: ${(e as Error).message}`);
+    }
+  };
+
+  const MAX_RETRIES = 2;
+  let response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
+  let parsed = parseResponse(response.text);
+  let validation = validatePersonaReview(parsed, rawInput);
+  for (let attempt = 1; attempt <= MAX_RETRIES && hasReviewViolations(validation); attempt++) {
+    console.log(
+      `[PersonaReview:${persona.identity.name}] Retry ${attempt}/${MAX_RETRIES} — banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} invalidExtracted:${validation.invalidExtractedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount} unused:${validation.unusedExtractedQuotes.length}`
+    );
+    const retryPrompt = `${prompt}\n\n---\n\nATTEMPT ${attempt} FAILED VALIDATION. You MUST fix these specific issues while PRESERVING every verbatim double-quoted fragment you already produced correctly:\n\n${buildReviewRetryInstructions(validation)}\n\nRegenerate the ENTIRE JSON response now, addressing every issue above. Keep the same exact schema. Keep extracted_quotes populated with 3-5 verbatim fragments from the submission.`;
+    response = await llm.complete({ system, prompt: retryPrompt, maxTokens: 2048, jsonMode: true });
+    parsed = parseResponse(response.text);
+    validation = validatePersonaReview(parsed, rawInput);
+  }
+  if (hasReviewViolations(validation)) {
+    console.log(
+      `[PersonaReview:${persona.identity.name}] Retries exhausted — proceeding with residual violations: fabricated:${validation.fabricatedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount}`
+    );
   }
   const scores = (dimensions && mode === "topic") ? (parsed.stances ?? parsed.scores) : parsed.scores;
   if (!scores || typeof scores !== "object") {
