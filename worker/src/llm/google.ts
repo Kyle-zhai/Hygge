@@ -1,5 +1,6 @@
 import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
 import { log } from "../utils/logger.js";
+import { config } from "../config.js";
 
 const DEFAULT_GOOGLE_URL = "https://generativelanguage.googleapis.com";
 
@@ -7,7 +8,7 @@ async function fetchAsInlineData(
   url: string,
 ): Promise<{ mimeType: string; data: string } | null> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
     if (!res.ok) return null;
     const mimeType =
       res.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream";
@@ -58,12 +59,15 @@ export class GoogleLLM implements LLMAdapter {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(config.llm.timeoutMs),
       });
     } catch (err) {
-      log.error("llm.network_error", {
+      const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+      log.error(timedOut ? "llm.timeout" : "llm.network_error", {
         provider: "google",
         model: this.model,
         durationMs: Date.now() - started,
+        timeoutMs: config.llm.timeoutMs,
         error: err instanceof Error ? err.message : String(err),
       });
       throw err;
