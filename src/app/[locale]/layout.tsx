@@ -4,6 +4,7 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { SmoothScrollProvider } from "@/app/providers/smooth-scroll";
+import { AnalyticsProvider } from "@/app/providers/analytics";
 import "@/app/globals.css";
 
 export async function generateMetadata({
@@ -41,7 +42,9 @@ export default async function LocaleLayout({
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen bg-[#0C0C0C] font-sans text-[#EAEAE8] antialiased">
         <NextIntlClientProvider messages={messages}>
-          <SmoothScrollProvider>{children}</SmoothScrollProvider>
+          <AnalyticsProvider>
+            <SmoothScrollProvider>{children}</SmoothScrollProvider>
+          </AnalyticsProvider>
         </NextIntlClientProvider>
       </body>
     </html>

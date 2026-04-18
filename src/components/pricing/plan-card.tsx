@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
+import { track } from "@/lib/analytics/posthog";
 
 interface PlanCardProps {
   name: string;
@@ -37,6 +38,7 @@ export function PlanCard({
 
   async function handleUpgrade() {
     if (planKey === "free" || isCurrent) return;
+    track("upgrade_cta_clicked", { plan: planKey });
     setLoading(true);
     try {
       const res = await fetch("/api/stripe/checkout", {
