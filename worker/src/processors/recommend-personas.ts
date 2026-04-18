@@ -1,5 +1,6 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
+import { robustJsonParse } from "../utils/json-parse.js";
 
 const RECOMMEND_SYSTEM = `You are a discussion panel coordinator. Given a topic description and a list of available personas, recommend the most relevant personas for discussing this topic. The topic may be a product, idea, policy, event, design, creative work, business strategy, or any other subject.
 
@@ -33,5 +34,5 @@ export async function recommendPersonas(
     maxTokens: 1024,
   });
 
-  return JSON.parse(response.text);
+  return robustJsonParse(response.text);
 }

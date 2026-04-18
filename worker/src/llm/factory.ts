@@ -3,6 +3,7 @@ import type { LLMAdapter } from "./adapter.js";
 import { OpenAICompatibleLLM } from "./openai-compatible.js";
 import { AnthropicLLM } from "./anthropic.js";
 import { GoogleLLM } from "./google.js";
+import { FallbackLLM } from "./fallback.js";
 
 export type LLMProviderType = "openai_compatible" | "anthropic" | "google";
 
@@ -52,7 +53,15 @@ export function buildLLM(overrides?: LLMOverrides | null): LLMAdapter {
       overrides.baseURL,
     );
   }
-  return new OpenAICompatibleLLM(config.llm.apiKey, config.llm.model, config.llm.baseURL);
+  const models = [config.llm.model, ...config.llm.fallbackModels];
+  if (models.length === 1) {
+    return new OpenAICompatibleLLM(config.llm.apiKey, models[0], config.llm.baseURL);
+  }
+  const entries = models.map((model) => ({
+    model,
+    adapter: new OpenAICompatibleLLM(config.llm.apiKey, model, config.llm.baseURL),
+  }));
+  return new FallbackLLM(entries);
 }
 
 export function buildVisionLLM(overrides?: LLMOverrides | null): LLMAdapter {

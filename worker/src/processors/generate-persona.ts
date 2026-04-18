@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { supabase } from "../supabase.js";
 import { buildLLM, type LLMOverrides } from "../llm/factory.js";
+import { robustJsonParse } from "../utils/json-parse.js";
 
 interface PersonaGenerationInput {
   name: string;
@@ -176,7 +177,7 @@ export async function processPersonaGeneration(job: Job<PersonaJobData>) {
   });
 
   const response = await llm.complete({ system, prompt, maxTokens: 4096 });
-  const persona = JSON.parse(response.text);
+  const persona = robustJsonParse<any>(response.text);
 
   persona.identity.name = name;
   if (avatarUrl) persona.identity.avatar = avatarUrl;
