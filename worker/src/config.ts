@@ -15,6 +15,10 @@ export const config = {
     visionModel: process.env.LLM_VISION_MODEL || "qwen3.5-omni-plus",
     baseURL: process.env.LLM_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1",
     fallbackModels,
+    // Hard cap on a single LLM HTTP call. Node fetch has no default timeout,
+    // so without this a slow/hung provider (Qwen sometimes stalls >2 min on
+    // JSON-mode completions) leaves the worker spinning on "thinking" forever.
+    timeoutMs: Number(process.env.LLM_TIMEOUT_MS ?? 120_000),
   },
   supabase: {
     url: process.env.SUPABASE_URL || "",

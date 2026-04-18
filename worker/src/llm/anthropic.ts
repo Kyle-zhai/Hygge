@@ -1,5 +1,6 @@
 import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
 import { log } from "../utils/logger.js";
+import { config } from "../config.js";
 
 const DEFAULT_ANTHROPIC_URL = "https://api.anthropic.com";
 
@@ -46,12 +47,15 @@ export class AnthropicLLM implements LLMAdapter {
           system: systemPrompt,
           messages: [{ role: "user", content }],
         }),
+        signal: AbortSignal.timeout(config.llm.timeoutMs),
       });
     } catch (err) {
-      log.error("llm.network_error", {
+      const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+      log.error(timedOut ? "llm.timeout" : "llm.network_error", {
         provider: "anthropic",
         model: this.model,
         durationMs: Date.now() - started,
+        timeoutMs: config.llm.timeoutMs,
         error: err instanceof Error ? err.message : String(err),
       });
       throw err;

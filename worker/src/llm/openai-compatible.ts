@@ -1,5 +1,6 @@
 import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
 import { log } from "../utils/logger.js";
+import { config } from "../config.js";
 
 export class OpenAICompatibleLLM implements LLMAdapter {
   private apiKey: string;
@@ -48,11 +49,14 @@ export class OpenAICompatibleLLM implements LLMAdapter {
             { role: "user", content: userContent },
           ],
         }),
+        signal: AbortSignal.timeout(config.llm.timeoutMs),
       });
     } catch (err) {
-      log.error("llm.network_error", {
+      const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+      log.error(timedOut ? "llm.timeout" : "llm.network_error", {
         model: this.model,
         durationMs: Date.now() - started,
+        timeoutMs: config.llm.timeoutMs,
         error: err instanceof Error ? err.message : String(err),
       });
       throw err;
