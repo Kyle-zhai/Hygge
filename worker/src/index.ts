@@ -19,7 +19,7 @@ const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
 
 const evaluationWorker = new Worker("evaluations", processEvaluation, {
   connection,
-  concurrency: 1,
+  concurrency: Number(process.env.EVAL_CONCURRENCY ?? 3),
   drainDelay: 30,
   stalledInterval: 60_000,
   lockDuration: 60_000,

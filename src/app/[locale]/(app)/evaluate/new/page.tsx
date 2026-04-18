@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ProjectInput } from "@/components/evaluation/project-input";
 import { PersonaSelector } from "@/components/evaluation/persona-selector";
 import { PLANS } from "@/lib/stripe/plans";
+import { track } from "@/lib/analytics/posthog";
 
 function NewEvaluationContent() {
   const t = useTranslations("evaluation");
@@ -54,11 +55,29 @@ function NewEvaluationContent() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
+    const MAX_BYTES = 25 * 1024 * 1024;
+    const ALLOWED_MIME = new Set([
+      "application/pdf",
+      "image/png", "image/jpeg", "image/webp", "image/gif",
+      "text/plain", "text/markdown", "text/csv",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "video/mp4", "video/quicktime",
+      "audio/mpeg", "audio/mp4", "audio/wav",
+    ]);
+
     const urls: string[] = [];
     for (const file of files) {
+      if (file.size > MAX_BYTES) {
+        throw new Error(`${file.name} exceeds 25MB limit`);
+      }
+      if (!ALLOWED_MIME.has(file.type)) {
+        throw new Error(`${file.name}: unsupported file type (${file.type || "unknown"})`);
+      }
       const ext = file.name.split(".").pop() || "bin";
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("attachments").upload(path, file);
+      const { error } = await supabase.storage.from("attachments").upload(path, file, {
+        contentType: file.type,
+      });
       if (error) throw new Error(`Upload failed: ${error.message}`);
       urls.push(path);
     }
@@ -88,6 +107,11 @@ function NewEvaluationContent() {
         throw new Error(data.error || "Failed to create evaluation");
       }
       const { evaluation } = await res.json();
+      track("first_evaluation_created", {
+        evaluation_id: evaluation.id,
+        mode,
+        persona_count: selectedPersonaIds.length,
+      });
       router.push(`/${locale}/evaluate/${evaluation.id}/progress`);
     } catch (e: any) {
       setError(e.message);

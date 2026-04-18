@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _req: Request,
@@ -33,6 +34,9 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
 
   const body = await request.json().catch(() => ({}));
   const rating = Number(body.rating);

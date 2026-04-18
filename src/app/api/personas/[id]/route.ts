@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 function getAdminClient() {
   return createSupabaseClient(
@@ -50,6 +51,9 @@ export async function PATCH(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
 
   const { data: existing } = await supabase
     .from("personas")
@@ -114,6 +118,9 @@ export async function DELETE(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
 
   const { data: persona } = await supabase
     .from("personas")

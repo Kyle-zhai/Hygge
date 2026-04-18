@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
+export const maxDuration = 30;
+
 const STUCK_THRESHOLD_MINUTES = 15;
 
 export async function GET(request: Request) {

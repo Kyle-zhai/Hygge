@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe/client";
 import { PLANS } from "@/lib/stripe/plans";
+import { enforceRateLimit } from "@/lib/rate-limit";
+
+export const maxDuration = 10;
+
+const TRIAL_DAYS = Number(process.env.STRIPE_TRIAL_DAYS ?? 0);
 
 export async function POST(request: Request) {
   if (!stripe) {
@@ -13,6 +18,9 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const limitResponse = await enforceRateLimit("personas", user.id);
+  if (limitResponse) return limitResponse;
 
   const { plan } = await request.json();
 
@@ -33,7 +41,12 @@ export async function POST(request: Request) {
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/pricing?success=true`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/pricing?canceled=true`,
     metadata: { user_id: user.id, plan },
+    allow_promotion_codes: true,
   };
+
+  if (TRIAL_DAYS > 0) {
+    sessionParams.subscription_data = { trial_period_days: TRIAL_DAYS };
+  }
 
   if (subscription?.stripe_customer_id) {
     sessionParams.customer = subscription.stripe_customer_id;
