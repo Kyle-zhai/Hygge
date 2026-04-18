@@ -1,5 +1,6 @@
 import type { Persona } from "../types/persona.js";
 import type { ProjectParsedData, TopicClassification } from "../types/evaluation.js";
+import { isShortTopicQuery } from "../utils/topic-mode.js";
 
 function buildDynamicNumericInstruction(dimensions: TopicClassification["dimensions"]): string {
   const lines = dimensions.map(d => `  * ${d.key}: ${d.description}`);
@@ -53,6 +54,19 @@ export function buildPersonaReviewPrompt(
     scoresSchema = buildDynamicNumericSchema(NEUTRAL_FALLBACK_DIMENSIONS);
   }
 
+  if (isShortTopicQuery(mode, rawInput)) {
+    return buildShortTopicPrompt(persona, project, rawInput, dimensionsInstruction, scoresSchema);
+  }
+  return buildSubmissionPrompt(persona, project, rawInput, dimensionsInstruction, scoresSchema);
+}
+
+function buildSubmissionPrompt(
+  persona: Persona,
+  project: ProjectParsedData,
+  rawInput: string,
+  dimensionsInstruction: string,
+  scoresSchema: string,
+): { system: string; prompt: string } {
   const system = `${persona.system_prompt}
 
 You are providing your perspective on a topic submitted for discussion. The topic could be a product, idea, policy, event, design, creative work, business strategy, or anything else. Stay completely in character. Your evaluation should reflect your unique perspective, biases, blind spots, and emotional reactions as defined in your character.
@@ -118,6 +132,61 @@ Respond ONLY with valid JSON in this exact format:
 **Success Metrics:** ${project.success_metrics}
 
 **Original user description (this is the canonical source for your quotes):**
+${rawInput}`;
+
+  return { system, prompt };
+}
+
+function buildShortTopicPrompt(
+  persona: Persona,
+  project: ProjectParsedData,
+  rawInput: string,
+  dimensionsInstruction: string,
+  scoresSchema: string,
+): { system: string; prompt: string } {
+  const system = `${persona.system_prompt}
+
+Someone has asked you a short, open-ended question inviting your perspective on a SUBJECT (e.g. "What do you think of X (Twitter)?"). This is a conversation — you are sharing your view IN CHARACTER on the subject itself. You are NOT evaluating the wording of their question.
+
+IMPORTANT RULES:
+${dimensionsInstruction}
+- Your stance reflects YOUR character's view on each aspect of the SUBJECT. Lean on your scoring_weights, biases, and lived experience as the persona.
+- TALK ABOUT THE SUBJECT. If they ask "what do you think of X?", discuss X — its mechanics, its effects, what it does well, where it falls short, what you've seen in your own life/work with it. Do NOT comment on how the question was phrased, how specific it was, or what context the user did or didn't provide. Pretending the user "lacked specificity" or "didn't define success thresholds" is off-limits — they asked for your opinion, not a brief.
+- CITATIONS:
+  * "cited_references" must have AT LEAST 2 entries. Every entry's "source" must be exactly one of:
+    - "persona_experience" — drawing on your lived history as the persona (projects you've shipped, people you've worked with, patterns you've seen first-hand). Use freely when your persona bio actually supports the claim.
+    - "common_knowledge" — widely-known facts a well-informed layperson would recognize without a Google search. Use for statements about the subject's general shape, history, or public reception.
+    - "user_submission" — only if you're directly quoting a phrase the user actually wrote. Rare in short questions.
+  * "strengths" and "weaknesses" arrays must each contain AT LEAST 3 items. These describe the SUBJECT — what it genuinely does well, and where it falls short, from your persona's perspective. They MUST NOT describe the user's question or writing.
+- HARD BAN on fabricated statistics. You do NOT have web access. Do NOT cite third-party research firms (Gartner, McKinsey, Forrester, Statista, CB Insights, Pew Research, Deloitte, IDC, eMarketer, SimilarWeb, Sensor Tower, etc.), named reports, or specific percentages/dollar figures you cannot verify. If you want to convey scale or trend, frame it as your own sense ("from what I've seen running teams in this space, engagement fell off a cliff after the acquisition") without a fake source.
+- BANNED PHRASES (rewrite if they appear in your draft): "has potential", "could be better", "interesting idea", "well thought out", "needs more work", "solid foundation", "great start", "overall good", "many possibilities", "promising direction", "has merit", "generally positive", "compelling vision", "thoughtful approach", "a decent chance", "reasonable idea". Rewrite around a specific observation about the subject, a lived experience, or a well-known fact.
+- Quote marks: you generally do NOT need them. If you do use double quotes in review_text, reserve them for (a) well-known named phrases tied to the subject (e.g. "everything app"), or (b) direct speech in your voice. Never wrap your own descriptors in quotes for stylistic emphasis.
+- React to the subject the way your character would in real life. Let your biases and blind spots show through the voice naturally.
+
+IMPORTANT: Always respond in English regardless of the input language. Keep proper nouns in the user's original spelling.
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "extracted_quotes": [],
+  ${scoresSchema},
+  "overall_stance": "<strongly_positive|positive|neutral|negative|strongly_negative>",
+  "review_text": "<Your perspective on the SUBJECT in first person as your character, 300-500 words. A conversation about the subject, not a critique of the user's writing.>",
+  "strengths": ["<specific strength of the SUBJECT, grounded in common knowledge or persona experience>", "<...>", "<at least 3 entries>"],
+  "weaknesses": ["<specific weakness of the SUBJECT, grounded in common knowledge or persona experience>", "<...>", "<at least 3 entries>"],
+  "cited_references": [
+    { "claim": "<specific claim you made about the subject>", "source": "persona_experience | common_knowledge" },
+    { "claim": "<another claim>", "source": "persona_experience | common_knowledge" }
+  ]
+}`;
+
+  const prompt = `Someone has asked for your perspective. Discuss the SUBJECT in character — do not critique the wording of their question.
+
+**Subject:** ${project.name}
+**Briefing:** ${project.description}
+**Audience / Stakeholders:** ${project.target_users}
+**Comparables / Alternatives:** ${project.competitors}
+
+**User's question:**
 ${rawInput}`;
 
   return { system, prompt };

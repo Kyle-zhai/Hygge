@@ -28,6 +28,8 @@ interface EvaluationJobData {
   llmOverrides?: LLMOverrides;
 }
 
+const MAX_RAW_INPUT_BYTES = 32 * 1024;
+
 export async function processEvaluation(job: Job<EvaluationJobData>) {
   const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId, llmOverrides } = job.data;
   const llm = buildLLM(llmOverrides);
@@ -35,6 +37,18 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
   const ctx = { evaluationId, projectId, mode, planTier, personaCount: selectedPersonaIds.length };
 
   log.info("orchestrator.start", { ...ctx, hasAttachments: !!attachments?.length, hasUrl: !!url, isComparison: !!comparisonBaseId });
+
+  // Defense-in-depth: the API already caps rawInput, but a legacy job or direct queue
+  // injection could still carry a huge payload into N persona-review LLM calls.
+  const rawInputBytes = Buffer.byteLength(rawInput ?? "", "utf8");
+  if (rawInputBytes > MAX_RAW_INPUT_BYTES) {
+    log.error("orchestrator.raw_input_too_large", { ...ctx, rawInputBytes, limit: MAX_RAW_INPUT_BYTES });
+    await supabase.from("evaluations").update({
+      status: "failed",
+      error_message: `rawInput exceeds ${MAX_RAW_INPUT_BYTES} bytes (${rawInputBytes})`,
+    }).eq("id", evaluationId);
+    return;
+  }
 
   try {
     // 1. Update status to processing
@@ -95,7 +109,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     // Use vision model when media attachments are present, text model otherwise
     const parseLlm = mediaItems.length > 0 ? buildVisionLLM(llmOverrides) : llm;
-    const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems);
+    const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems, mode);
 
     let classification: TopicClassification;
     let parsedData: import("../types/evaluation.js").ProjectParsedData;
@@ -114,7 +128,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     } else {
       const [pd, cl] = await Promise.all([
         withTiming("orchestrator.parse_project", ctx, () => parseTask),
-        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(llm, rawInput)),
+        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(llm, rawInput, mode)),
       ]);
       parsedData = pd;
       classification = cl;
