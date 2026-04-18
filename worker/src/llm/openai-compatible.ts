@@ -106,6 +106,7 @@ export class OpenAICompatibleLLM implements LLMAdapter {
 
     return {
       text,
+      model: this.model,
       usage: {
         inputTokens,
         outputTokens,

@@ -1,78 +1,96 @@
-import { config } from "../config.js";
+import { config, type ChainEntry, type ProviderType } from "../config.js";
 import type { LLMAdapter } from "./adapter.js";
 import { OpenAICompatibleLLM } from "./openai-compatible.js";
 import { AnthropicLLM } from "./anthropic.js";
 import { GoogleLLM } from "./google.js";
-import { FallbackLLM } from "./fallback.js";
+import { FallbackLLM, type FallbackEntry } from "./fallback.js";
 
-export type LLMProviderType = "openai_compatible" | "anthropic" | "google";
+export type { ProviderType } from "../config.js";
 
-export interface LLMOverrides {
-  providerType?: LLMProviderType;
+export interface LLMOverrideEntry {
+  providerType?: ProviderType;
   apiKey: string;
   baseURL?: string;
   model: string;
   visionModel?: string;
+  label?: string;
 }
 
-function isValid(overrides: LLMOverrides | undefined | null): overrides is LLMOverrides {
-  if (!overrides || !overrides.apiKey || !overrides.model) return false;
-  const provider = overrides.providerType ?? "openai_compatible";
-  if (provider === "openai_compatible") {
-    return !!overrides.baseURL;
-  }
+// Backwards-compat: API routes used to send a single object; worker still accepts
+// either a single entry or an array so in-flight jobs enqueued before the rollout
+// don't crash on the shape change.
+export type LLMOverrides = LLMOverrideEntry | LLMOverrideEntry[];
+
+function toEntryArray(overrides: LLMOverrides | undefined | null): LLMOverrideEntry[] {
+  if (!overrides) return [];
+  return Array.isArray(overrides) ? overrides : [overrides];
+}
+
+function isValidEntry(e: LLMOverrideEntry): boolean {
+  if (!e.apiKey || !e.model) return false;
+  const provider = e.providerType ?? "openai_compatible";
+  if (provider === "openai_compatible") return !!e.baseURL;
   return true;
 }
 
-function buildAdapter(
-  providerType: LLMProviderType,
-  apiKey: string,
-  model: string,
-  baseURL?: string,
-): LLMAdapter {
-  switch (providerType) {
+function buildAdapter(entry: ChainEntry): LLMAdapter {
+  switch (entry.providerType) {
     case "anthropic":
-      return new AnthropicLLM(apiKey, model, baseURL);
+      return new AnthropicLLM(entry.apiKey, entry.model, entry.baseURL);
     case "google":
-      return new GoogleLLM(apiKey, model, baseURL);
+      return new GoogleLLM(entry.apiKey, entry.model, entry.baseURL);
     case "openai_compatible":
     default:
-      if (!baseURL) {
-        throw new Error("openai_compatible provider requires a baseURL");
+      if (!entry.baseURL) {
+        throw new Error(`openai_compatible entry (${entry.model}) requires a baseURL`);
       }
-      return new OpenAICompatibleLLM(apiKey, model, baseURL);
+      return new OpenAICompatibleLLM(entry.apiKey, entry.model, entry.baseURL);
   }
 }
 
-export function buildLLM(overrides?: LLMOverrides | null): LLMAdapter {
-  if (isValid(overrides)) {
-    return buildAdapter(
-      overrides.providerType ?? "openai_compatible",
-      overrides.apiKey,
-      overrides.model,
-      overrides.baseURL,
+function toChainEntry(e: LLMOverrideEntry): ChainEntry {
+  return {
+    providerType: e.providerType ?? "openai_compatible",
+    apiKey: e.apiKey,
+    baseURL: e.baseURL,
+    model: e.model,
+    visionModel: e.visionModel,
+    label: e.label,
+  };
+}
+
+function resolveChain(overrides: LLMOverrides | undefined | null): ChainEntry[] {
+  const userEntries = toEntryArray(overrides).filter(isValidEntry).map(toChainEntry);
+  if (userEntries.length > 0) return userEntries;
+  if (config.llm.chain.length === 0) {
+    throw new Error(
+      "No LLM chain configured. Set LLM_1_PROVIDER/LLM_1_API_KEY/LLM_1_MODEL (and LLM_1_BASE_URL for openai_compatible) on the worker, or save a chain in /settings/llm.",
     );
   }
-  const models = [config.llm.model, ...config.llm.fallbackModels];
-  if (models.length === 1) {
-    return new OpenAICompatibleLLM(config.llm.apiKey, models[0], config.llm.baseURL);
-  }
-  const entries = models.map((model) => ({
-    model,
-    adapter: new OpenAICompatibleLLM(config.llm.apiKey, model, config.llm.baseURL),
+  return config.llm.chain;
+}
+
+function buildFallbackFrom(chain: ChainEntry[]): LLMAdapter {
+  const entries: FallbackEntry[] = chain.map((c) => ({
+    providerType: c.providerType,
+    baseURL: c.baseURL,
+    model: c.model,
+    adapter: buildAdapter(c),
   }));
   return new FallbackLLM(entries);
 }
 
+export function buildLLM(overrides?: LLMOverrides | null): LLMAdapter {
+  return buildFallbackFrom(resolveChain(overrides));
+}
+
 export function buildVisionLLM(overrides?: LLMOverrides | null): LLMAdapter {
-  if (isValid(overrides)) {
-    const model = overrides.visionModel || overrides.model;
-    return buildAdapter(
-      overrides.providerType ?? "openai_compatible",
-      overrides.apiKey,
-      model,
-      overrides.baseURL,
-    );
-  }
-  return new OpenAICompatibleLLM(config.llm.apiKey, config.llm.visionModel, config.llm.baseURL);
+  const chain = resolveChain(overrides);
+  const visionChain = chain
+    .filter((c) => !!c.visionModel)
+    .map<ChainEntry>((c) => ({ ...c, model: c.visionModel as string }));
+  if (visionChain.length > 0) return buildFallbackFrom(visionChain);
+  // No entry declared vision capability — fall back to the primary chain so callers
+  // still get something rather than crashing. Quality may degrade but the job runs.
+  return buildFallbackFrom(chain);
 }

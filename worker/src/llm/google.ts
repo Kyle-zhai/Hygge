@@ -116,6 +116,6 @@ export class GoogleLLM implements LLMAdapter {
       maxTokens: request.maxTokens ?? 4096,
     });
 
-    return { text, usage: { inputTokens, outputTokens } };
+    return { text, model: this.model, usage: { inputTokens, outputTokens } };
   }
 }

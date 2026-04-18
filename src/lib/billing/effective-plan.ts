@@ -55,18 +55,17 @@ export async function fetchEffectivePlan(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<EffectivePlan | null> {
-  const [{ data: subscription }, { data: llm }] = await Promise.all([
+  const [{ data: subscription }, { count: chainCount }] = await Promise.all([
     supabase
       .from("subscriptions")
       .select("plan, evaluations_used, evaluations_limit")
       .eq("user_id", userId)
       .single(),
     supabase
-      .from("user_llm_settings")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle(),
+      .from("user_llm_chain_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
   ]);
   if (!subscription) return null;
-  return resolveEffectivePlan(subscription, !!llm);
+  return resolveEffectivePlan(subscription, (chainCount ?? 0) > 0);
 }

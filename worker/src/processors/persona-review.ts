@@ -3,7 +3,6 @@ import type { LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification, PersonaStance, CitedReference } from "../types/evaluation.js";
 import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
-import { config } from "../config.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { validatePersonaReview, hasReviewViolations, buildReviewRetryInstructions } from "../utils/review-validator.js";
 import { isShortTopicQuery } from "../utils/topic-mode.js";
@@ -44,7 +43,7 @@ export async function generatePersonaReview(
   };
 
   const validatorOpts = { skipSubmissionQuoteChecks: isShortTopicQuery(mode, rawInput) };
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 1;
   let response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
   let parsed = parseResponse(response.text);
   let validation = validatePersonaReview(parsed, rawInput);
@@ -75,7 +74,7 @@ export async function generatePersonaReview(
     review_text: parsed.review_text,
     strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
     weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
-    llm_model: config.llm.model,
+    llm_model: response.model,
     overall_stance: parsed.overall_stance ?? null,
     cited_references: Array.isArray(parsed.cited_references) ? parsed.cited_references : null,
   };
