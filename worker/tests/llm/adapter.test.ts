@@ -36,4 +36,42 @@ describe("LLM Adapter", () => {
 
     fetchSpy.mockRestore();
   });
+
+  it("passes an AbortSignal to fetch so slow providers can't hang the worker", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "ok" } }], usage: {} }),
+        { status: 200 },
+      ),
+    );
+    const llm = new OpenAICompatibleLLM("k", "qwen-max", "https://example.com/v1");
+    await llm.complete({ system: "s", prompt: "p" });
+    const init = fetchSpy.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    fetchSpy.mockRestore();
+  });
+
+  it("aborts the request when the AbortSignal fires (real timeout path)", async () => {
+    // Simulate fetch that honors the abort signal — how real fetch behaves
+    // when AbortSignal.timeout() fires mid-flight.
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((_, reject) => {
+          const signal = (init as RequestInit).signal as AbortSignal;
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        }),
+    );
+    // Tight 20ms timeout so the test is deterministic and doesn't wait 120s.
+    const originalTimeout = AbortSignal.timeout;
+    AbortSignal.timeout = () => originalTimeout.call(AbortSignal, 20);
+    try {
+      const llm = new OpenAICompatibleLLM("k", "qwen-max", "https://example.com/v1");
+      const err = await llm.complete({ system: "s", prompt: "p" }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(DOMException);
+      expect((err as DOMException).name).toBe("TimeoutError");
+    } finally {
+      AbortSignal.timeout = originalTimeout;
+      fetchSpy.mockRestore();
+    }
+  });
 });
