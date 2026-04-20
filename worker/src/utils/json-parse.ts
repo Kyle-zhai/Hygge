@@ -9,12 +9,14 @@ export function robustJsonParse<T = unknown>(text: string): T {
   const stripped = stripFencesAndChatter(text);
   const noCtrl = stripControlChars(stripped);
   const fixedEsc = fixInvalidEscapes(noCtrl);
+  const balanced = balanceStringQuotes(fixedEsc);
   const attempts = [
     text,
     stripped,
     noCtrl,
     fixedEsc,
-    balanceStringQuotes(fixedEsc),
+    balanced,
+    closeUnbalancedBrackets(balanced),
   ];
 
   let lastErr: unknown;
@@ -89,6 +91,88 @@ function stripControlChars(text: string): string {
 
 function fixInvalidEscapes(text: string): string {
   return text.replace(/\\([^"\\/bfnrtu])/g, "$1");
+}
+
+/**
+ * Last-resort recovery for output truncated mid-structure (e.g. provider hit
+ * max_tokens). Walks the text, tracks the bracket stack and string state, then:
+ *   - drops a trailing partial token (number, true/false/null, key without value)
+ *   - closes an unterminated string with `"`
+ *   - removes a trailing comma before closing
+ *   - appends `}` / `]` for every still-open bracket, in reverse order
+ * Produces best-effort valid JSON; the caller must still treat parsed data as
+ * possibly-incomplete.
+ */
+function closeUnbalancedBrackets(text: string): string {
+  const stack: Array<"{" | "["> = [];
+  let inString = false;
+  let escape = false;
+  let lastStructuralIdx = -1;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        lastStructuralIdx = i;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+      lastStructuralIdx = i;
+      continue;
+    }
+    if (ch === "}" || ch === "]") {
+      stack.pop();
+      lastStructuralIdx = i;
+      continue;
+    }
+    if (ch === "," || ch === ":") {
+      lastStructuralIdx = i;
+    }
+  }
+
+  let out = text;
+  if (inString) {
+    out += '"';
+  } else if (lastStructuralIdx >= 0 && lastStructuralIdx < out.length - 1) {
+    // Trailing token sits after the last structural char. If it parses as a
+    // complete number/literal we can keep it (`[1,2,3` → `[1,2,3]`); otherwise
+    // it's garbage to drop (`{"foo":` or partial `tru`).
+    const trailing = text.slice(lastStructuralIdx + 1).trim();
+    const isCompleteLiteral = /^(?:-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)$/.test(trailing);
+    if (!isCompleteLiteral) {
+      out = out.slice(0, lastStructuralIdx + 1);
+    }
+  }
+
+  while (stack.length > 0) {
+    const open = stack.pop();
+    out = out.replace(/[,\s]+$/, "");
+    // If the next thing to close is an object but we just left a key with no
+    // value (`"foo":`), that's unrecoverable — bail and let parse fail.
+    if (open === "{") {
+      if (/:\s*$/.test(out)) return text;
+      out += "}";
+    } else {
+      out += "]";
+    }
+  }
+
+  return out;
 }
 
 /**

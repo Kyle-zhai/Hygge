@@ -1,4 +1,4 @@
-import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
+import { LLMTruncatedError, type LLMAdapter, type LLMRequest, type LLMResponse } from "./adapter.js";
 import { log } from "../utils/logger.js";
 import { config } from "../config.js";
 
@@ -75,7 +75,8 @@ export class OpenAICompatibleLLM implements LLMAdapter {
     }
 
     const data = await response.json();
-    let text = data.choices?.[0]?.message?.content ?? "";
+    const choice = data.choices?.[0];
+    let text = choice?.message?.content ?? "";
 
     // Strip markdown code fences if present (e.g. ```json ... ```)
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -102,7 +103,12 @@ export class OpenAICompatibleLLM implements LLMAdapter {
       jsonMode: request.jsonMode ?? false,
       hasMedia: !!request.media?.length,
       maxTokens: request.maxTokens ?? 4096,
+      finishReason: choice?.finish_reason,
     });
+
+    if (choice?.finish_reason === "length") {
+      throw new LLMTruncatedError("openai_compatible", this.model, outputTokens, text);
+    }
 
     return {
       text,

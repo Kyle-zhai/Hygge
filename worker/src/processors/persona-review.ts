@@ -1,11 +1,14 @@
 import { writeFileSync } from "node:fs";
-import type { LLMAdapter } from "../llm/adapter.js";
+import { LLMTruncatedError, type LLMAdapter } from "../llm/adapter.js";
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification, PersonaStance, CitedReference } from "../types/evaluation.js";
 import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { validatePersonaReview, hasReviewViolations, buildReviewRetryInstructions } from "../utils/review-validator.js";
 import { isShortTopicQuery } from "../utils/topic-mode.js";
+
+const BASE_MAX_TOKENS = 4096;
+const RETRY_MAX_TOKENS = 6144;
 
 export interface PersonaReviewResult {
   scores: EvaluationScores;
@@ -27,42 +30,80 @@ export async function generatePersonaReview(
   mode?: "product" | "topic"
 ): Promise<PersonaReviewResult> {
   const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions, mode);
-  const parseResponse = (text: string): any => {
+  const dumpFailure = (text: string, message: string) => {
     try {
-      return robustJsonParse(text);
+      const dumpPath = `/tmp/persona-review-fail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.txt`;
+      writeFileSync(dumpPath, text);
+      console.error(`[PersonaReview:${persona.identity.name}] ${message}. Full response at ${dumpPath}. First 300:`, text.slice(0, 300));
+    } catch {
+      console.error(`[PersonaReview:${persona.identity.name}] ${message}. First 300:`, text.slice(0, 300));
+    }
+  };
+
+  const tryComplete = async (
+    activePrompt: string,
+    maxTokens: number,
+  ): Promise<{ response: Awaited<ReturnType<typeof llm.complete>>; parsed: any } | { truncated: true; partialText: string }> => {
+    let response;
+    try {
+      response = await llm.complete({ system, prompt: activePrompt, maxTokens, jsonMode: true });
     } catch (e) {
-      try {
-        const dumpPath = `/tmp/persona-review-fail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.txt`;
-        writeFileSync(dumpPath, text);
-        console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. Full response at ${dumpPath}. First 300:`, text.slice(0, 300));
-      } catch {
-        console.error(`[PersonaReview:${persona.identity.name}] JSON parse failed. First 300:`, text.slice(0, 300));
+      if (e instanceof LLMTruncatedError) {
+        return { truncated: true, partialText: e.partialText };
       }
-      throw new Error(`Persona review JSON parse failed for ${persona.identity.name}: ${(e as Error).message}`);
+      throw e;
+    }
+    try {
+      const parsed = robustJsonParse(response.text);
+      return { response, parsed };
+    } catch (e) {
+      dumpFailure(response.text, `JSON parse failed: ${(e as Error).message}`);
+      return { truncated: true, partialText: response.text };
     }
   };
 
   const validatorOpts = { skipSubmissionQuoteChecks: isShortTopicQuery(mode, rawInput) };
-  const MAX_RETRIES = 1;
-  let response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
-  let parsed = parseResponse(response.text);
-  let validation = validatePersonaReview(parsed, rawInput);
-  for (let attempt = 1; attempt <= MAX_RETRIES && hasReviewViolations(validation, validatorOpts); attempt++) {
+  const MAX_RETRIES = 2;
+
+  let attempt = 0;
+  let outcome = await tryComplete(prompt, BASE_MAX_TOKENS);
+  // Recovery loop: retry once with a higher token budget if the first call was
+  // truncated or unparseable, then fall through to validation retries.
+  while ("truncated" in outcome && attempt < MAX_RETRIES) {
+    attempt++;
     console.log(
-      `[PersonaReview:${persona.identity.name}] Retry ${attempt}/${MAX_RETRIES} — banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} invalidExtracted:${validation.invalidExtractedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount} unused:${validation.unusedExtractedQuotes.length} shortTopic:${validatorOpts.skipSubmissionQuoteChecks}`
+      `[PersonaReview:${persona.identity.name}] Recovery retry ${attempt}/${MAX_RETRIES} — bumping maxTokens to ${RETRY_MAX_TOKENS}`,
+    );
+    outcome = await tryComplete(prompt, RETRY_MAX_TOKENS);
+  }
+  if ("truncated" in outcome) {
+    throw new Error(`Persona review failed for ${persona.identity.name}: response truncated/unparseable after ${MAX_RETRIES} retries`);
+  }
+
+  let response = outcome.response;
+  let parsed = outcome.parsed;
+  let validation = validatePersonaReview(parsed, rawInput);
+  for (; attempt < MAX_RETRIES && hasReviewViolations(validation, validatorOpts); attempt++) {
+    console.log(
+      `[PersonaReview:${persona.identity.name}] Validation retry ${attempt + 1}/${MAX_RETRIES} — banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} invalidExtracted:${validation.invalidExtractedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount} unused:${validation.unusedExtractedQuotes.length} shortTopic:${validatorOpts.skipSubmissionQuoteChecks}`,
     );
     const retryInstructions = buildReviewRetryInstructions(validation, validatorOpts);
     const retryTail = validatorOpts.skipSubmissionQuoteChecks
       ? "Regenerate the ENTIRE JSON response now, addressing every issue above. Keep the same exact schema. Keep extracted_quotes as an empty array."
       : "Regenerate the ENTIRE JSON response now, addressing every issue above. Keep the same exact schema. Keep extracted_quotes populated with 3-5 verbatim fragments from the submission.";
-    const retryPrompt = `${prompt}\n\n---\n\nATTEMPT ${attempt} FAILED VALIDATION. You MUST fix these specific issues:\n\n${retryInstructions}\n\n${retryTail}`;
-    response = await llm.complete({ system, prompt: retryPrompt, maxTokens: 2048, jsonMode: true });
-    parsed = parseResponse(response.text);
+    const retryPrompt = `${prompt}\n\n---\n\nATTEMPT ${attempt + 1} FAILED VALIDATION. You MUST fix these specific issues:\n\n${retryInstructions}\n\n${retryTail}`;
+    const retryOutcome = await tryComplete(retryPrompt, RETRY_MAX_TOKENS);
+    if ("truncated" in retryOutcome) {
+      console.log(`[PersonaReview:${persona.identity.name}] Validation retry truncated — keeping previous parsed result`);
+      break;
+    }
+    response = retryOutcome.response;
+    parsed = retryOutcome.parsed;
     validation = validatePersonaReview(parsed, rawInput);
   }
   if (hasReviewViolations(validation, validatorOpts)) {
     console.log(
-      `[PersonaReview:${persona.identity.name}] Retries exhausted — proceeding with residual violations: banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount}`
+      `[PersonaReview:${persona.identity.name}] Retries exhausted — proceeding with residual violations: banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount}`,
     );
   }
   const scores = (dimensions && mode === "topic") ? (parsed.stances ?? parsed.scores) : parsed.scores;

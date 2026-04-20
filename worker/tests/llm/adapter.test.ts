@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { OpenAICompatibleLLM } from "../../src/llm/openai-compatible.js";
+import { AnthropicLLM } from "../../src/llm/anthropic.js";
+import { GoogleLLM } from "../../src/llm/google.js";
+import { LLMTruncatedError } from "../../src/llm/adapter.js";
 
 describe("LLM Adapter", () => {
   it("OpenAICompatibleLLM implements LLMAdapter interface", () => {
@@ -49,6 +52,80 @@ describe("LLM Adapter", () => {
     await llm.complete({ system: "s", prompt: "p" });
     const init = fetchSpy.mock.calls[0][1] as RequestInit;
     expect(init.signal).toBeInstanceOf(AbortSignal);
+    fetchSpy.mockRestore();
+  });
+
+  it("OpenAICompatibleLLM throws LLMTruncatedError when finish_reason='length'", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"a":1' }, finish_reason: "length" }],
+          usage: { prompt_tokens: 10, completion_tokens: 4096 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
+    const err = await llm.complete({ system: "s", prompt: "p", maxTokens: 4096 }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LLMTruncatedError);
+    expect((err as LLMTruncatedError).provider).toBe("openai_compatible");
+    expect((err as LLMTruncatedError).outputTokens).toBe(4096);
+    fetchSpy.mockRestore();
+  });
+
+  it("AnthropicLLM throws LLMTruncatedError when stop_reason='max_tokens'", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          content: [{ type: "text", text: '{"a":1' }],
+          usage: { input_tokens: 10, output_tokens: 4096 },
+          stop_reason: "max_tokens",
+        }),
+        { status: 200 },
+      ),
+    );
+    const llm = new AnthropicLLM("k", "claude-opus-4-7");
+    const err = await llm.complete({ system: "s", prompt: "p", maxTokens: 4096 }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LLMTruncatedError);
+    expect((err as LLMTruncatedError).provider).toBe("anthropic");
+    fetchSpy.mockRestore();
+  });
+
+  it("GoogleLLM throws LLMTruncatedError when finishReason='MAX_TOKENS'", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: { parts: [{ text: '{"a":1' }] },
+              finishReason: "MAX_TOKENS",
+            },
+          ],
+          usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 4096 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const llm = new GoogleLLM("k", "gemini-2.0-flash");
+    const err = await llm.complete({ system: "s", prompt: "p", maxTokens: 4096 }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LLMTruncatedError);
+    expect((err as LLMTruncatedError).provider).toBe("google");
+    fetchSpy.mockRestore();
+  });
+
+  it("OpenAICompatibleLLM does NOT throw when finish_reason='stop'", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"a":1}' }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 10, completion_tokens: 5 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
+    const result = await llm.complete({ system: "s", prompt: "p" });
+    expect(result.text).toBe('{"a":1}');
     fetchSpy.mockRestore();
   });
 
