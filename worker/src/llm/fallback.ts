@@ -34,6 +34,11 @@ const FALLBACKABLE_ERROR_PATTERNS = [
   /model.*not.*(found|exist|available)/i,
   /InvalidParameter.*model/i,
   /timeout/i,
+  // Aliyun DashScope returns 400 with this code when its output filter
+  // rejects model-generated text (common on Chinese topic discussions).
+  // Treat as fallbackable so the chain can try a non-Aliyun provider.
+  /data_inspection_failed/i,
+  /inappropriate.?content/i,
 ];
 
 function errorMessage(err: unknown): string {
