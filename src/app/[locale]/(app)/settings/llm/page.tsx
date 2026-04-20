@@ -33,12 +33,6 @@ const PRESETS: Preset[] = [
     vision: "qwen3.5-omni-plus",
   },
   {
-    label: "GLM (Aliyun DashScope)",
-    providerType: "openai_compatible",
-    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    model: "glm-5",
-  },
-  {
     label: "DeepSeek",
     providerType: "openai_compatible",
     baseUrl: "https://api.deepseek.com/v1",
@@ -532,7 +526,7 @@ function EntryCard({
               ? "claude-sonnet-4-6"
               : entry.providerType === "google"
               ? "gemini-2.5-pro"
-              : "glm-5"
+              : "qwen3.6-plus"
           }
           required
         />

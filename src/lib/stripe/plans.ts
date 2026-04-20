@@ -25,7 +25,7 @@ export const PLANS: Record<string, PlanConfig> = {
     name: "free",
     stripePriceId: null,
     price: 0,
-    evaluationsLimit: 3,
+    evaluationsLimit: 10,
     maxPersonas: 5,
     customPersonasLimit: 0,
     features: {

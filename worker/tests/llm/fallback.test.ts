@@ -53,10 +53,10 @@ describe("FallbackLLM", () => {
   });
 
   it("falls through across providers (openai_compatible → anthropic)", async () => {
-    const glm = mockAdapter(new Error("AllocationQuota exhausted"));
+    const qwen = mockAdapter(new Error("AllocationQuota exhausted"));
     const claude = mockAdapter(ok("claude-sonnet-4-6"));
     const llm = new FallbackLLM([
-      entry("openai_compatible", "https://dashscope.test/v1", "glm-5", glm),
+      entry("openai_compatible", "https://dashscope.test/v1", "qwen3.6-plus", qwen),
       entry("anthropic", undefined, "claude-sonnet-4-6", claude),
     ]);
     const r = await llm.complete({ system: "s", prompt: "p" });
