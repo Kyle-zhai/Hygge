@@ -27,6 +27,7 @@ export async function fetchUserLLMOverrides(userId: string): Promise<LLMOverride
     .from("user_llm_chain_entries")
     .select("provider_type, label, base_url, model, vision_model, api_key, order_index")
     .eq("user_id", userId)
+    .eq("enabled", true)
     .order("order_index", { ascending: true });
 
   if (!data || data.length === 0) return null;

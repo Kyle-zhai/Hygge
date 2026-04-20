@@ -72,7 +72,8 @@ async function refundQuotaForEvaluation(
   const { count: chainCount } = await admin
     .from("user_llm_chain_entries")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", project.user_id);
+    .eq("user_id", project.user_id)
+    .eq("enabled", true);
   if ((chainCount ?? 0) > 0) return false;
 
   const { data: subscription } = await admin
