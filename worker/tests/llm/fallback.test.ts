@@ -99,6 +99,24 @@ describe("FallbackLLM", () => {
     expect(fine.complete).toHaveBeenCalledTimes(2);
   });
 
+  it("falls through on Aliyun output content moderation (data_inspection_failed)", async () => {
+    // Aliyun DashScope 400 when output filter rejects Chinese model output.
+    // Without this fallback, sensitive Chinese topic queries hard-fail with
+    // no chance for a non-Aliyun provider to retry.
+    const aliyun = mockAdapter(
+      new Error('LLM API error (400): {"error":{"code":"data_inspection_failed"}}'),
+    );
+    const claude = mockAdapter(ok("claude-sonnet-4-6"));
+    const llm = new FallbackLLM([
+      entry("openai_compatible", "https://dashscope.test/v1", "qwen3.6-plus", aliyun),
+      entry("anthropic", undefined, "claude-sonnet-4-6", claude),
+    ]);
+    const r = await llm.complete({ system: "s", prompt: "p" });
+    expect(r.model).toBe("claude-sonnet-4-6");
+    expect(aliyun.complete).toHaveBeenCalledOnce();
+    expect(claude.complete).toHaveBeenCalledOnce();
+  });
+
   it("rethrows non-fallbackable error without trying the next entry", async () => {
     const primary = mockAdapter(new Error("JSON parse error in response"));
     const secondary = mockAdapter(ok("qwen3.6-plus"));
