@@ -81,12 +81,13 @@ export default async function AppLayout({
         .order("updated_at", { ascending: false })
         .limit(10),
       supabase
-        .from("user_llm_settings")
-        .select("user_id")
+        .from("user_llm_chain_entries")
+        .select("id")
         .eq("user_id", user.id)
-        .maybeSingle(),
+        .eq("enabled", true)
+        .limit(1),
     ]);
-    isBYOK = !!llm;
+    isBYOK = Array.isArray(llm) && llm.length > 0;
 
     if (projects) {
       history = (projects as unknown as ProjectRow[]).map((p) => {

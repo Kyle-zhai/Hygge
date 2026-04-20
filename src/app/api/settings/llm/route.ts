@@ -23,6 +23,7 @@ interface EntryInput {
   vision_model?: string | null;
   api_key?: string;
   keep_existing_key?: boolean;
+  enabled?: boolean;
 }
 
 interface NormalizedEntry {
@@ -32,6 +33,7 @@ interface NormalizedEntry {
   model: string;
   vision_model: string | null;
   api_key: string;
+  enabled: boolean;
 }
 
 function normalizeEntry(raw: EntryInput): NormalizedEntry | { error: string } {
@@ -53,6 +55,7 @@ function normalizeEntry(raw: EntryInput): NormalizedEntry | { error: string } {
     ? raw.vision_model.trim()
     : null;
   const label = typeof raw.label === "string" && raw.label.trim() ? raw.label.trim() : null;
+  const enabled = raw.enabled === false ? false : true;
   return {
     provider_type: providerType,
     label,
@@ -60,6 +63,7 @@ function normalizeEntry(raw: EntryInput): NormalizedEntry | { error: string } {
     model,
     vision_model: visionModel,
     api_key: apiKey,
+    enabled,
   };
 }
 
@@ -70,7 +74,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("user_llm_chain_entries")
-    .select("id, provider_type, label, base_url, model, vision_model, api_key, order_index, updated_at")
+    .select("id, provider_type, label, base_url, model, vision_model, api_key, order_index, updated_at, enabled")
     .eq("user_id", user.id)
     .order("order_index", { ascending: true });
 
@@ -91,6 +95,7 @@ export async function GET() {
       api_key_masked: maskKey(plainKey),
       order_index: row.order_index,
       updated_at: row.updated_at,
+      enabled: row.enabled !== false,
     };
   });
 
@@ -183,6 +188,7 @@ export async function PUT(request: Request) {
     model: n.model,
     vision_model: n.vision_model,
     api_key: n.api_key,
+    enabled: n.enabled,
     updated_at: new Date().toISOString(),
   }));
   const { error: insErr } = await supabase.from("user_llm_chain_entries").insert(rows);

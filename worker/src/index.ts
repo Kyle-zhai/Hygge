@@ -84,7 +84,8 @@ async function handleEvaluationFailure(
   const { count: chainCount } = await supabase
     .from("user_llm_chain_entries")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", project.user_id);
+    .eq("user_id", project.user_id)
+    .eq("enabled", true);
   if ((chainCount ?? 0) > 0) {
     log.info("job.failed.byok_no_refund", { evaluationId, userId: project.user_id });
     return;

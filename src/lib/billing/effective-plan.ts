@@ -64,7 +64,8 @@ export async function fetchEffectivePlan(
     supabase
       .from("user_llm_chain_entries")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
+      .eq("user_id", userId)
+      .eq("enabled", true),
   ]);
   if (!subscription) return null;
   return resolveEffectivePlan(subscription, (chainCount ?? 0) > 0);

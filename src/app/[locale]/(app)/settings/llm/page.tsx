@@ -89,6 +89,7 @@ interface LoadedEntry {
   api_key_masked: string;
   order_index: number;
   updated_at: string;
+  enabled: boolean;
 }
 
 interface EntryState {
@@ -101,6 +102,7 @@ interface EntryState {
   apiKey: string;
   keyMasked: string;
   hadKey: boolean;
+  enabled: boolean;
 }
 
 function blankEntry(): EntryState {
@@ -114,6 +116,7 @@ function blankEntry(): EntryState {
     apiKey: "",
     keyMasked: "",
     hadKey: false,
+    enabled: true,
   };
 }
 
@@ -128,6 +131,7 @@ function entryFromLoaded(e: LoadedEntry): EntryState {
     apiKey: "",
     keyMasked: e.api_key_masked,
     hadKey: true,
+    enabled: e.enabled !== false,
   };
 }
 
@@ -231,6 +235,7 @@ export default function LLMSettingsPage() {
           base_url: e.baseUrl.trim() || null,
           model: e.model.trim(),
           vision_model: e.visionModel.trim() || null,
+          enabled: e.enabled,
         };
         if (reuse) return { ...base, id: e.id, keep_existing_key: true };
         return { ...base, api_key: e.apiKey.trim() };
@@ -301,22 +306,38 @@ export default function LLMSettingsPage() {
         </p>
       </div>
 
-      {hadSavedChain && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-[#C4A882]/30 bg-[#C4A882]/5 px-3 py-2">
-          <span className="text-xs text-[#C4A882]">
-            {zh ? `已激活链路 · ${entries.length} 个模型` : `Active chain · ${entries.length} entries`}
-          </span>
-          <button
-            type="button"
-            onClick={handleDeleteAll}
-            disabled={deleting}
-            className="flex items-center gap-1.5 text-xs text-[#9B9594] transition-colors hover:text-[#F87171]"
+      {hadSavedChain && (() => {
+        const activeCount = entries.filter((e) => e.enabled).length;
+        const paused = activeCount === 0;
+        return (
+          <div
+            className={`mb-4 flex items-center justify-between rounded-lg border px-3 py-2 ${
+              paused
+                ? "border-[#666462]/40 bg-[#141414]"
+                : "border-[#C4A882]/30 bg-[#C4A882]/5"
+            }`}
           >
-            {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-            {zh ? "清空全部" : "Clear all"}
-          </button>
-        </div>
-      )}
+            <span className={`text-xs ${paused ? "text-[#9B9594]" : "text-[#C4A882]"}`}>
+              {paused
+                ? zh
+                  ? `BYOK 已暂停 · ${entries.length} 个模型已保存，将使用平台默认`
+                  : `BYOK paused · ${entries.length} saved, platform default in use`
+                : zh
+                ? `已激活链路 · ${activeCount}/${entries.length} 个模型启用`
+                : `Active chain · ${activeCount}/${entries.length} entries enabled`}
+            </span>
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              disabled={deleting}
+              className="flex items-center gap-1.5 text-xs text-[#9B9594] transition-colors hover:text-[#F87171]"
+            >
+              {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+              {zh ? "清空全部" : "Clear all"}
+            </button>
+          </div>
+        );
+      })()}
 
       <div className="space-y-4">
         {entries.map((entry, idx) => (
@@ -430,7 +451,11 @@ function EntryCard({
     : "sk-...";
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5 space-y-4">
+    <div
+      className={`rounded-xl border bg-[#141414] p-5 space-y-4 transition-opacity ${
+        entry.enabled ? "border-[#2A2A2A]" : "border-[#2A2A2A]/60 opacity-60"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="rounded-md bg-[#C4A882]/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[#C4A882]">
@@ -441,8 +466,18 @@ function EntryCard({
               {zh ? "已保存" : "saved"}
             </span>
           )}
+          {!entry.enabled && (
+            <span className="rounded-md bg-[#666462]/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#9B9594]">
+              {zh ? "已暂停" : "paused"}
+            </span>
+          )}
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
+          <ToggleSwitch
+            enabled={entry.enabled}
+            onToggle={() => onUpdate({ enabled: !entry.enabled })}
+            title={entry.enabled ? (zh ? "暂停此项" : "Pause entry") : (zh ? "启用此项" : "Enable entry")}
+          />
           <IconButton onClick={() => onMove(-1)} disabled={idx === 0} title={zh ? "上移" : "Move up"}>
             <ArrowUp className="h-3.5 w-3.5" />
           </IconButton>
@@ -581,6 +616,37 @@ function IconButton({
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+function ToggleSwitch({
+  enabled,
+  onToggle,
+  title,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={title}
+      role="switch"
+      aria-checked={enabled}
+      className={`relative mr-1 inline-flex h-5 w-9 items-center rounded-full border transition-colors ${
+        enabled
+          ? "border-[#C4A882]/60 bg-[#C4A882]/40"
+          : "border-[#2A2A2A] bg-[#0C0C0C]"
+      }`}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform ${
+          enabled ? "translate-x-[18px] bg-[#EAEAE8]" : "translate-x-[3px] bg-[#666462]"
+        }`}
+      />
     </button>
   );
 }
