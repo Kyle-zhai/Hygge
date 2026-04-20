@@ -1692,7 +1692,7 @@ export function ReportTextView({
         {/* ════════════════════════════════════════════════════════════
             DEBATE HIGHLIGHTS (topic mode only)
         ════════════════════════════════════════════════════════════ */}
-        {isTopicMode && report.debate_highlights && report.debate_highlights.length > 0 && (
+        {isTopicMode && Array.isArray(report.debate_highlights) && report.debate_highlights.length > 0 && (
           <AnimatedSection id="debate-highlights">
             <SectionTitle icon={Users}>
               {locale === "zh" ? "讨论亮点" : "Debate Highlights"}
@@ -1716,7 +1716,7 @@ export function ReportTextView({
 
                   {/* Perspectives (multi-angle, not just pro/con) */}
                   <div className="px-5 pb-3 space-y-2">
-                    {highlight.perspectives.map((p, pi) => {
+                    {(Array.isArray(highlight.perspectives) ? highlight.perspectives : []).map((p, pi) => {
                       const colors = [
                         "border-[#4ADE80]/15 bg-[#4ADE80]/[0.03]",
                         "border-[#FBBF24]/15 bg-[#FBBF24]/[0.03]",

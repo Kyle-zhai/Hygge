@@ -83,6 +83,47 @@ function normalizeIfNotFeasible(raw: any): { modifications: string[]; direction:
   };
 }
 
+// LLMs sometimes emit `perspectives` as a string, a map keyed by persona name,
+// or drop it entirely. Coerce to the expected array shape and filter entries
+// that can't be salvaged — frontend renders .map() over this field.
+function normalizeDebateHighlights(raw: any): Array<{
+  topic: string;
+  perspectives: { persona_name: string; stance: string }[];
+  significance: string;
+}> | null {
+  if (!Array.isArray(raw)) return null;
+  const out = raw
+    .map((h: any) => {
+      if (!h || typeof h !== "object") return null;
+      let perspectives: { persona_name: string; stance: string }[] = [];
+      if (Array.isArray(h.perspectives)) {
+        perspectives = h.perspectives
+          .filter((p: any) => p && typeof p === "object")
+          .map((p: any) => ({
+            persona_name: typeof p.persona_name === "string" ? p.persona_name : "",
+            stance: typeof p.stance === "string" ? p.stance : "",
+          }))
+          .filter((p: { persona_name: string; stance: string }) => p.persona_name && p.stance);
+      } else if (h.perspectives && typeof h.perspectives === "object") {
+        perspectives = Object.entries(h.perspectives)
+          .map(([name, stance]) => ({
+            persona_name: name,
+            stance: typeof stance === "string" ? stance : "",
+          }))
+          .filter((p) => p.persona_name && p.stance);
+      }
+      return {
+        topic: typeof h.topic === "string" ? h.topic : "",
+        perspectives,
+        significance: typeof h.significance === "string" ? h.significance : "",
+      };
+    })
+    .filter((h: any): h is { topic: string; perspectives: { persona_name: string; stance: string }[]; significance: string } =>
+      h !== null && h.topic.length > 0 && h.perspectives.length > 0,
+    );
+  return out.length > 0 ? out : null;
+}
+
 const MIN_FEASIBILITY_ITEMS = 3;
 
 type IfFeasible = { next_steps: string[]; optimizations: string[]; risks: string[] };
@@ -258,7 +299,7 @@ export async function generateTopicSummaryReport(
     opinion_drift: null,
     consensus_score: parsed.consensus_score,
     synthesis: parsed.synthesis,
-    debate_highlights: parsed.debate_highlights,
+    debate_highlights: normalizeDebateHighlights(parsed.debate_highlights),
     positions: parsed.positions ?? null,
     references: Array.isArray(parsed.references) ? parsed.references : null,
   };
