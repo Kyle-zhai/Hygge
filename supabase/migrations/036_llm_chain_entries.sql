@@ -1,6 +1,6 @@
 -- Bring-your-own-key chain: each user can save an ordered list of LLM providers
 -- that the worker tries in order. Replaces the single-row user_llm_settings table
--- so users can mix providers (e.g. "glm-5 on dashscope first, qwen3.6-plus second,
+-- so users can mix providers (e.g. "qwen3.6-plus on dashscope first, qwen3-32b second,
 -- claude-sonnet as last-resort").
 
 create table if not exists user_llm_chain_entries (

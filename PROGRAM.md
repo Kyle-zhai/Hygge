@@ -201,7 +201,7 @@ Realtime Discussion Feed（实时展示每个 Persona 的发言）
 | 鉴权 / DB | Supabase Postgres + RLS + Auth | Supabase 云端 | RLS 安全模型成熟，匿名 SSR 友好 |
 | 队列 | BullMQ over Upstash Redis (TLS) | Upstash | 事件驱动，稳定性好，可观测性高 |
 | Worker | Node.js 独立进程，Docker 构建 | Railway | 海外可达阿里云 DashScope |
-| LLM | 阿里云 DashScope（OpenAI-compatible） | Worker 内部 | 默认 `glm-5`，fallback `qwen3.6-plus → qwen3-32b → qwen3.6-flash` |
+| LLM | 阿里云 DashScope（OpenAI-compatible） | Worker 内部 | 默认 `qwen3.6-plus`，fallback `qwen3-32b → qwen3.6-flash` |
 | 支付 | Stripe Subscription + Webhook | Vercel | 市场标准，国际支持完善 |
 | 可观测 | Sentry、BullMQ 结构化 log、Posthog | 全栈 | 异常 / 性能 / 用户行为三视角 |
 | Cron | Vercel Cron | Vercel | 每日死单清理 |
@@ -278,7 +278,7 @@ Realtime Discussion Feed（实时展示每个 Persona 的发言）
 | Marketplace 浏览 / 使用 | ✓ | ✓ | ✓ |
 
 **策略**：
-- Free 是"体验钩子"，3 次足以让用户形成判断但不足以长期使用
+- Free 是"体验钩子"，10 次足以让用户跑通三种产品形态完成判断，但不足以替代日常工作流；BYOK 通道额外为算力盈余者提供等同 Pro 的体验
 - Pro 是核心付费层，覆盖 90% 的个人用户需求
 - Max 面向重度用户与准 B2B（多工作区、无限 Persona、高级功能）
 

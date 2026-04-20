@@ -50,7 +50,7 @@ PROGRAM.md 假设 5-10% 付费转化,但缺了:
 
 | 缺的环节 | 实际后果 |
 |---|---|
-| Free 用户用完 3 次 evaluation 后看到的 paywall 文案 | 默默流失,没数据 |
+| Free 用户用完 10 次 evaluation 后看到的 paywall 文案 | 默默流失,没数据 |
 | "Evaluation failed" 后是否退额度 + 一键重试 | 用户花了 1 次额度看到 fail → 直接卸载 |
 | Trial 默认关闭(`STRIPE_TRIAL_DAYS=0`) | 列入 P2 但其实是 P0:0 转化曲线 |
 | Onboarding(首次进来给一个 demo evaluation) | 注册→第一次评估 转化假设 60%,实际可能 20% |
@@ -85,7 +85,7 @@ PROGRAM.md 假设 5-10% 付费转化,但缺了:
 - Cold start 解法:你和早期用户需要 **手动撒种** 50-100 个高质量 persona 上去
 
 ### 10. 单 LLM provider 风险被 fallback 假象掩盖
-- fallback 4 级是 `glm-5 → qwen3.6-plus → qwen3-32b → qwen3.6-flash` — **全是阿里云**
+- fallback 3 级是 `qwen3.6-plus → qwen3-32b → qwen3.6-flash` — **全是阿里云**
 - DashScope 一旦限速 / 调价 / 服务故障,你 100% 离线
 - 加一个 Claude / Gemini 入口不是 P3,是上线第一周就该做的
 

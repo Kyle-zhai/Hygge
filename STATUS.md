@@ -24,7 +24,7 @@
 | 鉴权 / 库 | Supabase Postgres + RLS + Auth | Supabase 云端 |
 | 队列 | BullMQ over Upstash Redis (TLS) | Upstash |
 | Worker（LLM） | Node.js 独立进程，Docker 构建 | Railway |
-| LLM | 阿里云 DashScope（OpenAI-compatible），**默认 `glm-5`**，带 fallback 链 | Worker 内部 |
+| LLM | 阿里云 DashScope（OpenAI-compatible），**默认 `qwen3.6-plus`**，带 fallback 链 | Worker 内部 |
 | 支付 | Stripe Subscription + Webhook | Vercel |
 | 可观测 | Sentry（前端 + Worker）、BullMQ 结构化 log | — |
 | Cron | `/api/cron/sweep-stuck-evaluations` 每日 03:00 UTC | Vercel Cron |
@@ -103,7 +103,7 @@ Vercel 海外默认 region 无法访问阿里云 DashScope（返回 400 "Model n
 - `jsonMode` 全面启用（parse-project / classify-topic / persona-review）
 - `robustJsonParse` + `balanceStringQuotes` 恢复策略
 - Persona-review 验证器 + 2 次重试循环
-- FallbackLLM 链：`glm-5 → qwen3.6-plus → qwen3-32b → qwen3.6-flash`
+- FallbackLLM 链：`qwen3.6-plus → qwen3-32b → qwen3.6-flash`
 - Extracted-quotes 验证器防 ghost citation
 
 ---
@@ -280,7 +280,7 @@ Vercel 海外默认 region 无法访问阿里云 DashScope（返回 400 "Model n
 | 变量 | 用途 |
 |------|------|
 | `LLM_API_KEY` | DashScope API Key |
-| `LLM_MODEL` | 默认 `glm-5` |
+| `LLM_MODEL` | 默认 `qwen3.6-plus` |
 | `LLM_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | `LLM_PROVIDER` | `openai-compatible` |
 | `REDIS_URL` | 同一个 Upstash Redis 实例 |
