@@ -252,6 +252,53 @@ function cleanConsensusPoint(raw: any): { point: string; supporting_personas: st
   };
 }
 
+// Different LLMs emit consensus/disagreements in wildly different shapes.
+// Unwrap wrapper objects ({points: [...]}), accept plain-string items,
+// and map alternate field names (description/statement/text/title/topic)
+// to the canonical `point`. Returns [] if nothing can be salvaged.
+function salvageList(
+  val: unknown,
+  pointKeys: string[] = ["point", "description", "statement", "text", "title", "topic"],
+): any[] {
+  let src: unknown = val;
+  if (src && typeof src === "object" && !Array.isArray(src)) {
+    for (const k of ["points", "items", "list", "consensus", "disagreements", "agreements", "entries"]) {
+      const nested = (src as any)[k];
+      if (Array.isArray(nested)) { src = nested; break; }
+    }
+  }
+  if (!Array.isArray(src)) return [];
+  const out: any[] = [];
+  for (const raw of src) {
+    if (raw == null) continue;
+    if (typeof raw === "string") {
+      const colonIdx = raw.indexOf(": ");
+      const text = colonIdx > 0 && pointKeys.includes(raw.slice(0, colonIdx).trim())
+        ? raw.slice(colonIdx + 2).trim()
+        : raw.trim();
+      if (text) out.push({ point: text, supporting_personas: [] });
+      continue;
+    }
+    if (typeof raw !== "object") continue;
+    let point = "";
+    for (const k of pointKeys) {
+      if (typeof (raw as any)[k] === "string" && (raw as any)[k].trim()) {
+        point = (raw as any)[k].trim();
+        break;
+      }
+    }
+    if (!point) continue;
+    out.push({
+      ...raw,
+      point,
+      supporting_personas: parseSupportingPersonas(
+        (raw as any).supporting_personas ?? (raw as any).personas ?? (raw as any).ids ?? [],
+      ),
+    });
+  }
+  return out;
+}
+
 function scoreColor(score: number) {
   if (score >= 7)
     return {
@@ -885,8 +932,15 @@ export function ReportTextView({
     const match = rawEntries.find((e: any) => e.persona_id === r.persona_id);
     return match || { persona_id: r.persona_id, core_viewpoint: r.review_text?.slice(0, 200), scoring_rationale: "" };
   });
-  const consensusPoints = reconstructFromStrings(safeArray<any>(report.persona_analysis?.consensus), "point").map(cleanConsensusPoint);
-  const disagreements = reconstructFromStrings(safeArray<any>(report.persona_analysis?.disagreements), "point").map(cleanConsensusPoint);
+  const consensusPoints = salvageList(
+    report.persona_analysis?.consensus
+    ?? (report.persona_analysis as any)?.agreements
+    ?? (report as any).consensus,
+  ).map(cleanConsensusPoint);
+  const disagreements = salvageList(
+    report.persona_analysis?.disagreements
+    ?? (report as any).disagreements,
+  ).map(cleanConsensusPoint);
   const dimensions = safeArray<any>(report.multi_dimensional_analysis);
   const goals = safeArray<any>(report.goal_assessment);
   const actionItems = safeArray<any>(report.action_items);
@@ -1270,51 +1324,78 @@ export function ReportTextView({
                                   )}
                                 </div>
 
-                                {/* Individual score bars */}
+                                {/* Individual score bars (numeric in product mode, stance ladder in topic mode) */}
                                 {review.scores && (
                                   <div className="space-y-2 pt-1">
                                     {Object.entries(
-                                      review.scores as Record<string, number>
+                                      review.scores as Record<string, number | string>
                                     ).map(([dim, score]) => {
                                       const dimLabel = topicClassification
                                         ? topicClassification.dimensions.find(d => d.key === dim)
                                         : null;
+                                      const labelText = dimLabel
+                                        ? (locale === "zh" ? dimLabel.label_zh : dimLabel.label_en)
+                                        : t(dim as any);
+
+                                      if (typeof score === "string") {
+                                        const stanceKey = legacyMap[score] ?? score;
+                                        const idx = stanceOrder.indexOf(stanceKey);
+                                        const stance = stanceLabels[stanceKey];
+                                        if (idx < 0 || !stance) return null;
+                                        const zhLabels: Record<string, string> = {
+                                          strongly_positive: "强烈正面",
+                                          positive: "正面",
+                                          neutral: "中立",
+                                          negative: "负面",
+                                          strongly_negative: "强烈负面",
+                                        };
+                                        const labelOut = locale === "zh" ? zhLabels[stanceKey] : stance.color;
+                                        return (
+                                          <div key={dim} className="flex items-center gap-2">
+                                            <span className="w-20 text-[11px] text-[#666462] truncate">
+                                              {labelText}
+                                            </span>
+                                            <div className="flex-1 flex items-center gap-1">
+                                              {stanceOrder.map((s, si) => (
+                                                <motion.div
+                                                  key={s}
+                                                  className="h-1.5 flex-1 rounded-full"
+                                                  style={{ background: si === idx ? stance.hex : "#1C1C1C" }}
+                                                  initial={{ opacity: 0 }}
+                                                  animate={{ opacity: 1 }}
+                                                  transition={{ duration: 0.4, delay: si * 0.04 }}
+                                                />
+                                              ))}
+                                            </div>
+                                            <span
+                                              className={`w-20 text-right text-[11px] font-medium truncate ${stance.text}`}
+                                            >
+                                              {labelOut}
+                                            </span>
+                                          </div>
+                                        );
+                                      }
+
                                       return (
-                                      <div
-                                        key={dim}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <span className="w-20 text-[11px] text-[#666462] truncate">
-                                          {dimLabel ? (locale === "zh" ? dimLabel.label_zh : dimLabel.label_en) : t(dim as any)}
-                                        </span>
-                                        <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
-                                          <motion.div
-                                            className="h-full rounded-full"
-                                            style={{
-                                              background: scoreGradientCSS(
-                                                score as number
-                                              ),
-                                            }}
-                                            initial={{ width: 0 }}
-                                            animate={{
-                                              width: `${
-                                                (score as number) * 10
-                                              }%`,
-                                            }}
-                                            transition={{
-                                              duration: 0.6,
-                                              ease: "easeOut",
-                                            }}
-                                          />
+                                        <div key={dim} className="flex items-center gap-2">
+                                          <span className="w-20 text-[11px] text-[#666462] truncate">
+                                            {labelText}
+                                          </span>
+                                          <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
+                                            <motion.div
+                                              className="h-full rounded-full"
+                                              style={{ background: scoreGradientCSS(score) }}
+                                              initial={{ width: 0 }}
+                                              animate={{ width: `${score * 10}%` }}
+                                              transition={{ duration: 0.6, ease: "easeOut" }}
+                                            />
+                                          </div>
+                                          <span
+                                            className={`w-5 text-right text-[11px] font-mono font-medium ${scoreColor(score).text}`}
+                                          >
+                                            {score}
+                                          </span>
                                         </div>
-                                        <span
-                                          className={`w-5 text-right text-[11px] font-mono font-medium ${
-                                            scoreColor(score as number).text
-                                          }`}
-                                        >
-                                          {score}
-                                        </span>
-                                      </div>
                                       );
                                     })}
                                   </div>
