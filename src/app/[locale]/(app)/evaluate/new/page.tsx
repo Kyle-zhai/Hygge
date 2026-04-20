@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ProjectInput } from "@/components/evaluation/project-input";
 import { PersonaSelector } from "@/components/evaluation/persona-selector";
+import { Paywall } from "@/components/evaluation/paywall";
 import { PLANS } from "@/lib/stripe/plans";
 import { track } from "@/lib/analytics/posthog";
 
@@ -25,6 +26,7 @@ function NewEvaluationContent() {
   const [maxPersonas, setMaxPersonas] = useState(PLANS.free.maxPersonas);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
 
   // Reset to step 1 when mode changes
   const [prevMode, setPrevMode] = useState(mode);
@@ -88,6 +90,7 @@ function NewEvaluationContent() {
     if (!projectData) return;
     setSubmitting(true);
     setError("");
+    setQuotaExceeded(false);
     try {
       const attachments = await uploadFiles(projectData.files);
 
@@ -102,6 +105,12 @@ function NewEvaluationContent() {
           mode,
         }),
       });
+      if (res.status === 429) {
+        track("paywall_shown", { reason: "quota_exceeded" });
+        setQuotaExceeded(true);
+        setSubmitting(false);
+        return;
+      }
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to create evaluation");
@@ -121,7 +130,11 @@ function NewEvaluationContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {error && (
+      {quotaExceeded && (
+        <Paywall locale={locale} onDismiss={() => setQuotaExceeded(false)} />
+      )}
+
+      {error && !quotaExceeded && (
         <div className="mx-auto mt-4 max-w-2xl rounded-lg border border-[#F87171]/30 bg-[#F87171]/10 px-4 py-3 text-sm text-[#F87171]">
           {error}
         </div>

@@ -28,6 +28,7 @@ interface DiscussionFeedProps {
   personas: PersonaInfo[];
   initialCompletedReviews: ReviewPayload[];
   initialStatus: string;
+  initialErrorMessage?: string | null;
   topicTitle: string;
   mode: "topic" | "product";
   locale: string;
@@ -304,13 +305,18 @@ export function DiscussionFeed({
   personas,
   initialCompletedReviews,
   initialStatus,
+  initialErrorMessage = null,
   topicTitle,
   mode,
   locale,
 }: DiscussionFeedProps) {
+  const router = useRouter();
   const t = useTranslations("evaluation");
   const [reviews, setReviews] = useState<ReviewPayload[]>(initialCompletedReviews);
   const [status, setStatus] = useState(initialStatus);
+  const [errorMessage, setErrorMessage] = useState<string | null>(initialErrorMessage);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
   const [summaryReport, setSummaryReport] = useState<any>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -339,8 +345,10 @@ export function DiscussionFeed({
     if (status === "completed" || status === "failed") return;
 
     const channel = subscribeToEvaluation(evaluationId, {
-      onStatusChange: (newStatus) => {
+      onStatusChange: (newStatus, newErrorMessage) => {
         setStatus(newStatus);
+        if (newStatus === "failed") setErrorMessage(newErrorMessage);
+        if (newStatus !== "failed") setErrorMessage(null);
         if (newStatus === "completed") fetchSummaryReport();
       },
       onNewReview: (review) => {
@@ -367,7 +375,7 @@ export function DiscussionFeed({
     const { data: evaluation } = await supabase
       .from("evaluations")
       .select(
-        "status, persona_reviews (persona_id, review_text, scores, strengths, weaknesses)",
+        "status, error_message, persona_reviews (persona_id, review_text, scores, strengths, weaknesses)",
       )
       .eq("id", evaluationId)
       .maybeSingle();
@@ -376,6 +384,11 @@ export function DiscussionFeed({
 
     if (evaluation.status !== statusRef.current) {
       setStatus(evaluation.status);
+      if (evaluation.status === "failed") {
+        setErrorMessage((evaluation as { error_message: string | null }).error_message ?? null);
+      } else {
+        setErrorMessage(null);
+      }
       if (evaluation.status === "completed") fetchSummaryReport();
     }
 
@@ -397,6 +410,31 @@ export function DiscussionFeed({
   useEffect(() => {
     if (status === "completed" && !summaryReport) fetchSummaryReport();
   }, [status, summaryReport, fetchSummaryReport]);
+
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const res = await fetch(`/api/evaluations/${evaluationId}/retry`, {
+        method: "POST",
+      });
+      if (res.status === 429) {
+        router.push(`/${locale}/pricing?reason=quota`);
+        return;
+      }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
+      }
+      setReviews([]);
+      setErrorMessage(null);
+      setStatus("pending");
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRetrying(false);
+    }
+  }, [evaluationId, locale, router]);
 
   // Auto-scroll on new review
   useEffect(() => {
@@ -516,9 +554,30 @@ export function DiscussionFeed({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           role="alert"
-          className="rounded-xl border border-[#F87171]/20 bg-[#F87171]/[0.03] p-4 text-center text-sm text-[#F87171]"
+          className="space-y-3 rounded-xl border border-[#F87171]/20 bg-[#F87171]/[0.03] p-4 text-sm text-[#F87171]"
         >
-          {t("discussionFailed")}
+          <p className="font-medium">{t("discussionFailed")}</p>
+          {errorMessage && (
+            <p className="text-xs text-[#F87171]/80 break-words">
+              {t("failureReasonLabel")}: {errorMessage}
+            </p>
+          )}
+          {retryError && (
+            <p className="text-xs text-[#F87171]/80 break-words">
+              {t("retryFailedLabel")}: {retryError}
+            </p>
+          )}
+          <div className="flex justify-center pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={retrying}
+              onClick={handleRetry}
+            >
+              {retrying ? t("retrying") : t("retryButton")}
+            </Button>
+          </div>
+          <p className="text-xs text-[#9B9594]">{t("retryRefundHint")}</p>
         </motion.div>
       )}
 

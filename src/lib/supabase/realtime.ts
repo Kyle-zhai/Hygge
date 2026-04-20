@@ -12,7 +12,7 @@ export interface ReviewPayload {
 export function subscribeToEvaluation(
   evaluationId: string,
   callbacks: {
-    onStatusChange: (status: string) => void;
+    onStatusChange: (status: string, errorMessage: string | null) => void;
     onNewReview: (review: ReviewPayload) => void;
   }
 ): RealtimeChannel {
@@ -29,7 +29,10 @@ export function subscribeToEvaluation(
         filter: `id=eq.${evaluationId}`,
       },
       (payload) => {
-        callbacks.onStatusChange(payload.new.status);
+        callbacks.onStatusChange(
+          payload.new.status,
+          payload.new.error_message ?? null,
+        );
       }
     )
     .on(

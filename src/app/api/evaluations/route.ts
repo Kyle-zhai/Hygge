@@ -1,28 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
-import { Queue } from "bullmq";
-import IORedis from "ioredis";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { enqueueEvaluation } from "@/lib/queue/evaluations";
 
 export const maxDuration = 15;
 
 const MAX_RAW_INPUT_BYTES = 32 * 1024;
-
-// Module-level singleton: reuse across requests (avoids cold-start per request)
-let _queue: Queue | null = null;
-function getQueue(): Queue {
-  if (!_queue) {
-    let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-    if (redisUrl.includes("upstash.io") && redisUrl.startsWith("redis://")) {
-      redisUrl = redisUrl.replace("redis://", "rediss://");
-    }
-    const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
-    _queue = new Queue("evaluations", { connection });
-  }
-  return _queue;
-}
 
 export async function GET() {
   const supabase = await createClient();
@@ -112,8 +97,7 @@ export async function POST(request: Request) {
   // On failure: roll back evaluation + project + refund the quota we just consumed,
   // so Redis / queue outages never leave the user billed for a non-running job.
   try {
-    const queue = getQueue();
-    await queue.add("evaluate", {
+    await enqueueEvaluation({
       evaluationId: evaluation.id,
       projectId: project.id,
       rawInput,

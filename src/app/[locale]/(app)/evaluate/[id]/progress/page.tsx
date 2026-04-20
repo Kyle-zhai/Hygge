@@ -15,7 +15,7 @@ export default async function EvaluationProgressPage({
 
   const { data: evaluation } = await supabase
     .from("evaluations")
-    .select(`id, status, mode, selected_persona_ids,
+    .select(`id, status, mode, selected_persona_ids, error_message,
       persona_reviews (persona_id, review_text, scores, strengths, weaknesses),
       projects (parsed_data)`)
     .eq("id", id)
@@ -61,6 +61,7 @@ export default async function EvaluationProgressPage({
       personas={personaInfos}
       initialCompletedReviews={initialReviews}
       initialStatus={evaluation.status}
+      initialErrorMessage={(evaluation as { error_message?: string | null }).error_message ?? null}
       topicTitle={topicTitle}
       mode={evaluation.mode === "topic" ? "topic" : "product"}
       locale={locale}

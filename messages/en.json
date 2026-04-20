@@ -154,7 +154,12 @@
     "discussionSummary": "Discussion Summary",
     "consensusBadge": "Consensus {score}%",
     "generatingSummary": "Generating discussion summary",
-    "discussionFailed": "Discussion failed. Please try again.",
+    "discussionFailed": "Discussion failed.",
+    "failureReasonLabel": "Reason",
+    "retryFailedLabel": "Retry failed",
+    "retryButton": "Retry",
+    "retrying": "Retrying…",
+    "retryRefundHint": "Your evaluation credit was refunded automatically — retrying won't double-charge.",
     "reportReady": "Report ready.",
     "stanceSupportive": "Supportive",
     "stanceOpposed": "Opposed",
@@ -174,6 +179,12 @@
     "opinionDriftSubtitle": "How each voice would shift after hearing the room — where minds flip, where they harden, and why.",
     "personaIntroProduct": "Each selected persona will evaluate your product from their unique professional perspective, providing targeted feedback on usability, design, market fit, and more.",
     "personaIntroTopic": "Each selected persona will join the discussion from their unique perspective, offering diverse viewpoints to help you think through the topic."
+  },
+  "paywall": {
+    "heading": "You've used your discussions for this month",
+    "body": "Upgrade your plan for more monthly discussions, or come back when your billing cycle resets.",
+    "upgradeCta": "See plans",
+    "dismiss": "Not now"
   },
   "pricing": {
     "title": "One upgrade away from bringing your questions to life",
