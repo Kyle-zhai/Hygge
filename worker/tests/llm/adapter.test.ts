@@ -4,6 +4,45 @@ import { AnthropicLLM } from "../../src/llm/anthropic.js";
 import { GoogleLLM } from "../../src/llm/google.js";
 import { LLMTruncatedError } from "../../src/llm/adapter.js";
 
+// Build an SSE Response matching the streaming format emitted by OpenAI-compatible
+// providers. Used by all OpenAICompatibleLLM tests below.
+function sseResponse(
+  content: string,
+  opts: {
+    finish_reason?: string;
+    usage?: { prompt_tokens: number; completion_tokens: number };
+  } = {},
+): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      if (content.length > 0) {
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`,
+          ),
+        );
+      }
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            choices: [{ delta: {}, finish_reason: opts.finish_reason ?? "stop" }],
+          })}\n\n`,
+        ),
+      );
+      if (opts.usage) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ usage: opts.usage })}\n\n`));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
+
 describe("LLM Adapter", () => {
   it("OpenAICompatibleLLM implements LLMAdapter interface", () => {
     const llm = new OpenAICompatibleLLM("fake-key", "qwen3.6-plus", "https://dashscope.aliyuncs.com/compatible-mode/v1");
@@ -12,14 +51,11 @@ describe("LLM Adapter", () => {
   });
 
   it("OpenAICompatibleLLM.complete calls API with correct params", async () => {
-    const mockResponse = {
-      ok: true,
-      json: vi.fn().mockResolvedValue({
-        choices: [{ message: { content: '{"result": "test"}' } }],
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      sseResponse('{"result": "test"}', {
         usage: { prompt_tokens: 100, completion_tokens: 50 },
       }),
-    };
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as any);
+    );
 
     const llm = new OpenAICompatibleLLM("fake-key", "qwen3.6-plus", "https://dashscope.aliyuncs.com/compatible-mode/v1");
 
@@ -42,12 +78,7 @@ describe("LLM Adapter", () => {
   });
 
   it("passes an AbortSignal to fetch so slow providers can't hang the worker", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ choices: [{ message: { content: "ok" } }], usage: {} }),
-        { status: 200 },
-      ),
-    );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(sseResponse("ok"));
     const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
     await llm.complete({ system: "s", prompt: "p" });
     const init = fetchSpy.mock.calls[0][1] as RequestInit;
@@ -57,13 +88,10 @@ describe("LLM Adapter", () => {
 
   it("OpenAICompatibleLLM throws LLMTruncatedError when finish_reason='length'", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"a":1' }, finish_reason: "length" }],
-          usage: { prompt_tokens: 10, completion_tokens: 4096 },
-        }),
-        { status: 200 },
-      ),
+      sseResponse('{"a":1', {
+        finish_reason: "length",
+        usage: { prompt_tokens: 10, completion_tokens: 4096 },
+      }),
     );
     const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
     const err = await llm.complete({ system: "s", prompt: "p", maxTokens: 4096 }).catch((e: unknown) => e);
@@ -115,13 +143,10 @@ describe("LLM Adapter", () => {
 
   it("OpenAICompatibleLLM does NOT throw when finish_reason='stop'", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          choices: [{ message: { content: '{"a":1}' }, finish_reason: "stop" }],
-          usage: { prompt_tokens: 10, completion_tokens: 5 },
-        }),
-        { status: 200 },
-      ),
+      sseResponse('{"a":1}', {
+        finish_reason: "stop",
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      }),
     );
     const llm = new OpenAICompatibleLLM("k", "qwen3.6-plus", "https://example.com/v1");
     const result = await llm.complete({ system: "s", prompt: "p" });
