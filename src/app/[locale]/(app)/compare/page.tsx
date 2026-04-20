@@ -34,11 +34,16 @@ export default async function ComparePage({
   const completedEvaluations = (projects || []).flatMap((p: any) => {
     const evals = Array.isArray(p.evaluations) ? p.evaluations : p.evaluations ? [p.evaluations] : [];
     return evals
-      .filter((e: any) => e.status === "completed" && !e.comparison_base_id)
+      .filter(
+        (e: any) =>
+          e.status === "completed" &&
+          !e.comparison_base_id &&
+          (e.mode || "product") === "product",
+      )
       .map((e: any) => ({
         evaluationId: e.id as string,
         title: (p.parsed_data?.name || p.raw_input?.slice(0, 60) || "Untitled") as string,
-        mode: (e.mode || "product") as "product" | "topic",
+        mode: "product" as const,
         completedAt: e.completed_at as string | null,
         personaCount: (e.selected_persona_ids?.length || 0) as number,
       }));

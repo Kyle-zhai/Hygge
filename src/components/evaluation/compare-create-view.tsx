@@ -3,14 +3,14 @@
 import { useState, useId } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Scale, Package, MessageCircle, Upload, X, FileText, Image, Film, Loader2, Check } from "lucide-react";
+import { Scale, Package, Upload, X, FileText, Image, Film, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 interface CompletedEvaluation {
   evaluationId: string;
   title: string;
-  mode: "product" | "topic";
+  mode: "product";
   completedAt: string | null;
   personaCount: number;
 }
@@ -40,7 +40,8 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
   const selected = evaluations.find((e) => e.evaluationId === selectedId);
 
   async function handleSubmit() {
-    if (!selectedId || !text.trim()) return;
+    if (!selectedId) return;
+    if (!text.trim() && files.length === 0) return;
     setSubmitting(true);
 
     try {
@@ -57,12 +58,16 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
         }
       }
 
+      const rawInput = text.trim()
+        ? text
+        : `[${locale === "zh" ? "新版本文件" : "New version files"}] ${files.map((f) => f.name).join(", ")}`;
+
       const res = await fetch("/api/evaluations/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           baseEvaluationId: selectedId,
-          rawInput: text,
+          rawInput,
           attachments: attachmentPaths.length > 0 ? attachmentPaths : undefined,
         }),
       });
@@ -90,8 +95,8 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
         </h1>
         <p className="mt-1 text-sm text-[#9B9594]">
           {locale === "zh"
-            ? "选择一份历史评估作为基线，提交新版本进行对比"
-            : "Select a past evaluation as baseline, then submit a new version to compare"}
+            ? "选择一份历史产品评估作为基线，提交新版本进行对比"
+            : "Select a past product evaluation as baseline, then submit a new version to compare"}
         </p>
       </div>
 
@@ -107,10 +112,9 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
             </p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-sidebar rounded-xl border border-[#2A2A2A] bg-[#141414] p-2">
+          <div className="space-y-2 rounded-xl border border-[#2A2A2A] bg-[#141414] p-2">
             {evaluations.map((ev) => {
               const active = selectedId === ev.evaluationId;
-              const ModeIcon = ev.mode === "product" ? Package : MessageCircle;
               return (
                 <button
                   key={ev.evaluationId}
@@ -124,7 +128,7 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
                   {active ? (
                     <Check className="h-4 w-4 shrink-0 text-[#C4A882]" />
                   ) : (
-                    <ModeIcon className="h-4 w-4 shrink-0 text-[#666462]" />
+                    <Package className="h-4 w-4 shrink-0 text-[#666462]" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className={`text-sm truncate ${active ? "text-[#EAEAE8] font-medium" : "text-[#9B9594]"}`}>
@@ -151,7 +155,11 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={locale === "zh" ? "描述产品/话题的新版本..." : "Describe the new version of your product/topic..."}
+              placeholder={
+                locale === "zh"
+                  ? "描述产品的新版本（可选，若只上传文件可留空）..."
+                  : "Describe the new version (optional — leave blank if uploading files only)..."
+              }
               rows={5}
               className="w-full resize-none rounded-lg bg-[#0C0C0C] border border-[#2A2A2A] px-4 py-3 text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none focus:border-[#C4A882]/40"
             />
@@ -210,7 +218,7 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
         <div className="flex justify-center">
           <Button
             onClick={handleSubmit}
-            disabled={!text.trim() || submitting}
+            disabled={submitting || (!text.trim() && files.length === 0)}
             className="bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892] font-semibold px-8 disabled:opacity-40"
           >
             {submitting ? (
