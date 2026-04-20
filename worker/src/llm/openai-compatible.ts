@@ -2,6 +2,16 @@ import { LLMTruncatedError, type LLMAdapter, type LLMRequest, type LLMResponse }
 import { log } from "../utils/logger.js";
 import { config } from "../config.js";
 
+interface StreamChoice {
+  delta?: { content?: string };
+  finish_reason?: string | null;
+}
+
+interface StreamChunk {
+  choices?: StreamChoice[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
 export class OpenAICompatibleLLM implements LLMAdapter {
   private apiKey: string;
   private model: string;
@@ -43,6 +53,10 @@ export class OpenAICompatibleLLM implements LLMAdapter {
         body: JSON.stringify({
           model: this.model,
           max_tokens: request.maxTokens ?? 4096,
+          // Streaming bypasses DashScope's ~60-90s non-stream gateway timeout:
+          // as long as tokens keep flowing, the connection stays alive.
+          stream: true,
+          stream_options: { include_usage: true },
           ...(request.jsonMode ? { response_format: { type: "json_object" } } : {}),
           messages: [
             { role: "system", content: request.system },
@@ -74,9 +88,59 @@ export class OpenAICompatibleLLM implements LLMAdapter {
       throw new Error(`LLM API error (${response.status}): ${err}`);
     }
 
-    const data = await response.json();
-    const choice = data.choices?.[0];
-    let text = choice?.message?.content ?? "";
+    if (!response.body) {
+      throw new Error(`LLM streaming response has no body (model=${this.model})`);
+    }
+
+    let text = "";
+    let finishReason: string | null = null;
+    let inputTokens = 0;
+    let outputTokens = 0;
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE events are newline-delimited. Parse every complete line out of
+        // the buffer; leave any trailing partial line for the next chunk.
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          const rawLine = buffer.slice(0, newlineIdx).replace(/\r$/, "");
+          buffer = buffer.slice(newlineIdx + 1);
+          if (!rawLine.startsWith("data:")) continue;
+
+          const payload = rawLine.slice(5).trim();
+          if (payload === "" || payload === "[DONE]") continue;
+
+          let chunk: StreamChunk;
+          try {
+            chunk = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+
+          const choice = chunk.choices?.[0];
+          if (choice?.delta?.content) text += choice.delta.content;
+          if (choice?.finish_reason) finishReason = choice.finish_reason;
+          if (chunk.usage) {
+            inputTokens = chunk.usage.prompt_tokens ?? inputTokens;
+            outputTokens = chunk.usage.completion_tokens ?? outputTokens;
+          }
+        }
+      }
+    } finally {
+      try {
+        reader.releaseLock();
+      } catch {
+        // already released
+      }
+    }
 
     // Strip markdown code fences if present (e.g. ```json ... ```)
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -90,9 +154,6 @@ export class OpenAICompatibleLLM implements LLMAdapter {
       return "";
     });
 
-    const inputTokens = data.usage?.prompt_tokens ?? 0;
-    const outputTokens = data.usage?.completion_tokens ?? 0;
-
     log.info("llm.complete", {
       model: this.model,
       durationMs: Date.now() - started,
@@ -103,10 +164,11 @@ export class OpenAICompatibleLLM implements LLMAdapter {
       jsonMode: request.jsonMode ?? false,
       hasMedia: !!request.media?.length,
       maxTokens: request.maxTokens ?? 4096,
-      finishReason: choice?.finish_reason,
+      finishReason,
+      streamed: true,
     });
 
-    if (choice?.finish_reason === "length") {
+    if (finishReason === "length") {
       throw new LLMTruncatedError("openai_compatible", this.model, outputTokens, text);
     }
 
