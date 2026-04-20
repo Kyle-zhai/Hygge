@@ -43,6 +43,80 @@ function jobDuration(job: { processedOn?: number; finishedOn?: number }): number
   return end - job.processedOn;
 }
 
+// Mark the evaluation failed and refund the user's monthly quota that was
+// consumed at submission time. Refund is skipped for BYOK users (their quota
+// was never charged) and clamped at 0 so a stale `failed` event after a
+// manual retry can never make `evaluations_used` go negative. Status guard
+// (.neq("status", "failed")) prevents double-refund if BullMQ ever re-fires.
+async function handleEvaluationFailure(
+  evaluationId: string,
+  errorMessage: string,
+  jobId: string | undefined,
+): Promise<void> {
+  const { data: updated, error: updateError } = await supabase
+    .from("evaluations")
+    .update({
+      status: "failed",
+      error_message: errorMessage.slice(0, 2000),
+      failed_at: new Date().toISOString(),
+    })
+    .eq("id", evaluationId)
+    .neq("status", "failed")
+    .select("project_id")
+    .maybeSingle();
+
+  if (updateError) {
+    log.error("job.failed.db_update_failed", { jobId, evaluationId, error: updateError.message });
+    return;
+  }
+  if (!updated) {
+    // Already failed — refund already happened (or never happened for BYOK).
+    return;
+  }
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("user_id")
+    .eq("id", updated.project_id)
+    .maybeSingle();
+  if (!project?.user_id) return;
+
+  const { count: chainCount } = await supabase
+    .from("user_llm_chain_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", project.user_id);
+  if ((chainCount ?? 0) > 0) {
+    log.info("job.failed.byok_no_refund", { evaluationId, userId: project.user_id });
+    return;
+  }
+
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("evaluations_used")
+    .eq("user_id", project.user_id)
+    .maybeSingle();
+  if (!subscription) return;
+
+  const refundedUsed = Math.max(subscription.evaluations_used - 1, 0);
+  const { error: refundError } = await supabase
+    .from("subscriptions")
+    .update({ evaluations_used: refundedUsed })
+    .eq("user_id", project.user_id);
+  if (refundError) {
+    log.error("job.failed.quota_refund_failed", {
+      evaluationId,
+      userId: project.user_id,
+      error: refundError.message,
+    });
+    return;
+  }
+  log.info("job.failed.quota_refunded", {
+    evaluationId,
+    userId: project.user_id,
+    evaluationsUsed: refundedUsed,
+  });
+}
+
 function attachLogs(queue: string, worker: Worker) {
   worker.on("completed", (job) => {
     log.info("job.completed", {
@@ -71,24 +145,7 @@ function attachLogs(queue: string, worker: Worker) {
 
     if (queue === "evaluations" && job?.data?.evaluationId) {
       const evaluationId = job.data.evaluationId as string;
-      supabase
-        .from("evaluations")
-        .update({
-          status: "failed",
-          error_message: err.message.slice(0, 2000),
-          failed_at: new Date().toISOString(),
-        })
-        .eq("id", evaluationId)
-        .then(({ error }) => {
-          if (error) {
-            log.error("job.failed.db_update_failed", {
-              queue,
-              jobId: job.id,
-              evaluationId,
-              error: error.message,
-            });
-          }
-        });
+      void handleEvaluationFailure(evaluationId, err.message, job.id);
     }
   });
   worker.on("stalled", (jobId) => {

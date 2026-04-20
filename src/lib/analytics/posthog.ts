@@ -25,7 +25,9 @@ export type AnalyticsEvent =
   | "checkout_completed"
   | "persona_created"
   | "debate_started"
-  | "evaluation_shared";
+  | "evaluation_shared"
+  | "paywall_shown"
+  | "evaluation_retried";
 
 export function track(event: AnalyticsEvent, props?: Record<string, unknown>) {
   if (typeof window === "undefined") return;
