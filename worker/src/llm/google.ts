@@ -1,4 +1,4 @@
-import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
+import { LLMTruncatedError, type LLMAdapter, type LLMRequest, type LLMResponse } from "./adapter.js";
 import { log } from "../utils/logger.js";
 import { config } from "../config.js";
 
@@ -102,6 +102,7 @@ export class GoogleLLM implements LLMAdapter {
 
     const inputTokens = data.usageMetadata?.promptTokenCount ?? 0;
     const outputTokens = data.usageMetadata?.candidatesTokenCount ?? 0;
+    const finishReason = data.candidates?.[0]?.finishReason;
 
     log.info("llm.complete", {
       provider: "google",
@@ -114,7 +115,12 @@ export class GoogleLLM implements LLMAdapter {
       jsonMode: !!request.jsonMode,
       hasMedia: !!request.media?.length,
       maxTokens: request.maxTokens ?? 4096,
+      finishReason,
     });
+
+    if (finishReason === "MAX_TOKENS") {
+      throw new LLMTruncatedError("google", this.model, outputTokens, text);
+    }
 
     return { text, model: this.model, usage: { inputTokens, outputTokens } };
   }

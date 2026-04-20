@@ -1,4 +1,4 @@
-import type { LLMAdapter, LLMRequest, LLMResponse } from "./adapter.js";
+import { LLMTruncatedError, type LLMAdapter, type LLMRequest, type LLMResponse } from "./adapter.js";
 import { log } from "../utils/logger.js";
 import { config } from "../config.js";
 
@@ -88,6 +88,7 @@ export class AnthropicLLM implements LLMAdapter {
 
     const inputTokens = data.usage?.input_tokens ?? 0;
     const outputTokens = data.usage?.output_tokens ?? 0;
+    const stopReason = data.stop_reason;
 
     log.info("llm.complete", {
       provider: "anthropic",
@@ -100,7 +101,12 @@ export class AnthropicLLM implements LLMAdapter {
       jsonMode: !!request.jsonMode,
       hasMedia: !!request.media?.length,
       maxTokens: request.maxTokens ?? 4096,
+      stopReason,
     });
+
+    if (stopReason === "max_tokens") {
+      throw new LLMTruncatedError("anthropic", this.model, outputTokens, text);
+    }
 
     return { text, model: this.model, usage: { inputTokens, outputTokens } };
   }
