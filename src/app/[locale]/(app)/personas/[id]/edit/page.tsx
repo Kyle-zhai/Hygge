@@ -80,15 +80,17 @@ export default function EditPersonaPage() {
     );
   }
 
+  const zh = locale === "zh";
+
   if (notFound) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <p className="mb-4 text-sm text-[#9B9594]">Persona not found or not editable</p>
+        <p className="mb-4 text-sm text-[#9B9594]">{zh ? "未找到人格或无法编辑" : "Persona not found or not editable"}</p>
         <Link
           href={`/${locale}/personas`}
           className="text-sm text-[#C4A882] transition-colors hover:text-[#D4B892]"
         >
-          Back to My Personas
+          {zh ? "返回我的人格" : "Back to My Personas"}
         </Link>
       </div>
     );
@@ -101,14 +103,14 @@ export default function EditPersonaPage() {
         className="mb-6 inline-flex items-center gap-2 text-sm text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
       >
         <ArrowLeft className="h-4 w-4" />
-        My Personas
+        {zh ? "我的人格" : "My Personas"}
       </Link>
 
       <h1 className="mb-1 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
-        Edit Persona
+        {zh ? "编辑人格" : "Edit Persona"}
       </h1>
       <p className="mb-8 text-sm text-[#666462]">
-        Update your persona&apos;s public-facing information
+        {zh ? "更新人格对外展示的信息" : "Update your persona's public-facing information"}
       </p>
 
       <div className="mb-6">
@@ -122,21 +124,36 @@ export default function EditPersonaPage() {
       )}
 
       <div className="space-y-5">
-        <Field label="Name" value={name} onChange={setName} placeholder="Persona name" />
-        <Field label="Tagline" value={tagline} onChange={setTagline} placeholder="Their signature belief or motto" />
-        <Field label="Occupation" value={occupation} onChange={setOccupation} placeholder="Job title" />
+        <Field
+          label={zh ? "姓名" : "Name"}
+          value={name}
+          onChange={setName}
+          placeholder={zh ? "人格名称" : "Persona name"}
+        />
+        <Field
+          label={zh ? "标语" : "Tagline"}
+          value={tagline}
+          onChange={setTagline}
+          placeholder={zh ? "代表其核心信念或座右铭" : "Their signature belief or motto"}
+        />
+        <Field
+          label={zh ? "职业" : "Occupation"}
+          value={occupation}
+          onChange={setOccupation}
+          placeholder={zh ? "职位头衔" : "Job title"}
+        />
         <FieldArea
-          label="Description"
+          label={zh ? "简介" : "Description"}
           value={description}
           onChange={setDescription}
-          placeholder="A short public-facing description for marketplace listing"
+          placeholder={zh ? "用于市场展示的简短对外描述" : "A short public-facing description for marketplace listing"}
           rows={3}
         />
         <Field
-          label="Tags"
+          label={zh ? "标签" : "Tags"}
           value={tagsInput}
           onChange={setTagsInput}
-          placeholder="Comma-separated, e.g. tech, startup, design"
+          placeholder={zh ? "用逗号分隔，例如：科技、创业、设计" : "Comma-separated, e.g. tech, startup, design"}
         />
       </div>
 
@@ -145,7 +162,7 @@ export default function EditPersonaPage() {
           href={`/${locale}/personas`}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#2A2A2A] px-6 py-3 text-sm text-[#9B9594] transition-colors hover:border-[#444] hover:text-[#EAEAE8]"
         >
-          Cancel
+          {zh ? "取消" : "Cancel"}
         </Link>
         <button
           onClick={handleSave}
@@ -157,7 +174,7 @@ export default function EditPersonaPage() {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          Save Changes
+          {zh ? "保存更改" : "Save Changes"}
         </button>
       </div>
     </div>

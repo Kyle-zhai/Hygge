@@ -48,26 +48,26 @@ export default function MyPublicationsPage() {
         className="mb-6 inline-flex items-center gap-2 text-sm text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
       >
         <ArrowLeft className="h-4 w-4" />
-        My Personas
+        {locale === "zh" ? "我的人格" : "My Personas"}
       </Link>
 
       <h1 className="mb-1 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
-        My Publications
+        {locale === "zh" ? "我的发布" : "My Publications"}
       </h1>
       <p className="mb-8 text-sm text-[#666462]">
-        {locale === "zh" ? "查看你发布到 Marketplace 的 Persona 使用情况" : "Track how your published personas are being used"}
+        {locale === "zh" ? "查看你发布到市场的人格使用情况" : "Track how your published personas are being used"}
       </p>
 
       {publications.length === 0 ? (
         <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414] px-6 py-16 text-center">
           <p className="text-sm text-[#9B9594]">
-            {locale === "zh" ? "你还没有发布任何 Persona 到 Marketplace" : "You haven't published any personas to the marketplace yet"}
+            {locale === "zh" ? "你还没有发布任何人格到市场" : "You haven't published any personas to the marketplace yet"}
           </p>
           <Link
             href={`/${locale}/personas`}
             className="mt-4 inline-block text-sm text-[#C4A882] transition-colors hover:text-[#D4B892]"
           >
-            {locale === "zh" ? "前往 My Personas" : "Go to My Personas"}
+            {locale === "zh" ? "前往我的人格" : "Go to My Personas"}
           </Link>
         </div>
       ) : (

@@ -139,7 +139,9 @@ export default function DebatesPage() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[#EAEAE8] truncate">{title}</p>
                     <p className="text-[10px] text-[#666462] mt-0.5">
-                      {ev.persona_reviews.length} personas · {new Date(ev.created_at).toLocaleDateString()}
+                      {locale === "zh"
+                        ? `${ev.persona_reviews.length} 个人格 · ${new Date(ev.created_at).toLocaleDateString("zh-CN")}`
+                        : `${ev.persona_reviews.length} personas · ${new Date(ev.created_at).toLocaleDateString()}`}
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-[#666462]" />
