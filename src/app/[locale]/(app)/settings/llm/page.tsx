@@ -69,15 +69,35 @@ const PRESETS: Preset[] = [
   },
 ];
 
-const PROVIDER_OPTIONS: { value: ProviderType; label: string; hint: string }[] = [
-  {
-    value: "openai_compatible",
-    label: "OpenAI-compatible",
-    hint: "OpenAI / Qwen / GLM / DeepSeek / OpenRouter / 自建代理",
-  },
-  { value: "anthropic", label: "Anthropic Claude", hint: "Messages API · x-api-key" },
-  { value: "google", label: "Google Gemini", hint: "Generative Language API · key query param" },
-];
+interface ProviderOption {
+  value: ProviderType;
+  label: string;
+  hint: string;
+}
+
+function buildProviderOptions(zh: boolean): ProviderOption[] {
+  return [
+    {
+      value: "openai_compatible",
+      label: "OpenAI-compatible",
+      hint: zh
+        ? "OpenAI / 通义千问 / 智谱 / DeepSeek / OpenRouter / 自建代理"
+        : "OpenAI / Qwen / GLM / DeepSeek / OpenRouter / self-hosted proxy",
+    },
+    {
+      value: "anthropic",
+      label: "Anthropic Claude",
+      hint: zh ? "Messages API · x-api-key 鉴权" : "Messages API · x-api-key",
+    },
+    {
+      value: "google",
+      label: "Google Gemini",
+      hint: zh
+        ? "Generative Language API · key 查询参数"
+        : "Generative Language API · key query param",
+    },
+  ];
+}
 
 const PLAN_LABEL: Record<PlanTier, { en: string; zh: string }> = {
   free: { en: "Free", zh: "免费版" },
@@ -178,7 +198,9 @@ export default function LLMSettingsPage() {
   }, []);
 
   const availablePresets = PRESETS.filter((p) => providerAllowed(p.providerType, plan));
-  const availableProviders = PROVIDER_OPTIONS.filter((opt) => providerAllowed(opt.value, plan));
+  const availableProviders = buildProviderOptions(zh).filter((opt) =>
+    providerAllowed(opt.value, plan),
+  );
 
   function update(idx: number, patch: Partial<EntryState>) {
     setEntries((es) => es.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
@@ -465,18 +487,19 @@ function EntryCard({
   entry: EntryState;
   zh: boolean;
   presets: Preset[];
-  providerOptions: { value: ProviderType; label: string; hint: string }[];
+  providerOptions: ProviderOption[];
   onUpdate: (patch: Partial<EntryState>) => void;
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
   onPreset: (p: Preset) => void;
 }) {
   const baseUrlRequired = entry.providerType === "openai_compatible";
+  const defaultHint = zh ? "（默认，可留空）" : " (default, leave blank)";
   const baseUrlPlaceholder =
     entry.providerType === "anthropic"
-      ? "https://api.anthropic.com (默认，可留空)"
+      ? `https://api.anthropic.com${defaultHint}`
       : entry.providerType === "google"
-      ? "https://generativelanguage.googleapis.com (默认，可留空)"
+      ? `https://generativelanguage.googleapis.com${defaultHint}`
       : "https://api.example.com/v1";
 
   const roleLabel = zh
@@ -501,8 +524,8 @@ function EntryCard({
         entry.enabled ? "border-[#2A2A2A]" : "border-[#2A2A2A]/60 opacity-60"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className="rounded-md bg-[#C4A882]/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[#C4A882]">
             #{idx + 1} · {roleLabel}
           </span>
@@ -517,7 +540,7 @@ function EntryCard({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <ToggleSwitch
             enabled={entry.enabled}
             onToggle={() => onUpdate({ enabled: !entry.enabled })}
