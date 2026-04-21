@@ -5,11 +5,19 @@ import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
+const LOCALE_PREFIX_RE = /^\/(en|zh)(?=\/|$)/;
+
 // Routes that require authentication
 const protectedRoutes = ["/dashboard", "/evaluate", "/settings"];
 
 // Routes that should redirect to dashboard if already logged in
 const authRoutes = ["/auth/login", "/auth/register"];
+
+function detectLocale(pathname: string): (typeof routing.locales)[number] {
+  const m = pathname.match(LOCALE_PREFIX_RE);
+  const candidate = m?.[1];
+  return candidate === "zh" ? "zh" : "en";
+}
 
 export async function proxy(request: NextRequest) {
   // Run i18n middleware first to get locale-aware response
@@ -19,8 +27,9 @@ export async function proxy(request: NextRequest) {
   const { user } = await updateSession(request, response);
 
   const { pathname } = request.nextUrl;
+  const locale = detectLocale(pathname);
   // Strip locale prefix for route matching
-  const pathnameWithoutLocale = pathname.replace(/^\/en/, "") || "/";
+  const pathnameWithoutLocale = pathname.replace(LOCALE_PREFIX_RE, "") || "/";
 
   // Redirect unauthenticated users away from protected routes
   const isProtected = protectedRoutes.some((route) =>
@@ -28,7 +37,7 @@ export async function proxy(request: NextRequest) {
   );
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = `/en/auth/login`;
+    url.pathname = `/${locale}/auth/login`;
     return NextResponse.redirect(url);
   }
 
@@ -38,7 +47,7 @@ export async function proxy(request: NextRequest) {
   );
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = `/en/evaluate/new`;
+    url.pathname = `/${locale}/evaluate/new`;
     return NextResponse.redirect(url);
   }
 
@@ -46,5 +55,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/(en)/:path*"],
+  matcher: ["/", "/(en|zh)/:path*"],
 };

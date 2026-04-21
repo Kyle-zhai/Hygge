@@ -27,6 +27,7 @@ import {
   LayoutDashboard,
   Settings,
   Users,
+  Languages,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -137,6 +138,16 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
     await supabase.auth.signOut();
     router.push(`/${locale}/auth/login`);
     router.refresh();
+  }
+
+  function switchLocale(next: "en" | "zh") {
+    if (next === locale) { setUserMenuOpen(false); return; }
+    const stripped = pathname.replace(/^\/(en|zh)(?=\/|$)/, "");
+    const target = `/${next}${stripped || ""}`;
+    const qs = searchParams.toString();
+    router.push(qs ? `${target}?${qs}` : target);
+    router.refresh();
+    setUserMenuOpen(false);
   }
 
   async function handleDelete(itemId: string) {
@@ -722,14 +733,40 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
                 >
                   <Zap className="h-4 w-4" />
-                  <span>Upgrade Plan</span>
+                  <span>{locale === "zh" ? "升级套餐" : "Upgrade Plan"}</span>
                 </Link>
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[#9B9594]">
+                  <Languages className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{locale === "zh" ? "语言" : "Language"}</span>
+                  <div className="flex items-center rounded-md border border-[#2A2A2A] bg-[#0C0C0C] p-0.5 text-[11px] font-medium">
+                    <button
+                      onClick={() => switchLocale("en")}
+                      className={`rounded px-2 py-0.5 transition-colors ${
+                        locale === "en"
+                          ? "bg-[#C4A882]/20 text-[#C4A882]"
+                          : "text-[#666462] hover:text-[#EAEAE8]"
+                      }`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      onClick={() => switchLocale("zh")}
+                      className={`rounded px-2 py-0.5 transition-colors ${
+                        locale === "zh"
+                          ? "bg-[#C4A882]/20 text-[#C4A882]"
+                          : "text-[#666462] hover:text-[#EAEAE8]"
+                      }`}
+                    >
+                      中文
+                    </button>
+                  </div>
+                </div>
                 <button
                   onClick={() => { setUserMenuOpen(false); handleLogout(); }}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>{locale === "zh" ? "退出登录" : "Sign out"}</span>
                 </button>
               </div>
 
