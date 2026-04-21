@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 
+import { PLAN_PROVIDER_TIER, planRank, type PlanTier } from "@/lib/billing/llm-plan-tier";
+
 type ProviderType = "openai_compatible" | "anthropic" | "google";
 
 interface Preset {
@@ -76,6 +78,16 @@ const PROVIDER_OPTIONS: { value: ProviderType; label: string; hint: string }[] =
   { value: "anthropic", label: "Anthropic Claude", hint: "Messages API · x-api-key" },
   { value: "google", label: "Google Gemini", hint: "Generative Language API · key query param" },
 ];
+
+const PLAN_LABEL: Record<PlanTier, { en: string; zh: string }> = {
+  free: { en: "Free", zh: "免费版" },
+  pro: { en: "Pro", zh: "Pro" },
+  max: { en: "Max", zh: "Max" },
+};
+
+function providerAllowed(provider: ProviderType, plan: PlanTier): boolean {
+  return planRank(plan) >= planRank(PLAN_PROVIDER_TIER[provider]);
+}
 
 const MAX_ENTRIES = 10;
 
@@ -146,21 +158,27 @@ export default function LLMSettingsPage() {
   const [hadSavedChain, setHadSavedChain] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [plan, setPlan] = useState<PlanTier>("free");
 
   useEffect(() => {
     fetch("/api/settings/llm")
       .then((r) => r.json())
       .then((d) => {
         const loaded = Array.isArray(d.entries) ? (d.entries as LoadedEntry[]) : [];
+        const userPlan = (d.plan === "pro" || d.plan === "max" ? d.plan : "free") as PlanTier;
+        setPlan(userPlan);
         if (loaded.length > 0) {
           setEntries(loaded.map(entryFromLoaded));
           setHadSavedChain(true);
         } else {
-          setEntries([blankEntry()]);
+          setEntries([{ ...blankEntry(), providerType: "openai_compatible" }]);
         }
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const availablePresets = PRESETS.filter((p) => providerAllowed(p.providerType, plan));
+  const availableProviders = PROVIDER_OPTIONS.filter((opt) => providerAllowed(opt.value, plan));
 
   function update(idx: number, patch: Partial<EntryState>) {
     setEntries((es) => es.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
@@ -210,6 +228,14 @@ export default function LLMSettingsPage() {
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i];
       const tag = `#${i + 1}`;
+      if (!providerAllowed(e.providerType, plan)) {
+        const required = PLAN_PROVIDER_TIER[e.providerType];
+        const name = zh ? PLAN_LABEL[required].zh : PLAN_LABEL[required].en;
+        setError(
+          `${tag}: ${zh ? `当前供应商需要 ${name} 计划` : `This provider requires the ${name} plan`}`,
+        );
+        return;
+      }
       if (!e.model.trim()) {
         setError(`${tag}: ${zh ? "请填写模型名" : "Model is required"}`);
         return;
@@ -304,6 +330,19 @@ export default function LLMSettingsPage() {
             ? "✨ 配置任意一个密钥即解锁全部高级功能，且不占用每月额度。"
             : "✨ Any saved entry unlocks every premium feature and removes the monthly quota."}
         </p>
+        <p className="mt-2 text-xs text-[#9B9594]">
+          {zh
+            ? `当前计划：${PLAN_LABEL[plan].zh}。仅可配置该计划范围内的供应商。`
+            : `Current plan: ${PLAN_LABEL[plan].en}. Only providers included in this plan are available.`}
+          {plan !== "max" && (
+            <>
+              {" "}
+              <a href={`/${locale}/pricing`} className="underline hover:text-[#C4A882]">
+                {zh ? "升级以解锁更多供应商" : "Upgrade for more providers"}
+              </a>
+            </>
+          )}
+        </p>
       </div>
 
       {hadSavedChain && (() => {
@@ -347,6 +386,8 @@ export default function LLMSettingsPage() {
             total={entries.length}
             entry={entry}
             zh={zh}
+            presets={availablePresets}
+            providerOptions={availableProviders}
             onUpdate={(patch) => update(idx, patch)}
             onMove={(dir) => move(idx, dir)}
             onRemove={() => remove(idx)}
@@ -412,6 +453,8 @@ function EntryCard({
   total,
   entry,
   zh,
+  presets,
+  providerOptions,
   onUpdate,
   onMove,
   onRemove,
@@ -421,6 +464,8 @@ function EntryCard({
   total: number;
   entry: EntryState;
   zh: boolean;
+  presets: Preset[];
+  providerOptions: { value: ProviderType; label: string; hint: string }[];
   onUpdate: (patch: Partial<EntryState>) => void;
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
@@ -499,7 +544,7 @@ function EntryCard({
           {zh ? "快速选择" : "Presets"}
         </p>
         <div className="flex flex-wrap gap-1.5">
-          {PRESETS.map((p) => (
+          {presets.map((p) => (
             <button
               key={p.label}
               type="button"
@@ -517,7 +562,7 @@ function EntryCard({
           {zh ? "供应商类型" : "Provider type"} <span className="text-[#F87171]">*</span>
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {PROVIDER_OPTIONS.map((opt) => {
+          {providerOptions.map((opt) => {
             const active = entry.providerType === opt.value;
             return (
               <button

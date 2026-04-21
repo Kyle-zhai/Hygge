@@ -21,15 +21,12 @@ import {
   Pencil,
 } from "lucide-react";
 import { PersonaAvatar } from "@/components/persona-avatar";
-
-const CATEGORIES = [
-  { value: "technical", label: "Technical" },
-  { value: "product", label: "Product" },
-  { value: "design", label: "Design" },
-  { value: "end_user", label: "End User" },
-  { value: "business", label: "Business" },
-  { value: "general", label: "General" },
-];
+import {
+  KIND_LABEL,
+  topicSubOptionsByDomain,
+  productOptions,
+  type MarketplaceKind,
+} from "@/lib/personas/marketplace-taxonomy";
 
 const SCENARIOS = [
   { value: "product_evaluation", label: "Product Evaluation" },
@@ -173,7 +170,9 @@ export default function MyPersonasPage() {
   const [dialog, setDialog] = useState<{ type: DialogType; persona: PersonaFull } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [publishDesc, setPublishDesc] = useState("");
-  const [publishCategory, setPublishCategory] = useState("");
+  const [publishKind, setPublishKind] = useState<MarketplaceKind | "">("");
+  const [publishSubDomain, setPublishSubDomain] = useState("");
+  const [publishProductCategory, setPublishProductCategory] = useState("");
   const [publishTags, setPublishTags] = useState<string[]>([]);
   const [publishTagInput, setPublishTagInput] = useState("");
   const [publishScenarios, setPublishScenarios] = useState<string[]>([]);
@@ -269,23 +268,29 @@ export default function MyPersonasPage() {
   }, [pendingJobs, fetchPersonas]);
 
   async function handlePublish(id: string) {
+    if (!publishKind) return;
     setActionLoading(true);
+    const payload: Record<string, unknown> = {
+      description: publishDesc,
+      tags: publishTags,
+      scenarios: publishScenarios,
+      kind: publishKind,
+    };
+    if (publishKind === "topic") payload.sub_domain = publishSubDomain;
+    if (publishKind === "product") payload.product_category = publishProductCategory;
     const res = await fetch(`/api/personas/${id}/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description: publishDesc,
-        category: publishCategory,
-        tags: publishTags,
-        scenarios: publishScenarios,
-      }),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       setPersonas((prev) => prev.map((p) => (p.id === id ? { ...p, is_public: true, description: publishDesc || p.description, tags: publishTags } : p)));
     }
     setActionLoading(false);
     setPublishDesc("");
-    setPublishCategory("");
+    setPublishKind("");
+    setPublishSubDomain("");
+    setPublishProductCategory("");
     setPublishTags([]);
     setPublishTagInput("");
     setPublishScenarios([]);
@@ -434,7 +439,7 @@ export default function MyPersonasPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => { setMenuOpenId(null); setPublishDesc(p.description ?? ""); setPublishCategory(p.demographics?.occupation ? "" : ""); setDialog({ type: "publish", persona: p }); }}
+                            onClick={() => { setMenuOpenId(null); setPublishDesc(p.description ?? ""); setPublishKind(""); setPublishSubDomain(""); setPublishProductCategory(""); setDialog({ type: "publish", persona: p }); }}
                             className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[#C4A882] transition-colors hover:bg-[#252525]"
                           >
                             <Globe className="h-3.5 w-3.5" />
@@ -627,18 +632,65 @@ export default function MyPersonasPage() {
                   This persona will be visible to all users in the marketplace.
                 </p>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Category</label>
-                  <select
-                    value={publishCategory}
-                    onChange={(e) => setPublishCategory(e.target.value)}
-                    className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] outline-none transition-colors focus:border-[#C4A882]/50"
-                  >
-                    <option value="">Select a category</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
+                  <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Kind</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["topic", "product", "general"] as MarketplaceKind[]).map((k) => {
+                      const active = publishKind === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => {
+                            setPublishKind(k);
+                            setPublishSubDomain("");
+                            setPublishProductCategory("");
+                          }}
+                          className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                            active
+                              ? "border-[#C4A882]/60 bg-[#C4A882]/10 text-[#EAEAE8]"
+                              : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#444] hover:text-[#EAEAE8]"
+                          }`}
+                        >
+                          {KIND_LABEL[k].en}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+                {publishKind === "topic" && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Sub-domain</label>
+                    <select
+                      value={publishSubDomain}
+                      onChange={(e) => setPublishSubDomain(e.target.value)}
+                      className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] outline-none transition-colors focus:border-[#C4A882]/50"
+                    >
+                      <option value="">Select a sub-domain</option>
+                      {topicSubOptionsByDomain().map((g) => (
+                        <optgroup key={g.domain} label={g.label_en}>
+                          {g.subs.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label_en}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {publishKind === "product" && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Product category</label>
+                    <select
+                      value={publishProductCategory}
+                      onChange={(e) => setPublishProductCategory(e.target.value)}
+                      className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] outline-none transition-colors focus:border-[#C4A882]/50"
+                    >
+                      <option value="">Select a product category</option>
+                      {productOptions().map((o) => (
+                        <option key={o.value} value={o.value}>{o.label_en}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-[#EAEAE8]">Introduction</label>
                   <textarea
@@ -737,7 +789,7 @@ export default function MyPersonasPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => { setDialog(null); setPublishDesc(""); setPublishCategory(""); setPublishTags([]); setPublishTagInput(""); setPublishScenarios([]); }}
+                onClick={() => { setDialog(null); setPublishDesc(""); setPublishKind(""); setPublishSubDomain(""); setPublishProductCategory(""); setPublishTags([]); setPublishTagInput(""); setPublishScenarios([]); }}
                 disabled={actionLoading}
                 className="flex-1 rounded-xl border border-[#2A2A2A] px-4 py-2.5 text-sm text-[#9B9594] transition-colors hover:border-[#444] hover:text-[#EAEAE8] disabled:opacity-40"
               >
@@ -749,7 +801,12 @@ export default function MyPersonasPage() {
                   else if (dialog.type === "unpublish") handleUnpublish(dialog.persona.id);
                   else if (dialog.type === "delete") handleDelete(dialog.persona.id);
                 }}
-                disabled={actionLoading || (dialog.type === "publish" && (!publishCategory || !publishDesc.trim()))}
+                disabled={actionLoading || (dialog.type === "publish" && (
+                  !publishKind ||
+                  !publishDesc.trim() ||
+                  (publishKind === "topic" && !publishSubDomain) ||
+                  (publishKind === "product" && !publishProductCategory)
+                ))}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
                   dialog.type === "delete"
                     ? "bg-[#F87171] text-white hover:bg-[#EF4444]"

@@ -4,6 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Search, Bookmark, BookmarkCheck, Users, Loader2 } from "lucide-react";
+import {
+  KIND_LABEL,
+  topicSubOptionsByDomain,
+  productOptions,
+  type MarketplaceKind,
+} from "@/lib/personas/marketplace-taxonomy";
 
 interface MarketplacePersona {
   id: string;
@@ -16,22 +22,15 @@ interface MarketplacePersona {
   is_saved: boolean;
 }
 
-const TAG_FILTERS = [
-  "All",
-  "business",
-  "technical",
-  "creative",
-  "academic",
-  "public-figure",
-  "end-user",
-];
-
 export default function MarketplacePage() {
   const locale = useLocale();
+  const zh = locale === "zh";
   const [personas, setPersonas] = useState<MarketplacePersona[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [tag, setTag] = useState("");
+  const [kind, setKind] = useState<MarketplaceKind | "">("");
+  const [subDomain, setSubDomain] = useState("");
+  const [productCategory, setProductCategory] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -40,7 +39,9 @@ export default function MarketplacePage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (tag) params.set("tag", tag);
+    if (kind) params.set("kind", kind);
+    if (kind === "topic" && subDomain) params.set("sub_domain", subDomain);
+    if (kind === "product" && productCategory) params.set("product_category", productCategory);
     params.set("page", String(page));
 
     const res = await fetch(`/api/marketplace?${params}`);
@@ -48,7 +49,7 @@ export default function MarketplacePage() {
     setPersonas(data.personas ?? []);
     setTotalPages(data.totalPages ?? 1);
     setLoading(false);
-  }, [search, tag, page]);
+  }, [search, kind, subDomain, productCategory, page]);
 
   useEffect(() => {
     const timer = setTimeout(fetchPersonas, search ? 300 : 0);
@@ -87,25 +88,95 @@ export default function MarketplacePage() {
         />
       </div>
 
-      {/* Tags */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {TAG_FILTERS.map((t) => {
-          const active = t === "All" ? !tag : tag === t;
+      {/* Kind filter */}
+      <div className="mb-3 flex flex-wrap gap-2">
+        {([
+          { value: "" as const, label: zh ? "全部" : "All" },
+          { value: "topic" as MarketplaceKind, label: zh ? KIND_LABEL.topic.zh : KIND_LABEL.topic.en },
+          { value: "product" as MarketplaceKind, label: zh ? KIND_LABEL.product.zh : KIND_LABEL.product.en },
+          { value: "general" as MarketplaceKind, label: zh ? KIND_LABEL.general.zh : KIND_LABEL.general.en },
+        ]).map((k) => {
+          const active = kind === k.value;
           return (
             <button
-              key={t}
-              onClick={() => { setTag(t === "All" ? "" : t); setPage(1); }}
+              key={k.value || "all"}
+              onClick={() => {
+                setKind(k.value || "");
+                setSubDomain("");
+                setProductCategory("");
+                setPage(1);
+              }}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 active
                   ? "bg-[#C4A882]/20 text-[#C4A882] border border-[#C4A882]/30"
                   : "bg-[#1C1C1C] text-[#9B9594] border border-transparent hover:text-[#EAEAE8]"
               }`}
             >
-              {t}
+              {k.label}
             </button>
           );
         })}
       </div>
+
+      {/* Sub-filter */}
+      {kind === "topic" && (
+        <div className="mb-6 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => { setSubDomain(""); setPage(1); }}
+            className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              subDomain === ""
+                ? "bg-[#C4A882]/20 text-[#C4A882] border border-[#C4A882]/30"
+                : "bg-[#0C0C0C] text-[#9B9594] border border-[#2A2A2A] hover:text-[#EAEAE8]"
+            }`}
+          >
+            {zh ? "全部" : "All"}
+          </button>
+          {topicSubOptionsByDomain().map((g) => (
+            g.subs.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => { setSubDomain(s.value); setPage(1); }}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  subDomain === s.value
+                    ? "bg-[#C4A882]/20 text-[#C4A882] border border-[#C4A882]/30"
+                    : "bg-[#0C0C0C] text-[#9B9594] border border-[#2A2A2A] hover:text-[#EAEAE8]"
+                }`}
+                title={zh ? g.label_zh : g.label_en}
+              >
+                {zh ? s.label_zh : s.label_en}
+              </button>
+            ))
+          ))}
+        </div>
+      )}
+      {kind === "product" && (
+        <div className="mb-6 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => { setProductCategory(""); setPage(1); }}
+            className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              productCategory === ""
+                ? "bg-[#C4A882]/20 text-[#C4A882] border border-[#C4A882]/30"
+                : "bg-[#0C0C0C] text-[#9B9594] border border-[#2A2A2A] hover:text-[#EAEAE8]"
+            }`}
+          >
+            {zh ? "全部" : "All"}
+          </button>
+          {productOptions().map((o) => (
+            <button
+              key={o.value}
+              onClick={() => { setProductCategory(o.value); setPage(1); }}
+              className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                productCategory === o.value
+                  ? "bg-[#C4A882]/20 text-[#C4A882] border border-[#C4A882]/30"
+                  : "bg-[#0C0C0C] text-[#9B9594] border border-[#2A2A2A] hover:text-[#EAEAE8]"
+              }`}
+            >
+              {zh ? o.label_zh : o.label_en}
+            </button>
+          ))}
+        </div>
+      )}
+      {kind !== "topic" && kind !== "product" && <div className="mb-6" />}
 
       {/* Grid */}
       {loading ? (

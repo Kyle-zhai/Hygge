@@ -24,7 +24,7 @@ export default async function PricingPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0C0C0C]">
+    <div className="min-h-screen bg-[#0C0C0C]">
       {/* Back button */}
       <div className="sticky top-0 z-10 border-b border-[#1C1C1C] bg-[#0C0C0C]/90 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-5xl items-center px-4">

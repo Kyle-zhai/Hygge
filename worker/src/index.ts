@@ -34,7 +34,7 @@ const personaWorker = new Worker("persona-generation", processPersonaGeneration,
 const debateWorker = new Worker("debate-response", processDebateResponse, {
   connection,
   concurrency: 3,
-  drainDelay: 5,
+  drainDelay: 10,
 });
 
 function jobDuration(job: { processedOn?: number; finishedOn?: number }): number | undefined {
