@@ -3,6 +3,12 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/plans";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { SUB_DOMAINS } from "@/lib/personas/taxonomy";
+import {
+  isMarketplaceKind,
+  isProductCategoryKey,
+  isSubDomainKey,
+} from "@/lib/personas/marketplace-taxonomy";
 
 function getAdminClient() {
   return createSupabaseClient(
@@ -54,19 +60,59 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   let category: string | undefined;
   let tags: string[] | undefined;
   let scenarios: string[] | undefined;
+  let kind: string | undefined;
+  let subDomain: string | undefined;
+  let productCategory: string | undefined;
   try {
     const body = await req.json();
     description = body.description;
     category = body.category;
     tags = Array.isArray(body.tags) ? body.tags : undefined;
     scenarios = Array.isArray(body.scenarios) ? body.scenarios : undefined;
+    kind = body.kind;
+    subDomain = body.sub_domain;
+    productCategory = body.product_category;
   } catch {}
+
+  if (!isMarketplaceKind(kind)) {
+    return NextResponse.json(
+      { error: "kind must be topic, product, or general" },
+      { status: 400 },
+    );
+  }
+  if (kind === "topic" && !isSubDomainKey(subDomain)) {
+    return NextResponse.json(
+      { error: "sub_domain is required when kind=topic" },
+      { status: 400 },
+    );
+  }
+  if (kind === "product" && !isProductCategoryKey(productCategory)) {
+    return NextResponse.json(
+      { error: "product_category is required when kind=product" },
+      { status: 400 },
+    );
+  }
 
   const updates: Record<string, unknown> = { is_public: true };
   if (description) updates.description = description;
   if (category) updates.category = category;
   if (tags) updates.tags = tags;
   if (scenarios) updates.scenarios = scenarios;
+
+  if (kind === "topic") {
+    const sub = SUB_DOMAINS.find((s) => s.key === subDomain);
+    updates.domain = sub?.domain ?? null;
+    updates.sub_domain = subDomain;
+    updates.product_category = null;
+  } else if (kind === "product") {
+    updates.product_category = productCategory;
+    updates.domain = null;
+    updates.sub_domain = null;
+  } else {
+    updates.domain = null;
+    updates.sub_domain = null;
+    updates.product_category = null;
+  }
 
   const admin = getAdminClient();
   const { error } = await admin

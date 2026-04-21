@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { decryptLLMKey, encryptLLMKey } from "@/lib/crypto/llm-key";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { PLAN_PROVIDER_TIER, type PlanTier } from "@/lib/billing/llm-plan-tier";
 
 const PROVIDER_TYPES = ["openai_compatible", "anthropic", "google"] as const;
 type ProviderType = (typeof PROVIDER_TYPES)[number];
@@ -72,11 +73,20 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data } = await supabase
-    .from("user_llm_chain_entries")
-    .select("id, provider_type, label, base_url, model, vision_model, api_key, order_index, updated_at, enabled")
-    .eq("user_id", user.id)
-    .order("order_index", { ascending: true });
+  const [{ data }, { data: subscription }] = await Promise.all([
+    supabase
+      .from("user_llm_chain_entries")
+      .select("id, provider_type, label, base_url, model, vision_model, api_key, order_index, updated_at, enabled")
+      .eq("user_id", user.id)
+      .order("order_index", { ascending: true }),
+    supabase
+      .from("subscriptions")
+      .select("plan")
+      .eq("user_id", user.id)
+      .single(),
+  ]);
+
+  const plan = (subscription?.plan ?? "free") as PlanTier;
 
   const entries = (data ?? []).map((row) => {
     let plainKey = "";
@@ -99,7 +109,7 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ entries });
+  return NextResponse.json({ entries, plan });
 }
 
 export async function PUT(request: Request) {
@@ -109,6 +119,13 @@ export async function PUT(request: Request) {
 
   const limitResponse = await enforceRateLimit("llmSettings", user.id);
   if (limitResponse) return limitResponse;
+
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select("plan")
+    .eq("user_id", user.id)
+    .single();
+  const plan = (subscription?.plan ?? "free") as PlanTier;
 
   const body = await request.json().catch(() => ({}));
   const rawEntries: EntryInput[] = Array.isArray(body?.entries) ? body.entries : [];
@@ -131,6 +148,17 @@ export async function PUT(request: Request) {
   const normalized: NormalizedEntry[] = [];
   for (let i = 0; i < rawEntries.length; i++) {
     const raw = rawEntries[i];
+    const providerType = (PROVIDER_TYPES.includes(raw.provider_type as ProviderType)
+      ? raw.provider_type
+      : "openai_compatible") as ProviderType;
+    const requiredTier = PLAN_PROVIDER_TIER[providerType];
+    const rank = { free: 0, pro: 1, max: 2 } as const;
+    if (rank[plan] < rank[requiredTier]) {
+      return NextResponse.json(
+        { error: `entry ${i}: provider ${providerType} requires ${requiredTier} plan` },
+        { status: 403 },
+      );
+    }
     const reuseKey = raw.keep_existing_key === true;
     if (reuseKey) {
       const existingId = typeof raw.id === "string" ? raw.id : "";
