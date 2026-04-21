@@ -253,7 +253,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <MessageCircle className="h-4 w-4" />
-          <span>General Discussion</span>
+          <span>{locale === "zh" ? "通用讨论" : "General Discussion"}</span>
         </Link>
         <Link
           href={`/${locale}/evaluate/new?mode=product`}
@@ -265,7 +265,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <Package className="h-4 w-4" />
-          <span>Product Evaluation</span>
+          <span>{locale === "zh" ? "产品评估" : "Product Evaluation"}</span>
         </Link>
         <Link
           href={`/${locale}/compare`}
@@ -277,7 +277,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <Scale className="h-4 w-4" />
-          <span>Compare</span>
+          <span>{locale === "zh" ? "对比" : "Compare"}</span>
         </Link>
         <Link
           href={`/${locale}/debates`}
@@ -289,7 +289,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <Swords className="h-4 w-4" />
-          <span>Debate</span>
+          <span>{locale === "zh" ? "辩论" : "Debate"}</span>
         </Link>
         <Link
           href={`/${locale}/marketplace`}
@@ -301,7 +301,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <Store className="h-4 w-4" />
-          <span>Marketplace</span>
+          <span>{locale === "zh" ? "人格市场" : "Marketplace"}</span>
         </Link>
         <Link
           href={`/${locale}/personas`}
@@ -313,7 +313,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <UserCircle className="h-4 w-4" />
-          <span>My Personas</span>
+          <span>{locale === "zh" ? "我的人格" : "My Personas"}</span>
         </Link>
         <Link
           href={`/${locale}/publications`}
@@ -325,7 +325,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           }`}
         >
           <BarChart3 className="h-4 w-4" />
-          <span>My Publications</span>
+          <span>{locale === "zh" ? "我的发布" : "My Publications"}</span>
         </Link>
         <Link
           href={`/${locale}/settings/llm`}
@@ -359,7 +359,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       {/* Your Discussions */}
       <div className="px-3 pt-3 pb-3">
         <div className="mb-2 flex items-center justify-between px-3">
-          <p className="text-xs font-medium text-[#666462]">Your Discussions</p>
+          <p className="text-xs font-medium text-[#666462]">{locale === "zh" ? "你的讨论" : "Your Discussions"}</p>
           <div className="relative">
             <button
               ref={filterBtnRef}
@@ -385,7 +385,9 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                   >
                     {(["topic", "product", "compare", "debate"] as const).map((type) => {
                       const active = typeFilter.has(type);
-                      const labels: Record<string, string> = { topic: "Topic", product: "Product", compare: "Compare", debate: "Debate" };
+                      const labels: Record<string, string> = locale === "zh"
+                        ? { topic: "话题", product: "产品", compare: "对比", debate: "辩论" }
+                        : { topic: "Topic", product: "Product", compare: "Compare", debate: "Debate" };
                       const Icons: Record<string, typeof MessageCircle> = { topic: MessageCircle, product: Package, compare: Scale, debate: Swords };
                       const Icon = Icons[type];
                       return (
@@ -418,7 +420,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search discussions..."
+              placeholder={locale === "zh" ? "搜索讨论..." : "Search discussions..."}
               className="w-full bg-transparent text-xs text-[#EAEAE8] placeholder:text-[#666462] outline-none"
             />
           </div>
@@ -428,7 +430,9 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
         <div className="space-y-0.5">
           {filteredHistory.length === 0 && (
             <p className="px-3 py-4 text-center text-xs text-[#666462]">
-              {searchQuery ? "No results found" : "No discussions yet"}
+              {searchQuery
+                ? (locale === "zh" ? "未找到结果" : "No results found")
+                : (locale === "zh" ? "暂无讨论" : "No discussions yet")}
             </p>
           )}
           {filteredHistory.map((item) => {
@@ -583,7 +587,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#EAEAE8] transition-colors hover:bg-[#1C1C1C]"
                 >
                   <ExternalLink className="h-4 w-4 text-[#9B9594]" />
-                  <span className="flex-1 text-left font-medium">Share</span>
+                  <span className="flex-1 text-left font-medium">{locale === "zh" ? "分享" : "Share"}</span>
                   <ChevronRight className="h-4 w-4 text-[#666462]" />
                 </button>
                 <button
@@ -599,7 +603,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                   ) : (
                     <Trash2 className="h-4 w-4" />
                   )}
-                  <span className="flex-1 text-left font-medium">Delete</span>
+                  <span className="flex-1 text-left font-medium">{locale === "zh" ? "删除" : "Delete"}</span>
                 </button>
               </motion.div>
             </>
@@ -626,24 +630,28 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               className="fixed left-1/2 top-1/2 z-[70] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-2xl"
             >
               <h3 className="text-base font-semibold text-[#EAEAE8] mb-2">
-                Delete Discussion
+                {locale === "zh" ? "删除讨论" : "Delete Discussion"}
               </h3>
               <p className="text-sm text-[#9B9594] mb-6">
-                This action cannot be undone. All data associated with this discussion will be permanently deleted.
+                {locale === "zh"
+                  ? "此操作无法撤销。与该讨论相关的所有数据将被永久删除。"
+                  : "This action cannot be undone. All data associated with this discussion will be permanently deleted."}
               </p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setConfirmDeleteId(null)}
                   className="rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-4 py-2 text-sm text-[#EAEAE8] transition-colors hover:bg-[#222222]"
                 >
-                  Cancel
+                  {locale === "zh" ? "取消" : "Cancel"}
                 </button>
                 <button
                   onClick={() => handleDelete(confirmDeleteId)}
                   disabled={deleting === confirmDeleteId}
                   className="rounded-lg bg-[#F87171] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#EF4444] disabled:opacity-50"
                 >
-                  {deleting === confirmDeleteId ? "Deleting..." : "Delete"}
+                  {deleting === confirmDeleteId
+                    ? (locale === "zh" ? "删除中..." : "Deleting...")
+                    : (locale === "zh" ? "删除" : "Delete")}
                 </button>
               </div>
             </motion.div>
@@ -681,7 +689,9 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
               <div className="px-4 py-3">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs text-[#666462]">
-                    {isBYOK ? (locale === "zh" ? "使用自带密钥" : "Using your own key") : "Credits Left"}
+                    {isBYOK
+                      ? (locale === "zh" ? "使用自带密钥" : "Using your own key")
+                      : (locale === "zh" ? "剩余次数" : "Credits Left")}
                   </span>
                   <span
                     className={
@@ -774,11 +784,11 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
 
               <div className="flex items-center justify-center gap-3 px-3 py-2 text-[10px] text-[#666462]">
                 <Link href={`/${locale}/legal/terms`} className="hover:text-[#9B9594]" onClick={() => setUserMenuOpen(false)}>
-                  Terms
+                  {locale === "zh" ? "条款" : "Terms"}
                 </Link>
                 <span>·</span>
                 <Link href={`/${locale}/legal/privacy`} className="hover:text-[#9B9594]" onClick={() => setUserMenuOpen(false)}>
-                  Privacy
+                  {locale === "zh" ? "隐私" : "Privacy"}
                 </Link>
                 <span>·</span>
                 <Link href={`/${locale}/legal/cookies`} className="hover:text-[#9B9594]" onClick={() => setUserMenuOpen(false)}>
