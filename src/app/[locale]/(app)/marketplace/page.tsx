@@ -69,10 +69,12 @@ export default function MarketplacePage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
-          Persona Marketplace
+          {zh ? "人格市场" : "Persona Marketplace"}
         </h1>
         <p className="mt-1 text-sm text-[#666462]">
-          Discover community-created personas for your discussions
+          {zh
+            ? "探索社区创建的人格，用于你的讨论"
+            : "Discover community-created personas for your discussions"}
         </p>
       </div>
 
@@ -83,7 +85,7 @@ export default function MarketplacePage() {
           type="text"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Search personas..."
+          placeholder={zh ? "搜索人格..." : "Search personas..."}
           className="flex-1 bg-transparent text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none"
         />
       </div>
@@ -186,9 +188,17 @@ export default function MarketplacePage() {
       ) : personas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Users className="mb-3 h-8 w-8 text-[#666462]" />
-          <p className="text-sm text-[#9B9594]">No personas found</p>
+          <p className="text-sm text-[#9B9594]">
+            {zh ? "未找到人格" : "No personas found"}
+          </p>
           <p className="mt-1 text-xs text-[#666462]">
-            {search ? "Try a different search" : "Be the first to publish a persona!"}
+            {search
+              ? zh
+                ? "换个关键词试试"
+                : "Try a different search"
+              : zh
+              ? "成为第一个发布人格的用户！"
+              : "Be the first to publish a persona!"}
           </p>
         </div>
       ) : (
@@ -245,7 +255,7 @@ export default function MarketplacePage() {
                     ))}
                   </div>
                   <span className="text-[10px] text-[#666462]">
-                    {p.uses_count} uses
+                    {zh ? `${p.uses_count} 次使用` : `${p.uses_count} uses`}
                   </span>
                 </div>
               </Link>
@@ -260,7 +270,7 @@ export default function MarketplacePage() {
                 disabled={page === 1}
                 className="rounded-lg border border-[#2A2A2A] px-4 py-2 text-xs text-[#9B9594] transition-colors hover:text-[#EAEAE8] disabled:opacity-30"
               >
-                Previous
+                {zh ? "上一页" : "Previous"}
               </button>
               <span className="text-xs text-[#666462]">
                 {page} / {totalPages}
@@ -270,7 +280,7 @@ export default function MarketplacePage() {
                 disabled={page === totalPages}
                 className="rounded-lg border border-[#2A2A2A] px-4 py-2 text-xs text-[#9B9594] transition-colors hover:text-[#EAEAE8] disabled:opacity-30"
               >
-                Next
+                {zh ? "下一页" : "Next"}
               </button>
             </div>
           )}
