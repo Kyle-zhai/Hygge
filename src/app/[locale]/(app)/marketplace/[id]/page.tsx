@@ -75,7 +75,7 @@ export default async function MarketplaceDetailPage({
       <MarketplaceDetailClient
         locale={locale}
         personaId={persona.id}
-        persona={persona as any}
+        persona={persona as unknown as Parameters<typeof MarketplaceDetailClient>[0]["persona"]}
         stats={stats ?? { review_count: 0, average_rating: null }}
         initialReviews={reviews ?? []}
         initialIsSaved={isSaved}

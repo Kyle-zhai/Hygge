@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import { supabase } from "../supabase.js";
 import { buildLLM, type LLMOverrides } from "../llm/factory.js";
 import { robustJsonParse } from "../utils/json-parse.js";
+import type { Persona } from "../types/persona.js";
 
 interface PersonaGenerationInput {
   name: string;
@@ -177,7 +178,7 @@ export async function processPersonaGeneration(job: Job<PersonaJobData>) {
   });
 
   const response = await llm.complete({ system, prompt, maxTokens: 4096 });
-  const persona = robustJsonParse<any>(response.text);
+  const persona = robustJsonParse<Omit<Persona, "id" | "created_at"> & { description?: string; tags?: string[] }>(response.text);
 
   persona.identity.name = name;
   if (avatarUrl) persona.identity.avatar = avatarUrl;

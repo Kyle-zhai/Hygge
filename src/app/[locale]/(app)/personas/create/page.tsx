@@ -84,8 +84,8 @@ export default function CreatePersonaPage() {
       pending.push({ jobId, name: tab === "form" ? name : (importName || "Imported Persona"), createdAt: Date.now() });
       localStorage.setItem("pendingPersonas", JSON.stringify(pending));
       router.push(`/${locale}/personas`);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
     }

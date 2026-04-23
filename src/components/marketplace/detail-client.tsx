@@ -214,7 +214,7 @@ export function MarketplaceDetailClient({
               {L(locale, "评估视角", "Evaluation Lens")}
             </h2>
             <p className="text-sm text-[#9B9594] leading-relaxed italic">
-              "{persona.evaluation_lens.primary_question}"
+              &ldquo;{persona.evaluation_lens.primary_question}&rdquo;
             </p>
           </div>
         )}

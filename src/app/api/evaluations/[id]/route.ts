@@ -26,7 +26,7 @@ export async function GET(
     return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
   }
 
-  const project = (evaluation as any).projects;
+  const project = (evaluation as unknown as { projects: { user_id: string } }).projects;
   if (project.user_id !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

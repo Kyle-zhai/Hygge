@@ -4,6 +4,10 @@ import { stripe } from "@/lib/stripe/client";
 import { PLANS } from "@/lib/stripe/plans";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
+type StripeCheckoutSessionCreateParams = NonNullable<
+  Parameters<NonNullable<typeof stripe>["checkout"]["sessions"]["create"]>[0]
+>;
+
 export const maxDuration = 10;
 
 const TRIAL_DAYS = Number(process.env.STRIPE_TRIAL_DAYS ?? 0);
@@ -34,7 +38,7 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .single();
 
-  const sessionParams: Record<string, any> = {
+  const sessionParams: StripeCheckoutSessionCreateParams = {
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: PLANS[plan].stripePriceId, quantity: 1 }],

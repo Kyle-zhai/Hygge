@@ -49,7 +49,7 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      let attachmentPaths: string[] = [];
+      const attachmentPaths: string[] = [];
       if (files.length > 0) {
         for (const file of files) {
           const path = `${user.id}/${crypto.randomUUID()}.${file.name.split(".").pop()}`;

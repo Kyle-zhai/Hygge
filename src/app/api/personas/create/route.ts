@@ -73,8 +73,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ jobId: job.id, status: "processing" }, { status: 202 });
-  } catch (error: any) {
-    console.error("Failed to queue persona generation:", error?.message);
+  } catch (error) {
+    console.error("Failed to queue persona generation:", error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: "Failed to start persona generation" }, { status: 500 });
   }
 }

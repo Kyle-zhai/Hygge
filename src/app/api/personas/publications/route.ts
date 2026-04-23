@@ -23,8 +23,8 @@ export async function GET() {
   }
 
   const personaIds = (personas || []).map((p) => p.id);
-  let saveCountMap: Record<string, number> = {};
-  let usageCountMap: Record<string, number> = {};
+  const saveCountMap: Record<string, number> = {};
+  const usageCountMap: Record<string, number> = {};
 
   if (personaIds.length > 0) {
     const { data: saves } = await supabase

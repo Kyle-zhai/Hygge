@@ -33,26 +33,34 @@ export default async function PublicSharePage({
     notFound();
   }
 
-  const reviews = (evaluation as any).persona_reviews ?? [];
+  type ReviewRow = { id: string; persona_id: string; [k: string]: unknown };
+  type PersonaRow = { id: string; identity: unknown; demographics?: unknown; category?: string };
+  type EvaluationJoined = typeof evaluation & {
+    persona_reviews?: ReviewRow[] | null;
+    summary_reports?: unknown;
+    topic_classification?: unknown;
+  };
+  const evalJoined = evaluation as EvaluationJoined;
+  const reviews = evalJoined.persona_reviews ?? [];
   const personaIds = Array.from(
     new Set([
       ...(Array.isArray(evaluation.selected_persona_ids) ? evaluation.selected_persona_ids : []).map(String),
-      ...reviews.map((r: any) => String(r.persona_id)),
+      ...reviews.map((r) => String(r.persona_id)),
     ]),
   );
 
-  let personas: any[] = [];
+  let personas: PersonaRow[] = [];
   if (personaIds.length > 0) {
     const { data } = await supabase
       .from("personas")
       .select("id, identity, demographics, category")
       .in("id", personaIds);
-    personas = data ?? [];
+    personas = (data ?? []) as PersonaRow[];
   }
 
-  const reportData = (evaluation as any).summary_reports;
+  const reportData = evalJoined.summary_reports;
   const report = Array.isArray(reportData) ? reportData[0] ?? null : reportData ?? null;
-  const topicClassification = (evaluation as any).topic_classification ?? null;
+  const topicClassification = evalJoined.topic_classification ?? null;
 
   const banner =
     locale === "zh"
@@ -74,11 +82,11 @@ export default async function PublicSharePage({
         </div>
       </div>
       <ReportView
-        report={report}
-        reviews={reviews}
-        personas={personas}
+        report={report as Parameters<typeof ReportView>[0]["report"]}
+        reviews={reviews as Parameters<typeof ReportView>[0]["reviews"]}
+        personas={personas as Parameters<typeof ReportView>[0]["personas"]}
         locale={locale}
-        topicClassification={topicClassification}
+        topicClassification={topicClassification as Parameters<typeof ReportView>[0]["topicClassification"]}
         mode={evaluation.mode === "topic" ? "topic" : "product"}
       />
     </div>

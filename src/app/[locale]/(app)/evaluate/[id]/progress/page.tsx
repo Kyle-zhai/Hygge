@@ -27,33 +27,46 @@ export default async function EvaluationProgressPage({
     redirect(`/${locale}/evaluate/${id}/result`);
   }
 
-  const topicTitle =
-    (evaluation as any).projects?.parsed_data?.name || "Discussion";
+  type PersonaRow = {
+    id: string;
+    identity: { name: string; avatar?: string; locale_variants?: Record<string, { name?: string }> };
+  };
+  type ReviewRow = {
+    persona_id: string;
+    review_text: string;
+    scores: unknown;
+    strengths: string[];
+    weaknesses: string[];
+  };
+  type EvaluationJoined = typeof evaluation & {
+    projects?: { parsed_data?: { name?: string } } | null;
+    persona_reviews?: ReviewRow[] | null;
+  };
+  const evalJoined = evaluation as EvaluationJoined;
+  const topicTitle = evalJoined.projects?.parsed_data?.name || "Discussion";
 
-  const existingReviews = (evaluation as any).persona_reviews || [];
+  const existingReviews = evalJoined.persona_reviews ?? [];
   const allPersonaIds = Array.from(new Set([
     ...(evaluation.selected_persona_ids || []).map(String),
-    ...existingReviews.map((r: any) => String(r.persona_id)),
+    ...existingReviews.map((r) => String(r.persona_id)),
   ]));
   const { data: personas } = allPersonaIds.length > 0
     ? await supabase.from("personas").select("id, identity").in("id", allPersonaIds)
     : { data: [] };
 
-  const personaInfos = (personas || []).map((p: any) => ({
+  const personaInfos = ((personas ?? []) as PersonaRow[]).map((p) => ({
     id: p.id,
     name: p.identity.locale_variants?.en?.name || p.identity.name,
-    avatar: p.identity.avatar,
+    avatar: p.identity.avatar ?? "",
   }));
 
-  const initialReviews = ((evaluation as any).persona_reviews || []).map(
-    (r: any) => ({
-      persona_id: r.persona_id,
-      review_text: r.review_text,
-      scores: r.scores,
-      strengths: r.strengths,
-      weaknesses: r.weaknesses,
-    })
-  );
+  const initialReviews = existingReviews.map((r) => ({
+    persona_id: r.persona_id,
+    review_text: r.review_text,
+    scores: r.scores,
+    strengths: r.strengths,
+    weaknesses: r.weaknesses,
+  }));
 
   return (
     <DiscussionFeed

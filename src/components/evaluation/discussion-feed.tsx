@@ -240,6 +240,12 @@ function CompletedCard({
   );
 }
 
+type SummaryReport = {
+  persona_analysis?: { consensus?: Array<{ point?: unknown }> };
+  synthesis?: unknown;
+  consensus_score?: unknown;
+};
+
 function SummaryCard({
   summaryReport,
   mode,
@@ -247,7 +253,7 @@ function SummaryCard({
   locale,
   t,
 }: {
-  summaryReport: any;
+  summaryReport: SummaryReport | null;
   mode: "topic" | "product";
   evaluationId: string;
   locale: string;
@@ -257,7 +263,7 @@ function SummaryCard({
 
   const consensusPoints: string[] =
     (summaryReport?.persona_analysis?.consensus || [])
-      .map((c: any) => (typeof c?.point === "string" ? stripInlineUuidMeta(c.point) : ""))
+      .map((c) => (typeof c?.point === "string" ? stripInlineUuidMeta(c.point) : ""))
       .filter((p: string) => p.length > 0);
 
   const excerpt =
@@ -317,7 +323,7 @@ export function DiscussionFeed({
   const [errorMessage, setErrorMessage] = useState<string | null>(initialErrorMessage);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
-  const [summaryReport, setSummaryReport] = useState<any>(null);
+  const [summaryReport, setSummaryReport] = useState<SummaryReport | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const feedEndRef = useRef<HTMLDivElement>(null);
   const prevReviewCount = useRef(reviews.length);
@@ -393,7 +399,7 @@ export function DiscussionFeed({
     }
 
     const existing = new Set(reviewsRef.current.map((r) => r.persona_id));
-    const fetched = ((evaluation as any).persona_reviews || []) as ReviewPayload[];
+    const fetched = ((evaluation as { persona_reviews?: ReviewPayload[] }).persona_reviews || []) as ReviewPayload[];
     const newOnes = fetched.filter((r) => !existing.has(r.persona_id));
     if (newOnes.length > 0) {
       setReviews((prev) => [...prev, ...newOnes]);

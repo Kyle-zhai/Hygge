@@ -13,8 +13,8 @@ import { PrintButton } from "@/components/evaluation/print-button";
 
 interface PersonaData {
   id: string;
-  identity: any;
-  demographics: any;
+  identity: { name: string; avatar: string; locale_variants?: Record<string, { name: string }> };
+  demographics: { occupation: string };
   category: string;
 }
 
@@ -36,8 +36,13 @@ interface TopicClassification {
 
 type ViewMode = "report" | "scores" | "simulation" | "debate";
 
+type ReportLike = Record<string, unknown> & {
+  scenario_simulation?: unknown;
+  round_table_debate?: unknown;
+};
+
 interface ReportViewProps {
-  report: any;
+  report: ReportLike | null;
   reviews: ReviewData[];
   personas: PersonaData[];
   locale: string;
@@ -105,12 +110,17 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
     />
   ) : null;
 
+  type ReportTextViewReport = Parameters<typeof ReportTextView>[0]["report"];
+  type ReportScoresViewReport = Parameters<typeof ReportScoresView>[0]["report"];
+  type RoundTableDebateProp = Parameters<typeof RoundTableDebateView>[0]["debate"];
+  type ScenarioSimulationProp = Parameters<typeof ScenarioSimulationView>[0]["simulation"];
+
   if (view === "scores") {
     return (
       <>
         <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
           <ReportScoresView
-            report={report}
+            report={report as ReportScoresViewReport}
             reviews={reviews}
             personas={personas}
             locale={locale}
@@ -129,7 +139,7 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
       <>
         <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
           <RoundTableDebateView
-            debate={report.round_table_debate}
+            debate={report.round_table_debate as RoundTableDebateProp}
             personas={personas}
             locale={locale}
             onBack={handleBackToReport}
@@ -146,7 +156,7 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
       <>
         <div className="mx-auto max-w-4xl px-4 py-8 pb-16">
           <ScenarioSimulationView
-            simulation={report.scenario_simulation}
+            simulation={report.scenario_simulation as ScenarioSimulationProp}
             personas={personas}
             locale={locale}
             onBack={handleBackToReport}
@@ -165,7 +175,7 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
           {evaluationId && <ShareButton evaluationId={evaluationId} />}
         </div>
         <ReportTextView
-          report={report}
+          report={report as ReportTextViewReport}
           reviews={reviews}
           personas={personas}
           locale={locale}

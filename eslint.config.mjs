@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Compiled worker output — linting it re-flags every `any` the compiler
+    // emitted for untyped JSON responses.
+    "worker/dist/**",
   ]),
 ]);
 

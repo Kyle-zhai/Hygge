@@ -708,7 +708,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                       <p className="text-[11px] text-[#666462]">{persona.demographics.occupation}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-[#9B9594] italic mb-2">"{localized.tagline}"</p>
+                  <p className="text-xs text-[#9B9594] italic mb-2">&ldquo;{localized.tagline}&rdquo;</p>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#666462]">
                     <span>{persona.demographics.age}{locale === "zh" ? "岁" : "y/o"} · {genderLabels[persona.demographics.gender]?.[locale] || persona.demographics.gender}</span>
                     <span>{persona.demographics.occupation}</span>

@@ -31,16 +31,29 @@ export default async function ComparePage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const completedEvaluations = (projects || []).flatMap((p: any) => {
+  type EvalRow = {
+    id: string;
+    mode?: string | null;
+    status?: string | null;
+    completed_at?: string | null;
+    selected_persona_ids?: string[] | null;
+    comparison_base_id?: string | null;
+  };
+  type ProjectRow = {
+    parsed_data?: { name?: string } | null;
+    raw_input?: string | null;
+    evaluations?: EvalRow | EvalRow[] | null;
+  };
+  const completedEvaluations = ((projects ?? []) as ProjectRow[]).flatMap((p) => {
     const evals = Array.isArray(p.evaluations) ? p.evaluations : p.evaluations ? [p.evaluations] : [];
     return evals
       .filter(
-        (e: any) =>
+        (e) =>
           e.status === "completed" &&
           !e.comparison_base_id &&
           (e.mode || "product") === "product",
       )
-      .map((e: any) => ({
+      .map((e) => ({
         evaluationId: e.id as string,
         title: (p.parsed_data?.name || p.raw_input?.slice(0, 60) || "Untitled") as string,
         mode: "product" as const,

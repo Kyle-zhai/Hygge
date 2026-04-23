@@ -6,10 +6,22 @@ import { ArrowLeft, Users, Lightbulb, AlertTriangle, MessageSquare, Swords } fro
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
+interface PersonaIdentityLike {
+  name?: string;
+  avatar?: string;
+  locale_variants?: Record<string, { name?: string; tagline?: string }>;
+  [key: string]: unknown;
+}
+
+interface PersonaDemographicsLike {
+  occupation?: string;
+  [key: string]: unknown;
+}
+
 interface PersonaData {
   id: string;
-  identity: any;
-  demographics: any;
+  identity: PersonaIdentityLike;
+  demographics: PersonaDemographicsLike;
   category: string;
 }
 

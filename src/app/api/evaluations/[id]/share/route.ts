@@ -13,7 +13,7 @@ async function assertOwner(supabase: Awaited<ReturnType<typeof createClient>>, e
     .eq("id", evaluationId)
     .single();
   if (error || !data) return null;
-  const ownerId = (data as any).projects?.user_id;
+  const ownerId = (data as { projects?: { user_id?: string } | null }).projects?.user_id;
   if (ownerId !== userId) return null;
   return data as { id: string; status: string; share_token: string | null };
 }

@@ -63,11 +63,11 @@ export async function GET(request: Request) {
       .from("persona_saves")
       .select("persona_id")
       .eq("user_id", user.id);
-    savedIds = saves?.map((s: any) => s.persona_id) ?? [];
+    savedIds = saves?.map((s: { persona_id: string }) => s.persona_id) ?? [];
   }
 
   return NextResponse.json({
-    personas: (personas ?? []).map((p: any) => ({ ...p, is_saved: savedIds.includes(p.id) })),
+    personas: (personas ?? []).map((p: { id: string } & Record<string, unknown>) => ({ ...p, is_saved: savedIds.includes(p.id) })),
     total: count ?? 0,
     page,
     totalPages: Math.ceil((count ?? 0) / limit),

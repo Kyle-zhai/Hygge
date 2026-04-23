@@ -30,8 +30,8 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (err: any) {
-    console.error("Webhook signature verification failed:", err.message);
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -87,7 +87,14 @@ export async function POST(request: Request) {
 
         const isRenewal = existing && existing.current_period_start !== newPeriodStart;
 
-        const updateData: Record<string, any> = {
+        const updateData: {
+          plan: string;
+          evaluations_limit: number;
+          custom_personas_limit: number;
+          current_period_start: string;
+          current_period_end: string;
+          evaluations_used?: number;
+        } = {
           plan: plan.name,
           evaluations_limit: plan.evaluationsLimit,
           custom_personas_limit: plan.customPersonasLimit,
@@ -137,7 +144,7 @@ export async function POST(request: Request) {
     }
 
     case "invoice.payment_failed": {
-      const invoice = event.data.object as any;
+      const invoice = event.data.object as unknown as { subscription?: string | null; attempt_count?: number };
       const subscriptionId: string | null = invoice.subscription ?? null;
       const attemptCount: number = invoice.attempt_count ?? 1;
       if (!subscriptionId) break;

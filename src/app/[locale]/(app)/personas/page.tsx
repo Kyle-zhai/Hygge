@@ -196,6 +196,7 @@ export default function MyPersonasPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time data fetch; setState is intentional and gated by a pending-fetch flag inside fetchPersonas
     fetchPersonas().finally(() => setLoading(false));
   }, [fetchPersonas]);
 
@@ -211,6 +212,7 @@ export default function MyPersonasPage() {
         localStorage.setItem("pendingPersonas", JSON.stringify(recent));
       }
       if (recent.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- rehydrating pendingJobs from localStorage on mount; only runs once, guarded by the empty dep array
         setPendingJobs(recent.map((p) => ({ ...p, status: p.status ?? "processing" })));
       }
     } catch {

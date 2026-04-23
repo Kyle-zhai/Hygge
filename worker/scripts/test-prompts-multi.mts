@@ -2,8 +2,10 @@ import "dotenv/config";
 import { buildLLM } from "../src/llm/factory.js";
 import { parseProject } from "../src/processors/parse-project.js";
 import { classifyTopic } from "../src/processors/classify-topic.js";
-import { generatePersonaReview } from "../src/processors/persona-review.js";
+import { generatePersonaReview, type PersonaReviewResult } from "../src/processors/persona-review.js";
+import type { LLMAdapter } from "../src/llm/adapter.js";
 import type { Persona } from "../src/types/persona.js";
+import type { ProjectParsedData, TopicClassification } from "../src/types/evaluation.js";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -158,14 +160,14 @@ interface CaseResult {
   mode: "topic" | "product";
   category: string;
   raw: string;
-  parsed?: any;
-  classification?: any;
-  review?: any;
+  parsed?: ProjectParsedData;
+  classification?: TopicClassification;
+  review?: PersonaReviewResult;
   error?: string;
   durationMs?: number;
 }
 
-async function runCase(llm: any, persona: Persona, tc: TestCase): Promise<CaseResult> {
+async function runCase(llm: LLMAdapter, persona: Persona, tc: TestCase): Promise<CaseResult> {
   const start = Date.now();
   try {
     const [parsed, classification] = await Promise.all([
@@ -177,10 +179,10 @@ async function runCase(llm: any, persona: Persona, tc: TestCase): Promise<CaseRe
       id: tc.id, mode: tc.mode, category: tc.category, raw: tc.raw,
       parsed, classification, review, durationMs: Date.now() - start,
     };
-  } catch (err: any) {
+  } catch (err) {
     return {
       id: tc.id, mode: tc.mode, category: tc.category, raw: tc.raw,
-      error: err?.message ?? String(err), durationMs: Date.now() - start,
+      error: err instanceof Error ? err.message : String(err), durationMs: Date.now() - start,
     };
   }
 }
@@ -328,7 +330,7 @@ function analyzeOne(r: CaseResult) {
     checks, issues,
     snippets: {
       review_first_300: rt.slice(0, 300),
-      dimensions: dims.map((d: any) => `${d.key}: ${d.description}`),
+      dimensions: dims.map((d: { key: string; description: string }) => `${d.key}: ${d.description}`),
       cited: citedRefs.map((c) => `${c.claim} [${c.source ?? "?"}]`),
       bad_quotes: fabricatedQuotes.slice(0, 3),
     },
@@ -356,8 +358,9 @@ async function main() {
     console.log("═".repeat(78));
     console.log(`[${a.id}] ${a.mode}/${a.category}`);
     console.log("─".repeat(78));
-    if ((a as any).error) {
-      console.log(`  ✗ ERRORED: ${(a as any).error}`);
+    const analysisError = (a as { error?: string }).error;
+    if (analysisError) {
+      console.log(`  ✗ ERRORED: ${analysisError}`);
       continue;
     }
     for (const c of a.checks) {

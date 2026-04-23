@@ -30,7 +30,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ recommended_ids: [], reasoning: "No personas available" });
   }
 
-  const personaSummaries = personas.map((p: any) => ({
+  type PersonaSummaryRow = {
+    id: string;
+    identity: { name: string };
+    demographics: { occupation: string };
+    evaluation_lens: { primary_question: string };
+  };
+  const personaSummaries = (personas as PersonaSummaryRow[]).map((p) => ({
     id: p.id,
     name: p.identity.name,
     occupation: p.demographics.occupation,
@@ -42,7 +48,7 @@ export async function POST(request: Request) {
 
   if (!workerUrl || !workerSecret) {
     return NextResponse.json({
-      recommended_ids: personas.slice(0, 5).map((p: any) => p.id),
+      recommended_ids: personas.slice(0, 5).map((p: { id: string }) => p.id),
       reasoning: "Default recommendation (worker not configured)",
     });
   }
@@ -68,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json(await workerRes.json());
   } catch {
     return NextResponse.json({
-      recommended_ids: personas.slice(0, 5).map((p: any) => p.id),
+      recommended_ids: personas.slice(0, 5).map((p: { id: string }) => p.id),
       reasoning: "Default recommendation (worker unavailable)",
     });
   }

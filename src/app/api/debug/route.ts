@@ -23,8 +23,8 @@ export async function GET(request: Request) {
     .eq("user_id", user.id)
     .single();
 
-  const selectedIds = evaluation.selected_persona_ids;
-  const reviewPersonaIds = (evaluation as any).persona_reviews?.map((r: any) => r.persona_id) || [];
+  const selectedIds = evaluation.selected_persona_ids as string[] | null;
+  const reviewPersonaIds = ((evaluation as { persona_reviews?: Array<{ persona_id: string }> }).persona_reviews ?? []).map((r) => r.persona_id);
 
   const { data: personasBySelected, error: e1 } = await supabase
     .from("personas")
@@ -51,26 +51,27 @@ export async function GET(request: Request) {
     .eq("evaluation_id", evalId!)
     .single();
 
-  const personaAnalysis = summaryReport?.persona_analysis as any;
+  const personaAnalysis = summaryReport?.persona_analysis as
+    | { entries?: unknown[]; consensus?: unknown } | null | undefined;
   const personaAnalysisKeys = personaAnalysis ? Object.keys(personaAnalysis) : [];
   const reportEntries = personaAnalysis?.entries || [];
   const firstEntryType = reportEntries[0] ? typeof reportEntries[0] : null;
-  const firstEntry = reportEntries[0] && typeof reportEntries[0] === "object" ? Object.keys(reportEntries[0]) : reportEntries.slice(0, 4);
+  const firstEntry = reportEntries[0] && typeof reportEntries[0] === "object" ? Object.keys(reportEntries[0] as object) : reportEntries.slice(0, 4);
   const consensus = personaAnalysis?.consensus;
   const firstConsensus = Array.isArray(consensus) && consensus[0] ? consensus[0] : null;
-  const mda = summaryReport ? (summaryReport as any).multi_dimensional_analysis : null;
+  const mda = summaryReport ? (summaryReport as { multi_dimensional_analysis?: unknown[] }).multi_dimensional_analysis : null;
   const mdaFirstType = Array.isArray(mda) && mda[0] ? typeof mda[0] : null;
-  const mdaFirst = Array.isArray(mda) && mda[0] && typeof mda[0] === "object" ? Object.keys(mda[0]) : (Array.isArray(mda) ? mda.slice(0, 3) : null);
+  const mdaFirst = Array.isArray(mda) && mda[0] && typeof mda[0] === "object" ? Object.keys(mda[0] as object) : (Array.isArray(mda) ? mda.slice(0, 3) : null);
 
   return NextResponse.json({
     selectedIds,
-    selectedIdsTypes: selectedIds?.map((id: any) => typeof id),
+    selectedIdsTypes: selectedIds?.map((id) => typeof id),
     reviewPersonaIds,
-    reviewPersonaIdsTypes: reviewPersonaIds.map((id: any) => typeof id),
+    reviewPersonaIdsTypes: reviewPersonaIds.map((id) => typeof id),
     personasBySelected: { count: personasBySelected?.length, data: personasBySelected, error: e1 },
     personasByReview: { count: personasByReview?.length, data: personasByReview, error: e2 },
     personasByStringIds: { count: personasByStringIds?.length, data: personasByStringIds, error: e3 },
-    samplePersonaIds: allPersonas?.map((p: any) => p.id),
+    samplePersonaIds: allPersonas?.map((p) => p.id),
     overallScore: summaryReport?.overall_score,
     personaAnalysisKeys,
     entriesCount: reportEntries.length,

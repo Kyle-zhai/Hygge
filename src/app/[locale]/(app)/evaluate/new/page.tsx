@@ -122,8 +122,8 @@ function NewEvaluationContent() {
         persona_count: selectedPersonaIds.length,
       });
       router.push(`/${locale}/evaluate/${evaluation.id}/progress`);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
       setSubmitting(false);
     }
   }

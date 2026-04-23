@@ -20,10 +20,22 @@ const priorityColors: Record<string, string> = {
   low: "bg-[#1C1C1C] text-[#9B9594] border-[#2A2A2A]",
 };
 
+interface PersonaIdentityLike {
+  name?: string;
+  avatar?: string;
+  locale_variants?: Record<string, { name?: string; tagline?: string }>;
+  [key: string]: unknown;
+}
+
+interface PersonaDemographicsLike {
+  occupation?: string;
+  [key: string]: unknown;
+}
+
 interface PersonaData {
   id: string;
-  identity: any;
-  demographics: any;
+  identity: PersonaIdentityLike;
+  demographics: PersonaDemographicsLike;
   category: string;
 }
 
@@ -166,7 +178,7 @@ function safeArray<T>(val: unknown): T[] {
 
 function safeTr(t: ReturnType<typeof useTranslations>, key: string | undefined | null, fallback?: string): string {
   if (!key) return fallback ?? "";
-  try { return t(key as any); } catch { return fallback ?? key; }
+  try { return t(key as Parameters<typeof t>[0]); } catch { return fallback ?? key; }
 }
 
 function safeScoresOf(scores: unknown): Record<string, number | string> {
@@ -202,7 +214,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
   const isTopicMode = mode === "topic";
   const t = useTranslations("evaluation");
   const topRef = useRef<HTMLDivElement>(null);
-  const personaMap = new Map(personas.map((p) => [p.id, p]));
+  const personaMap = useMemo(
+    () => new Map(personas.map((p) => [p.id, p])),
+    [personas],
+  );
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -252,7 +267,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
         entries,
       };
     }).sort((a, b) => b.avg - a.avg);
-  }, [reviews, personas, dimKeys, locale, isTopicMode]);
+  }, [reviews, personaMap, dimKeys, locale, isTopicMode]);
 
   // ── Per-dimension stats ──
   const dimensionStats = useMemo(() => {
@@ -265,9 +280,9 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       const min = values.length ? Math.min(...values) : 0;
       const max = values.length ? Math.max(...values) : 0;
       const spread = max - min;
-      const analysis = safeArray<any>(report?.multi_dimensional_analysis)
-        .filter((d: any) => typeof d === "object" && d !== null)
-        .find((d: any) => d.dimension === dim);
+      const analysis = safeArray<ReportData["multi_dimensional_analysis"][number]>(report?.multi_dimensional_analysis)
+        .filter((d) => typeof d === "object" && d !== null)
+        .find((d) => d.dimension === dim);
       return { dim, avg, min, max, spread, count: values.length, analysis };
     });
   }, [reviews, dimKeys, report, isTopicMode]);
