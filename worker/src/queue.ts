@@ -36,8 +36,8 @@ export function createWorker(
   return new Worker("evaluations", processor, {
     connection,
     concurrency,
-    drainDelay: 30,
-    stalledInterval: 60_000,
+    drainDelay: 300,
+    stalledInterval: 600_000,
     lockDuration: 60_000,
   });
 }
