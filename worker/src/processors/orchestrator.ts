@@ -1,5 +1,8 @@
 import type { Job } from "bullmq";
+import { createHash } from "node:crypto";
+import AdmZip from "adm-zip";
 import { OfficeParser } from "officeparser";
+import { pdfToPng } from "pdf-to-png-converter";
 import { supabase } from "../supabase.js";
 import { buildLLM, buildVisionLLM, type LLMOverrides } from "../llm/factory.js";
 import type { MediaItem } from "../llm/adapter.js";
@@ -29,6 +32,35 @@ interface EvaluationJobData {
 }
 
 const MAX_RAW_INPUT_BYTES = 32 * 1024;
+// Caps that keep vision-token spend bounded even when users upload 50-page PDFs
+// or docx files that embed the same logo image 40 times.
+const MAX_IMAGES_PER_EVAL = 12;
+const MAX_PDF_PAGES = 8;
+const ARCHIVE_IMAGE_RE = /\.(png|jpe?g|gif|webp)$/i;
+const ARCHIVE_MEDIA_PREFIXES = ["word/media/", "ppt/media/", "xl/media/"];
+
+function mimeForExt(ext: string): string {
+  const e = ext.toLowerCase();
+  if (e === "jpg" || e === "jpeg") return "image/jpeg";
+  if (e === "png") return "image/png";
+  if (e === "gif") return "image/gif";
+  if (e === "webp") return "image/webp";
+  return "image/png";
+}
+
+function pushDedupedImage(
+  mediaItems: MediaItem[],
+  seen: Set<string>,
+  mime: string,
+  buffer: Buffer,
+): boolean {
+  if (mediaItems.filter((m) => m.type === "image").length >= MAX_IMAGES_PER_EVAL) return false;
+  const hash = createHash("sha1").update(buffer).digest("hex");
+  if (seen.has(hash)) return false;
+  seen.add(hash);
+  mediaItems.push({ type: "image", url: `data:${mime};base64,${buffer.toString("base64")}` });
+  return true;
+}
 
 export async function processEvaluation(job: Job<EvaluationJobData>) {
   const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId, llmOverrides } = job.data;
@@ -57,13 +89,18 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     // 2. Parse user submission — separate text descriptions from media items
     const attachmentDescriptions: string[] = [];
     const mediaItems: MediaItem[] = [];
+    // Dedupe identical images across all attachments — docx frequently embeds the
+    // same logo in header/footer of every section, and PDFs of slide decks often
+    // render the same footer on every page.
+    const imageHashes = new Set<string>();
     if (attachments && attachments.length > 0) {
       for (const path of attachments) {
         const filename = path.split("/").pop() ?? path;
         const ext = filename.split(".").pop()?.toLowerCase() ?? "";
         const isImage = /^(png|jpg|jpeg|gif|webp)$/.test(ext);
         const isVideo = /^(mp4|mov|avi|webm|mkv)$/.test(ext);
-        const isDocument = /^(pdf|docx|pptx)$/.test(ext);
+        const isZipDoc = /^(docx|pptx|xlsx)$/.test(ext);
+        const isPdf = ext === "pdf";
 
         if (isVideo) {
           const { data: urlData } = await supabase.storage.from("attachments").createSignedUrl(path, 3600);
@@ -76,33 +113,92 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
         const { data } = await supabase.storage.from("attachments").download(path);
         if (!data) continue;
+        const buffer = Buffer.from(await data.arrayBuffer());
 
         if (isImage) {
-          const base64 = Buffer.from(await data.arrayBuffer()).toString("base64");
-          const mime = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
-          mediaItems.push({ type: "image", url: `data:${mime};base64,${base64}` });
+          pushDedupedImage(mediaItems, imageHashes, mimeForExt(ext), buffer);
           attachmentDescriptions.push(`[Image attachment: ${filename}]`);
-        } else if (isDocument) {
+          continue;
+        }
+
+        if (isZipDoc) {
+          // Text layer via officeparser, image layer via raw zip extraction.
           try {
-            const buffer = Buffer.from(await data.arrayBuffer());
             const ast = await OfficeParser.parseOffice(buffer);
-            const text = ast.toText().slice(0, 8000);
-            attachmentDescriptions.push(`[Document: ${filename}]\n${text}`);
+            attachmentDescriptions.push(`[Document: ${filename}]\n${ast.toText().slice(0, 8000)}`);
           } catch (parseErr) {
             log.warn("orchestrator.attachment.parse_failed", {
-              ...ctx,
-              filename,
-              error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+              ...ctx, filename, error: parseErr instanceof Error ? parseErr.message : String(parseErr),
             });
             attachmentDescriptions.push(`[Document: ${filename} — could not extract text]`);
           }
-        } else {
           try {
-            const text = await data.text();
-            attachmentDescriptions.push(`[Attachment: ${filename}]\n${text.slice(0, 5000)}`);
-          } catch {
-            attachmentDescriptions.push(`[Attachment: ${filename} — binary file]`);
+            const zip = new AdmZip(buffer);
+            let extracted = 0;
+            for (const entry of zip.getEntries()) {
+              if (entry.isDirectory) continue;
+              if (!ARCHIVE_MEDIA_PREFIXES.some((p) => entry.entryName.startsWith(p))) continue;
+              if (!ARCHIVE_IMAGE_RE.test(entry.entryName)) continue;
+              const mediaExt = entry.entryName.split(".").pop() ?? "png";
+              const entryData = entry.getData();
+              if (!entryData) continue;
+              if (pushDedupedImage(mediaItems, imageHashes, mimeForExt(mediaExt), entryData)) {
+                extracted += 1;
+              }
+            }
+            if (extracted > 0) {
+              log.info("orchestrator.attachment.images_extracted", { ...ctx, filename, count: extracted, kind: ext });
+            }
+          } catch (zipErr) {
+            log.warn("orchestrator.attachment.zip_failed", {
+              ...ctx, filename, error: zipErr instanceof Error ? zipErr.message : String(zipErr),
+            });
           }
+          continue;
+        }
+
+        if (isPdf) {
+          // Text layer via officeparser, visual layer via page rasterization so
+          // diagrams/screenshots embedded in the PDF still reach the vision LLM.
+          try {
+            const ast = await OfficeParser.parseOffice(buffer);
+            attachmentDescriptions.push(`[Document: ${filename}]\n${ast.toText().slice(0, 8000)}`);
+          } catch (parseErr) {
+            log.warn("orchestrator.attachment.parse_failed", {
+              ...ctx, filename, error: parseErr instanceof Error ? parseErr.message : String(parseErr),
+            });
+            attachmentDescriptions.push(`[Document: ${filename} — could not extract text]`);
+          }
+          try {
+            const pages = await pdfToPng(buffer, {
+              outputFolder: undefined,
+              viewportScale: 1.5,
+              pagesToProcess: Array.from({ length: MAX_PDF_PAGES }, (_, i) => i + 1),
+            });
+            let extracted = 0;
+            for (const page of pages) {
+              if (!page.content) continue;
+              if (pushDedupedImage(mediaItems, imageHashes, "image/png", page.content)) {
+                extracted += 1;
+              }
+            }
+            if (extracted > 0) {
+              log.info("orchestrator.attachment.pdf_rasterized", { ...ctx, filename, pages: extracted });
+            }
+          } catch (pdfErr) {
+            log.warn("orchestrator.attachment.pdf_rasterize_failed", {
+              ...ctx, filename, error: pdfErr instanceof Error ? pdfErr.message : String(pdfErr),
+            });
+          }
+          continue;
+        }
+
+        // Plain text / markdown / csv / unknown — best-effort text read.
+        try {
+          const text = buffer.toString("utf8");
+          attachmentDescriptions.push(`[Attachment: ${filename}]\n${text.slice(0, 5000)}`);
+        } catch {
+          attachmentDescriptions.push(`[Attachment: ${filename} — binary file]`);
         }
       }
     }
