@@ -20,21 +20,23 @@ const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
 const evaluationWorker = new Worker("evaluations", processEvaluation, {
   connection,
   concurrency: Number(process.env.EVAL_CONCURRENCY ?? 3),
-  drainDelay: 30,
-  stalledInterval: 60_000,
+  drainDelay: 300,
+  stalledInterval: 600_000,
   lockDuration: 60_000,
 });
 
 const personaWorker = new Worker("persona-generation", processPersonaGeneration, {
   connection,
   concurrency: 2,
-  drainDelay: 30,
+  drainDelay: 300,
+  stalledInterval: 600_000,
 });
 
 const debateWorker = new Worker("debate-response", processDebateResponse, {
   connection,
   concurrency: 3,
-  drainDelay: 10,
+  drainDelay: 60,
+  stalledInterval: 600_000,
 });
 
 function jobDuration(job: { processedOn?: number; finishedOn?: number }): number | undefined {
