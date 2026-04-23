@@ -18,7 +18,7 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const currentIndex = PLAN_ORDER.indexOf(currentPlan as any);
+  const currentIndex = PLAN_ORDER.indexOf(currentPlan as (typeof PLAN_ORDER)[number]);
 
   async function handleAction(planKey: string) {
     if (planKey === "free" || planKey === currentPlan) return;
@@ -94,7 +94,7 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
   ];
 
   function getButtonState(planKey: string) {
-    const planIndex = PLAN_ORDER.indexOf(planKey as any);
+    const planIndex = PLAN_ORDER.indexOf(planKey as (typeof PLAN_ORDER)[number]);
     if (planKey === currentPlan) return "current";
     if (planIndex > currentIndex) return "upgrade";
     if (planIndex < currentIndex) return "downgrade";

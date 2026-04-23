@@ -43,7 +43,7 @@ export async function generatePersonaReview(
   const tryComplete = async (
     activePrompt: string,
     maxTokens: number,
-  ): Promise<{ response: Awaited<ReturnType<typeof llm.complete>>; parsed: any } | { truncated: true; partialText: string }> => {
+  ): Promise<{ response: Awaited<ReturnType<typeof llm.complete>>; parsed: Record<string, unknown> } | { truncated: true; partialText: string }> => {
     let response;
     try {
       response = await llm.complete({ system, prompt: activePrompt, maxTokens, jsonMode: true });
@@ -54,7 +54,7 @@ export async function generatePersonaReview(
       throw e;
     }
     try {
-      const parsed = robustJsonParse(response.text);
+      const parsed = robustJsonParse(response.text) as Record<string, unknown>;
       return { response, parsed };
     } catch (e) {
       dumpFailure(response.text, `JSON parse failed: ${(e as Error).message}`);
@@ -106,17 +106,17 @@ export async function generatePersonaReview(
       `[PersonaReview:${persona.identity.name}] Retries exhausted — proceeding with residual violations: banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount}`,
     );
   }
-  const scores = (dimensions && mode === "topic") ? (parsed.stances ?? parsed.scores) : parsed.scores;
-  if (!scores || typeof scores !== "object") {
+  const scoresCandidate = (dimensions && mode === "topic") ? (parsed.stances ?? parsed.scores) : parsed.scores;
+  if (!scoresCandidate || typeof scoresCandidate !== "object") {
     throw new Error(`Persona review for ${persona.identity.name} returned no scores`);
   }
   return {
-    scores,
-    review_text: parsed.review_text,
-    strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-    weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+    scores: scoresCandidate as EvaluationScores,
+    review_text: typeof parsed.review_text === "string" ? parsed.review_text : "",
+    strengths: Array.isArray(parsed.strengths) ? (parsed.strengths as string[]) : [],
+    weaknesses: Array.isArray(parsed.weaknesses) ? (parsed.weaknesses as string[]) : [],
     llm_model: response.model,
-    overall_stance: parsed.overall_stance ?? null,
-    cited_references: Array.isArray(parsed.cited_references) ? parsed.cited_references : null,
+    overall_stance: (parsed.overall_stance ?? null) as PersonaStance | null,
+    cited_references: Array.isArray(parsed.cited_references) ? (parsed.cited_references as CitedReference[]) : null,
   };
 }

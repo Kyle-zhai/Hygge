@@ -1,12 +1,25 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
-import type { SummaryReport } from "../types/report.js";
+import type {
+  SummaryReport,
+  DimensionAnalysis,
+  MarketReadiness,
+  PersonaAnalysisEntry,
+  ConsensusPoint,
+  DisagreementPoint,
+  GoalAssessmentEntry,
+  ActionItem,
+  ReportPositions,
+  ReportReference,
+} from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
 
-function reconstructFromStrings(arr: string[], requiredKey: string): any[] {
-  const objects: any[] = [];
-  let current: any = null;
+type LooseRecord = Record<string, unknown>;
+
+function reconstructFromStrings(arr: string[], requiredKey: string): LooseRecord[] {
+  const objects: LooseRecord[] = [];
+  let current: LooseRecord | null = null;
   for (const s of arr) {
     const colonIdx = s.indexOf(": ");
     if (colonIdx === -1) continue;
@@ -37,10 +50,11 @@ function parseSupportingPersonas(val: unknown): string[] {
 
 // Some LLM outputs flatten the object — the `point` ends up containing the
 // supporting_personas array as inline text. Strip that tail and recover the ids.
-function cleanConsensusPoint(raw: any): any {
-  if (!raw || typeof raw !== "object") return raw;
-  const rawPoint = typeof raw.point === "string" ? raw.point : "";
-  const existing = parseSupportingPersonas(raw.supporting_personas);
+function cleanConsensusPoint(raw: unknown): LooseRecord {
+  if (!raw || typeof raw !== "object") return (raw ?? {}) as LooseRecord;
+  const src = raw as LooseRecord;
+  const rawPoint = typeof src.point === "string" ? src.point : "";
+  const existing = parseSupportingPersonas(src.supporting_personas);
   const extracted: string[] = [];
   const cleaned = rawPoint
     .replace(/[,;]?\s*supporting[_ ]personas\s*:\s*\[([^\]]*)\]/gi, (_m: string, ids: string) => {
@@ -53,7 +67,7 @@ function cleanConsensusPoint(raw: any): any {
     .replace(/[\s,;]+$/, "")
     .trim();
   return {
-    ...raw,
+    ...src,
     point: cleaned,
     supporting_personas: existing.length > 0 ? existing : extracted,
   };
@@ -64,8 +78,8 @@ function toStringArray(val: unknown): string[] {
   return val.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
 }
 
-function normalizeIfFeasible(raw: any): { next_steps: string[]; optimizations: string[]; risks: string[] } {
-  const src = raw && typeof raw === "object" ? raw : {};
+function normalizeIfFeasible(raw: unknown): { next_steps: string[]; optimizations: string[]; risks: string[] } {
+  const src: LooseRecord = raw && typeof raw === "object" ? (raw as LooseRecord) : {};
   return {
     next_steps: toStringArray(src.next_steps),
     optimizations: toStringArray(src.optimizations),
@@ -73,8 +87,8 @@ function normalizeIfFeasible(raw: any): { next_steps: string[]; optimizations: s
   };
 }
 
-function normalizeIfNotFeasible(raw: any): { modifications: string[]; direction: string; priorities: string[]; reference_cases: string[] } {
-  const src = raw && typeof raw === "object" ? raw : {};
+function normalizeIfNotFeasible(raw: unknown): { modifications: string[]; direction: string; priorities: string[]; reference_cases: string[] } {
+  const src: LooseRecord = raw && typeof raw === "object" ? (raw as LooseRecord) : {};
   return {
     modifications: toStringArray(src.modifications),
     direction: typeof src.direction === "string" ? src.direction : "",
@@ -86,26 +100,27 @@ function normalizeIfNotFeasible(raw: any): { modifications: string[]; direction:
 // LLMs sometimes emit `perspectives` as a string, a map keyed by persona name,
 // or drop it entirely. Coerce to the expected array shape and filter entries
 // that can't be salvaged — frontend renders .map() over this field.
-function normalizeDebateHighlights(raw: any): Array<{
+function normalizeDebateHighlights(raw: unknown): Array<{
   topic: string;
   perspectives: { persona_name: string; stance: string }[];
   significance: string;
 }> | null {
   if (!Array.isArray(raw)) return null;
   const out = raw
-    .map((h: any) => {
+    .map((h: unknown) => {
       if (!h || typeof h !== "object") return null;
+      const hr = h as LooseRecord;
       let perspectives: { persona_name: string; stance: string }[] = [];
-      if (Array.isArray(h.perspectives)) {
-        perspectives = h.perspectives
-          .filter((p: any) => p && typeof p === "object")
-          .map((p: any) => ({
+      if (Array.isArray(hr.perspectives)) {
+        perspectives = hr.perspectives
+          .filter((p: unknown): p is LooseRecord => !!p && typeof p === "object")
+          .map((p: LooseRecord) => ({
             persona_name: typeof p.persona_name === "string" ? p.persona_name : "",
             stance: typeof p.stance === "string" ? p.stance : "",
           }))
           .filter((p: { persona_name: string; stance: string }) => p.persona_name && p.stance);
-      } else if (h.perspectives && typeof h.perspectives === "object") {
-        perspectives = Object.entries(h.perspectives)
+      } else if (hr.perspectives && typeof hr.perspectives === "object") {
+        perspectives = Object.entries(hr.perspectives as Record<string, unknown>)
           .map(([name, stance]) => ({
             persona_name: name,
             stance: typeof stance === "string" ? stance : "",
@@ -113,12 +128,12 @@ function normalizeDebateHighlights(raw: any): Array<{
           .filter((p) => p.persona_name && p.stance);
       }
       return {
-        topic: typeof h.topic === "string" ? h.topic : "",
+        topic: typeof hr.topic === "string" ? hr.topic : "",
         perspectives,
-        significance: typeof h.significance === "string" ? h.significance : "",
+        significance: typeof hr.significance === "string" ? hr.significance : "",
       };
     })
-    .filter((h: any): h is { topic: string; perspectives: { persona_name: string; stance: string }[]; significance: string } =>
+    .filter((h): h is { topic: string; perspectives: { persona_name: string; stance: string }[]; significance: string } =>
       h !== null && h.topic.length > 0 && h.perspectives.length > 0,
     );
   return out.length > 0 ? out : null;
@@ -199,7 +214,7 @@ Generate both feasibility paths. At least 3 concrete, persona-referenced items p
 
   try {
     const response = await llm.complete({ system, prompt, maxTokens: 2048, jsonMode: true });
-    const parsed: any = robustJsonParse(response.text);
+    const parsed = robustJsonParse(response.text) as LooseRecord;
     const refilledFeasible = normalizeIfFeasible(parsed.if_feasible);
     const refilledNotFeasible = normalizeIfNotFeasible(parsed.if_not_feasible);
     return {
@@ -212,43 +227,48 @@ Generate both feasibility paths. At least 3 concrete, persona-referenced items p
   }
 }
 
-function normalizePersonaAnalysis(raw: any): any {
+function normalizePersonaAnalysis(raw: unknown): { entries: PersonaAnalysisEntry[]; consensus: ConsensusPoint[]; disagreements: DisagreementPoint[] } {
   if (!raw || typeof raw !== "object") return { entries: [], consensus: [], disagreements: [] };
+  const src = raw as LooseRecord;
 
-  let entries: any[];
-  if (Array.isArray(raw.entries) && raw.entries.length > 0 && typeof raw.entries[0] === "string") {
-    entries = reconstructFromStrings(raw.entries, "persona_id");
+  let entries: LooseRecord[];
+  if (Array.isArray(src.entries) && src.entries.length > 0 && typeof src.entries[0] === "string") {
+    entries = reconstructFromStrings(src.entries as string[], "persona_id");
     console.warn("[normalizePersonaAnalysis] Reconstructed entries from flat strings:", entries.length);
   } else {
-    entries = Array.isArray(raw.entries)
-      ? raw.entries.filter((e: any) => typeof e === "object" && e !== null && e.persona_id)
+    entries = Array.isArray(src.entries)
+      ? (src.entries as unknown[]).filter((e): e is LooseRecord => typeof e === "object" && e !== null && "persona_id" in (e as object))
       : [];
   }
 
-  let consensus: any[];
-  if (Array.isArray(raw.consensus) && raw.consensus.length > 0 && typeof raw.consensus[0] === "string") {
-    consensus = reconstructFromStrings(raw.consensus, "point");
+  let consensus: LooseRecord[];
+  if (Array.isArray(src.consensus) && src.consensus.length > 0 && typeof src.consensus[0] === "string") {
+    consensus = reconstructFromStrings(src.consensus as string[], "point");
   } else {
-    consensus = Array.isArray(raw.consensus)
-      ? raw.consensus.filter((c: any) => typeof c === "object" && c !== null && c.point)
+    consensus = Array.isArray(src.consensus)
+      ? (src.consensus as unknown[]).filter((c): c is LooseRecord => typeof c === "object" && c !== null && "point" in (c as object))
       : [];
   }
-  consensus = consensus.map((c: any) => cleanConsensusPoint({
+  consensus = consensus.map((c) => cleanConsensusPoint({
     ...c,
     supporting_personas: parseSupportingPersonas(c.supporting_personas),
   }));
 
-  let disagreements: any[];
-  if (Array.isArray(raw.disagreements) && raw.disagreements.length > 0 && typeof raw.disagreements[0] === "string") {
-    disagreements = reconstructFromStrings(raw.disagreements, "point");
+  let disagreements: LooseRecord[];
+  if (Array.isArray(src.disagreements) && src.disagreements.length > 0 && typeof src.disagreements[0] === "string") {
+    disagreements = reconstructFromStrings(src.disagreements as string[], "point");
   } else {
-    disagreements = Array.isArray(raw.disagreements)
-      ? raw.disagreements.filter((d: any) => typeof d === "object" && d !== null && (d.point || d.reason))
+    disagreements = Array.isArray(src.disagreements)
+      ? (src.disagreements as unknown[]).filter((d): d is LooseRecord => typeof d === "object" && d !== null && ("point" in (d as object) || "reason" in (d as object)))
       : [];
   }
   disagreements = disagreements.map(cleanConsensusPoint);
 
-  return { entries, consensus, disagreements };
+  return {
+    entries: entries as unknown as PersonaAnalysisEntry[],
+    consensus: consensus as unknown as ConsensusPoint[],
+    disagreements: disagreements as unknown as DisagreementPoint[],
+  };
 }
 
 export interface ReviewForSummary {
@@ -271,9 +291,9 @@ export async function generateTopicSummaryReport(
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions);
   const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
-  let parsed: any;
+  let parsed: LooseRecord;
   try {
-    parsed = robustJsonParse(response.text);
+    parsed = robustJsonParse(response.text) as LooseRecord;
   } catch (e) {
     console.error("[TopicSummary] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
     throw new Error(`Topic summary JSON parse failed: ${(e as Error).message}`);
@@ -286,22 +306,22 @@ export async function generateTopicSummaryReport(
   return {
     overall_score: 0,
     persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
-    multi_dimensional_analysis: parsed.multi_dimensional_analysis,
+    multi_dimensional_analysis: (parsed.multi_dimensional_analysis ?? []) as DimensionAnalysis[],
     goal_assessment: [],
     if_not_feasible: feasibility.if_not_feasible,
     if_feasible: feasibility.if_feasible,
     action_items: [],
-    market_readiness: parsed.market_readiness,
-    readiness_label_en: parsed.readiness_label_en,
-    readiness_label_zh: parsed.readiness_label_zh,
+    market_readiness: parsed.market_readiness as MarketReadiness,
+    readiness_label_en: typeof parsed.readiness_label_en === "string" ? parsed.readiness_label_en : undefined,
+    readiness_label_zh: typeof parsed.readiness_label_zh === "string" ? parsed.readiness_label_zh : undefined,
     scenario_simulation: null,
     round_table_debate: null,
     opinion_drift: null,
-    consensus_score: parsed.consensus_score,
-    synthesis: parsed.synthesis,
+    consensus_score: typeof parsed.consensus_score === "number" ? parsed.consensus_score : null,
+    synthesis: typeof parsed.synthesis === "string" ? parsed.synthesis : null,
     debate_highlights: normalizeDebateHighlights(parsed.debate_highlights),
-    positions: parsed.positions ?? null,
-    references: Array.isArray(parsed.references) ? parsed.references : null,
+    positions: (parsed.positions ?? null) as ReportPositions | null,
+    references: Array.isArray(parsed.references) ? (parsed.references as ReportReference[]) : null,
   };
 }
 
@@ -315,9 +335,9 @@ export async function generateSummaryReport(
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions);
   const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
-  let parsed: any;
+  let parsed: LooseRecord;
   try {
-    parsed = robustJsonParse(response.text);
+    parsed = robustJsonParse(response.text) as LooseRecord;
   } catch (e) {
     console.error("[SummaryReport] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
     throw new Error(`Summary report JSON parse failed: ${(e as Error).message}`);
@@ -328,16 +348,16 @@ export async function generateSummaryReport(
   });
 
   return {
-    overall_score: parsed.overall_score,
+    overall_score: typeof parsed.overall_score === "number" ? parsed.overall_score : 0,
     persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
-    multi_dimensional_analysis: parsed.multi_dimensional_analysis,
-    goal_assessment: parsed.goal_assessment,
+    multi_dimensional_analysis: (parsed.multi_dimensional_analysis ?? []) as DimensionAnalysis[],
+    goal_assessment: (parsed.goal_assessment ?? []) as GoalAssessmentEntry[],
     if_not_feasible: feasibility.if_not_feasible,
     if_feasible: feasibility.if_feasible,
-    action_items: parsed.action_items,
-    market_readiness: parsed.market_readiness,
-    readiness_label_en: parsed.readiness_label_en,
-    readiness_label_zh: parsed.readiness_label_zh,
+    action_items: (parsed.action_items ?? []) as ActionItem[],
+    market_readiness: parsed.market_readiness as MarketReadiness,
+    readiness_label_en: typeof parsed.readiness_label_en === "string" ? parsed.readiness_label_en : undefined,
+    readiness_label_zh: typeof parsed.readiness_label_zh === "string" ? parsed.readiness_label_zh : undefined,
     scenario_simulation: null,
     round_table_debate: null,
     opinion_drift: null,

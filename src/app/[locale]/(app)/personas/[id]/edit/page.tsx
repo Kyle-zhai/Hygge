@@ -65,8 +65,8 @@ export default function EditPersonaPage() {
       }
 
       router.push(`/${locale}/personas`);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }

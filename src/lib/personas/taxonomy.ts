@@ -15,7 +15,7 @@ export interface TaxonomyLabel {
   label_zh: string;
 }
 
-export interface Dimension extends TaxonomyLabel {}
+export type Dimension = TaxonomyLabel;
 
 export interface SubDomain extends TaxonomyLabel {
   key: SubDomainKey;
@@ -155,7 +155,7 @@ export function localizedLabel(item: TaxonomyLabel, locale: string): string {
 
 export type ProductCategoryKey = "utility" | "market" | "novelty" | "reliability";
 
-export interface ProductTrait extends TaxonomyLabel {}
+export type ProductTrait = TaxonomyLabel;
 
 export interface ProductCategory extends TaxonomyLabel {
   key: ProductCategoryKey;

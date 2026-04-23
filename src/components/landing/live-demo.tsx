@@ -181,6 +181,7 @@ export function LiveDemo({ script }: LiveDemoProps) {
   useEffect(() => {
     if (!inView) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset demo-reveal state when the section scrolls into view so the animation restarts
     setRevealedCount(0);
     setShowSummary(false);
     const timers: ReturnType<typeof setTimeout>[] = [];

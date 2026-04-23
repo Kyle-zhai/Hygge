@@ -380,13 +380,14 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     await job.updateProgress(100);
     log.info("orchestrator.complete", { ...ctx, durationMs: Date.now() - startedAt });
     return { success: true, evaluationId };
-  } catch (error: any) {
-    const errorMessage = error?.message ?? String(error);
+  } catch (error) {
+    const err = error as { message?: unknown; stack?: unknown } | null | undefined;
+    const errorMessage = typeof err?.message === "string" ? err.message : String(error);
     log.error("orchestrator.failed", {
       ...ctx,
       durationMs: Date.now() - startedAt,
       error: errorMessage,
-      stack: error?.stack,
+      stack: typeof err?.stack === "string" ? err.stack : undefined,
     });
     await supabase
       .from("evaluations")

@@ -51,8 +51,8 @@ export interface ReviewValidation {
   verbatimReviewCount: number;
 }
 
-export function validatePersonaReview(parsed: any, rawInput: string): ReviewValidation {
-  const review: string = parsed?.review_text ?? "";
+export function validatePersonaReview(parsed: Record<string, unknown>, rawInput: string): ReviewValidation {
+  const review: string = typeof parsed?.review_text === "string" ? parsed.review_text : "";
   const reviewLower = review.toLowerCase();
   const rtMasked = maskContractions(review);
   const rawMasked = maskContractions(rawInput).toLowerCase();
@@ -60,7 +60,7 @@ export function validatePersonaReview(parsed: any, rawInput: string): ReviewVali
 
   const bannedHits = BANNED_PHRASES.filter((p) => reviewLower.includes(p));
 
-  const extractedQuotesRaw: unknown[] = Array.isArray(parsed?.extracted_quotes) ? parsed.extracted_quotes : [];
+  const extractedQuotesRaw: unknown[] = Array.isArray(parsed?.extracted_quotes) ? (parsed.extracted_quotes as unknown[]) : [];
   const invalidExtractedQuotes: string[] = extractedQuotesRaw
     .filter((q) => {
       if (typeof q !== "string") return true;

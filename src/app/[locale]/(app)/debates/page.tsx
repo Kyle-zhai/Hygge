@@ -51,7 +51,7 @@ export default function DebatesPage() {
       setEvaluations(evals as unknown as Evaluation[]);
 
       const personaIds = new Set<string>();
-      for (const e of evals as any[]) {
+      for (const e of evals as unknown as Array<{ persona_reviews?: Array<{ persona_id: string }> }>) {
         for (const r of e.persona_reviews || []) personaIds.add(r.persona_id);
       }
 
@@ -127,8 +127,8 @@ export default function DebatesPage() {
               </p>
             )}
             {evaluations.map((ev) => {
-              const title = (ev.project as any)?.parsed_data?.name
-                || (Array.isArray(ev.project) ? (ev.project[0] as any)?.parsed_data?.name : null)
+              const proj = ev.project as { parsed_data?: { name?: string } } | Array<{ parsed_data?: { name?: string } }> | null | undefined;
+              const title = (Array.isArray(proj) ? proj[0]?.parsed_data?.name : proj?.parsed_data?.name)
                 || "Untitled";
               return (
                 <button

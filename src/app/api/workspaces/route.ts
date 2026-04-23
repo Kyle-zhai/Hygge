@@ -12,7 +12,11 @@ export async function GET() {
     .select("workspace_id, role, workspaces!inner(id, name, owner_id, created_at)")
     .eq("user_id", user.id);
 
-  const workspaces = (memberships ?? []).map((m: any) => ({
+  type MembershipRow = {
+    role: string;
+    workspaces: { id: string; name: string; owner_id: string; created_at: string };
+  };
+  const workspaces = ((memberships ?? []) as unknown as MembershipRow[]).map((m) => ({
     id: m.workspaces.id,
     name: m.workspaces.name,
     owner_id: m.workspaces.owner_id,

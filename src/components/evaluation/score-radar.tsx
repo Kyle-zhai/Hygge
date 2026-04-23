@@ -51,7 +51,7 @@ const stanceConfig: Record<string, { position: number; color: string; label: str
 
 function safeTr(t: ReturnType<typeof useTranslations>, key: string | undefined | null, fallback?: string): string {
   if (!key) return fallback ?? "";
-  try { return t(key as any); } catch { return fallback ?? key; }
+  try { return t(key as Parameters<typeof t>[0]); } catch { return fallback ?? key; }
 }
 
 export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode }: ScoreBarProps) {

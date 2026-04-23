@@ -29,10 +29,24 @@ import { ReviewFeedback } from "./review-feedback";
 // Types
 // ═══════════════════════════════════════════════════════════════════════════
 
+interface PersonaIdentityLike {
+  name?: string;
+  avatar?: string;
+  locale_variants?: Record<string, { name?: string; tagline?: string }>;
+  [key: string]: unknown;
+}
+
+interface PersonaDemographicsLike {
+  occupation?: string;
+  age?: number;
+  location?: string;
+  [key: string]: unknown;
+}
+
 interface PersonaData {
   id: string;
-  identity: any;
-  demographics: any;
+  identity: PersonaIdentityLike;
+  demographics: PersonaDemographicsLike;
   category: string;
 }
 
@@ -196,10 +210,14 @@ function safeArray<T>(val: unknown): T[] {
   return Array.isArray(val) ? val : [];
 }
 
-function reconstructFromStrings(arr: any[], requiredKey: string): any[] {
-  if (!arr.length || typeof arr[0] !== "string") return arr.filter((e: any) => typeof e === "object" && e !== null);
-  const objects: any[] = [];
-  let current: any = null;
+type LooseEntry = Record<string, unknown>;
+
+function reconstructFromStrings(arr: unknown[], requiredKey: string): LooseEntry[] {
+  if (!arr.length || typeof arr[0] !== "string") {
+    return arr.filter((e): e is LooseEntry => typeof e === "object" && e !== null);
+  }
+  const objects: LooseEntry[] = [];
+  let current: LooseEntry | null = null;
   for (const s of arr) {
     if (typeof s !== "string") continue;
     const colonIdx = s.indexOf(": ");
@@ -231,7 +249,7 @@ function parseSupportingPersonas(val: unknown): string[] {
 
 // Some LLM outputs flatten the object — the `point` ends up containing the
 // supporting_personas array as inline text. Strip that tail and recover the ids.
-function cleanConsensusPoint(raw: any): { point: string; supporting_personas: string[]; [k: string]: any } {
+function cleanConsensusPoint(raw: LooseEntry): { point: string; supporting_personas: string[]; [k: string]: unknown } {
   const rawPoint = typeof raw?.point === "string" ? raw.point : "";
   const existing = parseSupportingPersonas(raw?.supporting_personas);
   const extracted: string[] = [];
@@ -259,16 +277,16 @@ function cleanConsensusPoint(raw: any): { point: string; supporting_personas: st
 function salvageList(
   val: unknown,
   pointKeys: string[] = ["point", "description", "statement", "text", "title", "topic"],
-): any[] {
+): LooseEntry[] {
   let src: unknown = val;
   if (src && typeof src === "object" && !Array.isArray(src)) {
     for (const k of ["points", "items", "list", "consensus", "disagreements", "agreements", "entries"]) {
-      const nested = (src as any)[k];
+      const nested = (src as Record<string, unknown>)[k];
       if (Array.isArray(nested)) { src = nested; break; }
     }
   }
   if (!Array.isArray(src)) return [];
-  const out: any[] = [];
+  const out: LooseEntry[] = [];
   for (const raw of src) {
     if (raw == null) continue;
     if (typeof raw === "string") {
@@ -280,19 +298,21 @@ function salvageList(
       continue;
     }
     if (typeof raw !== "object") continue;
+    const rawObj = raw as Record<string, unknown>;
     let point = "";
     for (const k of pointKeys) {
-      if (typeof (raw as any)[k] === "string" && (raw as any)[k].trim()) {
-        point = (raw as any)[k].trim();
+      const v = rawObj[k];
+      if (typeof v === "string" && v.trim()) {
+        point = v.trim();
         break;
       }
     }
     if (!point) continue;
     out.push({
-      ...raw,
+      ...rawObj,
       point,
       supporting_personas: parseSupportingPersonas(
-        (raw as any).supporting_personas ?? (raw as any).personas ?? (raw as any).ids ?? [],
+        rawObj.supporting_personas ?? rawObj.personas ?? rawObj.ids ?? [],
       ),
     });
   }
@@ -927,23 +947,25 @@ export function ReportTextView({
   if (!report) return null;
 
   // ── Derived data (safe access, handles malformed LLM output) ──
-  const rawEntries = reconstructFromStrings(safeArray<any>(report.persona_analysis?.entries), "persona_id");
-  const entries = rawEntries.length >= reviews.length ? rawEntries : reviews.map((r) => {
-    const match = rawEntries.find((e: any) => e.persona_id === r.persona_id);
+  const rawEntries = reconstructFromStrings(safeArray<unknown>(report.persona_analysis?.entries), "persona_id");
+  const entries: LooseEntry[] = rawEntries.length >= reviews.length ? rawEntries : reviews.map((r) => {
+    const match = rawEntries.find((e) => e.persona_id === r.persona_id);
     return match || { persona_id: r.persona_id, core_viewpoint: r.review_text?.slice(0, 200), scoring_rationale: "" };
   });
+  const reportExtras = report as unknown as Record<string, unknown>;
+  const personaAnalysisExtras = (report.persona_analysis ?? {}) as unknown as Record<string, unknown>;
   const consensusPoints = salvageList(
     report.persona_analysis?.consensus
-    ?? (report.persona_analysis as any)?.agreements
-    ?? (report as any).consensus,
+    ?? personaAnalysisExtras.agreements
+    ?? reportExtras.consensus,
   ).map(cleanConsensusPoint);
   const disagreements = salvageList(
     report.persona_analysis?.disagreements
-    ?? (report as any).disagreements,
+    ?? reportExtras.disagreements,
   ).map(cleanConsensusPoint);
-  const dimensions = safeArray<any>(report.multi_dimensional_analysis);
-  const goals = safeArray<any>(report.goal_assessment);
-  const actionItems = safeArray<any>(report.action_items);
+  const dimensions = safeArray<ReportData["multi_dimensional_analysis"][number]>(report.multi_dimensional_analysis);
+  const goals = safeArray<ReportData["goal_assessment"][number]>(report.goal_assessment);
+  const actionItems = safeArray<ReportData["action_items"][number]>(report.action_items);
   const ifFeasible = report.if_feasible;
   const ifNotFeasible = report.if_not_feasible;
   const keyTakeaways = consensusPoints.slice(0, 3);
@@ -1092,8 +1114,8 @@ export function ReportTextView({
 
           <div className="space-y-5">
             {(entries.length > 0 ? entries : reviews).map(
-              (item: any, i: number) => {
-                const personaId = item.persona_id;
+              (item: LooseEntry | ReviewData, i: number) => {
+                const personaId = String((item as LooseEntry).persona_id ?? "");
                 let persona = personaMap.get(personaId);
                 if (!persona) {
                   for (const [, p] of personaMap) {
@@ -1108,8 +1130,8 @@ export function ReportTextView({
                   (r) => r.persona_id === personaId || r.persona_id === persona?.id
                 );
                 const analysisEntry = entries.find(
-                  (e: any) => e.persona_id === personaId
-                );
+                  (e) => e.persona_id === personaId
+                ) as (LooseEntry & { persona_name?: string; core_viewpoint?: string; scoring_rationale?: string }) | undefined;
                 const isExpanded = expandedPersonas.has(personaId);
 
                 const fallbackName = locale === "zh" ? `参与者 ${i + 1}` : `Participant ${i + 1}`;
@@ -1335,7 +1357,7 @@ export function ReportTextView({
                                         : null;
                                       const labelText = dimLabel
                                         ? (locale === "zh" ? dimLabel.label_zh : dimLabel.label_en)
-                                        : t(dim as any);
+                                        : t(dim as Parameters<typeof t>[0]);
 
                                       if (typeof score === "string") {
                                         const stanceKey = legacyMap[score] ?? score;
@@ -1492,7 +1514,12 @@ export function ReportTextView({
                 {t("disagreements")}
               </h3>
               <div className="space-y-4">
-                {disagreements.map((item, i) => (
+                {disagreements.map((item, i) => {
+                  const sides = Array.isArray(item.sides)
+                    ? (item.sides as Array<{ position: string; persona_ids?: string[] }>)
+                    : null;
+                  const reason = typeof item.reason === "string" ? item.reason : null;
+                  return (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -8 }}
@@ -1505,9 +1532,9 @@ export function ReportTextView({
                     </p>
 
                     {/* Debate sides (if structured data available) */}
-                    {Array.isArray(item.sides) && item.sides.length >= 2 ? (
+                    {sides && sides.length >= 2 ? (
                       <div className="grid gap-3 sm:grid-cols-2 mb-3">
-                        {item.sides.map((side: any, si: number) => (
+                        {sides.map((side, si: number) => (
                           <div
                             key={si}
                             className={`rounded-lg p-3 ${
@@ -1543,13 +1570,14 @@ export function ReportTextView({
                       </div>
                     ) : null}
 
-                    {item.reason && (
+                    {reason && (
                       <p className="text-xs text-[#666462] leading-relaxed italic">
-                        {item.reason}
+                        {reason}
                       </p>
                     )}
                   </motion.div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
