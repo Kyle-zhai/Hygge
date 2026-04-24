@@ -26,16 +26,15 @@ interface PersonaShowcaseProps {
 
 const AUTOPLAY_STEP_DEG = 12;
 const AUTOPLAY_INTERVAL_MS = 3000;
-const AUTOPLAY_RESUME_MS = 1600;
 const DRAG_FACTOR = 0.25;
 const MOMENTUM = 0.1;
 const CLICK_THRESHOLD_PX = 6;
-const RADIUS_DESKTOP = 560;
-const RADIUS_MOBILE = 380;
-const CARD_W_DESKTOP = 260;
-const CARD_H_DESKTOP = 340;
-const CARD_W_MOBILE = 190;
-const CARD_H_MOBILE = 250;
+const RADIUS_DESKTOP = 520;
+const RADIUS_MOBILE = 340;
+const CARD_W_DESKTOP = 210;
+const CARD_H_DESKTOP = 280;
+const CARD_W_MOBILE = 160;
+const CARD_H_MOBILE = 210;
 
 const categoryColors: Record<string, string> = {
   technical: "#60A5FA",
@@ -53,7 +52,7 @@ const categoryColors: Record<string, string> = {
 };
 
 function getCategoryColor(category: string): string {
-  return categoryColors[category] || "#9B9594";
+  return categoryColors[category] || "var(--text-secondary)";
 }
 
 export function PersonaShowcase({
@@ -76,11 +75,11 @@ export function PersonaShowcase({
     isDragging: false,
     isHovered: false,
     isVisible: false,
+    userEngaged: false,
     startX: 0,
     startRot: 0,
     dragDist: 0,
     autoTimer: null as ReturnType<typeof setInterval> | null,
-    resumeTimer: null as ReturnType<typeof setTimeout> | null,
     reduceMotion: false,
   });
 
@@ -134,19 +133,17 @@ export function PersonaShowcase({
       }
     };
     const startAuto = () => {
-      if (state.reduceMotion) return;
+      if (state.reduceMotion || state.userEngaged) return;
       stopAuto();
       state.autoTimer = setInterval(() => {
-        if (state.isDragging || state.isHovered || !state.isVisible) return;
+        if (state.isDragging || state.isHovered || !state.isVisible || state.userEngaged) return;
         state.rotateY -= AUTOPLAY_STEP_DEG;
         apply();
       }, AUTOPLAY_INTERVAL_MS);
     };
-    const scheduleResume = () => {
-      if (state.resumeTimer) clearTimeout(state.resumeTimer);
-      state.resumeTimer = setTimeout(() => {
-        if (!state.isDragging && !state.isHovered && state.isVisible) startAuto();
-      }, AUTOPLAY_RESUME_MS);
+    const disableAuto = () => {
+      state.userEngaged = true;
+      stopAuto();
     };
 
     const onDown = (clientX: number) => {
@@ -155,7 +152,7 @@ export function PersonaShowcase({
       state.startRot = state.rotateY;
       state.dragDist = 0;
       track.classList.add("is-dragging");
-      stopAuto();
+      disableAuto();
     };
     const onMove = (clientX: number) => {
       if (!state.isDragging) return;
@@ -171,7 +168,6 @@ export function PersonaShowcase({
       const momentum = (clientX - state.startX) * MOMENTUM;
       state.rotateY += momentum;
       apply();
-      scheduleResume();
     };
 
     const mouseDown = (e: MouseEvent) => {
@@ -192,14 +188,13 @@ export function PersonaShowcase({
     };
     const mouseLeave = () => {
       state.isHovered = false;
-      scheduleResume();
     };
     const wheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
         e.preventDefault();
         state.rotateY -= e.deltaX * 0.5;
         apply();
-        scheduleResume();
+        disableAuto();
       }
     };
 
@@ -235,7 +230,6 @@ export function PersonaShowcase({
       viewport.removeEventListener("wheel", wheel);
       io.disconnect();
       stopAuto();
-      if (state.resumeTimer) clearTimeout(state.resumeTimer);
     };
   }, [apply]);
 

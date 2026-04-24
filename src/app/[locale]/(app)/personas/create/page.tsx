@@ -98,27 +98,27 @@ export default function CreatePersonaPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Link
         href={`/${locale}/personas`}
-        className="mb-6 inline-flex items-center gap-2 text-sm text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--text-primary)]"
       >
         <ArrowLeft className="h-4 w-4" />
         {zh ? "我的人格" : "My Personas"}
       </Link>
 
-      <h1 className="mb-2 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+      <h1 className="mb-2 text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
         {zh ? "创建人格" : "Create Persona"}
       </h1>
-      <p className="mb-8 text-sm text-[#666462]">
+      <p className="mb-8 text-sm text-[color:var(--text-tertiary)]">
         {zh ? "为你的圆桌讨论构建一个定制的 AI 人格" : "Build a custom AI persona for your round table discussions"}
       </p>
 
       {/* Tab switcher */}
-      <div className="mb-6 flex gap-1 rounded-xl bg-[#0C0C0C] border border-[#2A2A2A] p-1">
+      <div className="mb-6 flex gap-1 rounded-xl bg-[color:var(--bg-primary)] border border-[color:var(--border-default)] p-1">
         <button
           onClick={() => setTab("form")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
             tab === "form"
-              ? "bg-[#1C1C1C] text-[#EAEAE8]"
-              : "text-[#666462] hover:text-[#9B9594]"
+              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)]"
+              : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)]"
           }`}
         >
           <Sparkles className="h-4 w-4" />
@@ -128,8 +128,8 @@ export default function CreatePersonaPage() {
           onClick={() => setTab("import")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
             tab === "import"
-              ? "bg-[#1C1C1C] text-[#EAEAE8]"
-              : "text-[#666462] hover:text-[#9B9594]"
+              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)]"
+              : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)]"
           }`}
         >
           <Upload className="h-4 w-4" />
@@ -184,15 +184,15 @@ export default function CreatePersonaPage() {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
+            className="flex items-center gap-2 text-sm text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--text-primary)]"
           >
             <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
             {zh ? "高级设置" : "Advanced details"}
           </button>
 
           {showAdvanced && (
-            <div className="space-y-4 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C]/50 p-4">
-              <p className="text-xs text-[#C4A882]">
+            <div className="space-y-4 rounded-lg border border-[color:var(--border-default)] bg-[rgb(var(--bg-primary-rgb)/0.50)] p-4">
+              <p className="text-xs text-[color:var(--accent-warm)]">
                 {zh
                   ? "提供的细节越多，生成的人格越丰富、越真实。所有字段都为选填。"
                   : "The more details you provide, the richer and more realistic the persona will be. All fields are optional."}
@@ -249,15 +249,15 @@ export default function CreatePersonaPage() {
             onChange={setImportName}
           />
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">
+            <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">
               {zh ? "角色文档" : "Character Document"}
             </label>
             {fileName ? (
-              <div className="flex items-center gap-3 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-3">
-                <FileText className="h-5 w-5 shrink-0 text-[#C4A882]" />
+              <div className="flex items-center gap-3 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-3">
+                <FileText className="h-5 w-5 shrink-0 text-[color:var(--accent-warm)]" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-[#EAEAE8]">{fileName}</p>
-                  <p className="text-xs text-[#666462]">
+                  <p className="truncate text-sm text-[color:var(--text-primary)]">{fileName}</p>
+                  <p className="text-xs text-[color:var(--text-tertiary)]">
                     {zh
                       ? `${importText.length.toLocaleString()} 个字符`
                       : `${importText.length.toLocaleString()} characters`}
@@ -265,27 +265,27 @@ export default function CreatePersonaPage() {
                 </div>
                 <button
                   onClick={() => { setFileName(""); setImportText(""); }}
-                  className="rounded-lg p-1.5 text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+                  className="rounded-lg p-1.5 text-[color:var(--text-tertiary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed border-[#2A2A2A] bg-[#0C0C0C] px-4 py-8 transition-colors hover:border-[#C4A882]/40">
-                <Upload className="h-6 w-6 text-[#666462]" />
+              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-8 transition-colors hover:border-[rgb(var(--accent-warm-rgb)/0.40)]">
+                <Upload className="h-6 w-6 text-[color:var(--text-tertiary)]" />
                 <div className="text-center">
-                  <p className="text-sm text-[#9B9594]">
+                  <p className="text-sm text-[color:var(--text-secondary)]">
                     {zh ? (
                       <>
-                        拖拽 <span className="text-[#C4A882]">.md</span> 或 <span className="text-[#C4A882]">.txt</span> 文件到此处，或点击浏览
+                        拖拽 <span className="text-[color:var(--accent-warm)]">.md</span> 或 <span className="text-[color:var(--accent-warm)]">.txt</span> 文件到此处，或点击浏览
                       </>
                     ) : (
                       <>
-                        Drop a <span className="text-[#C4A882]">.md</span> or <span className="text-[#C4A882]">.txt</span> file here, or click to browse
+                        Drop a <span className="text-[color:var(--accent-warm)]">.md</span> or <span className="text-[color:var(--accent-warm)]">.txt</span> file here, or click to browse
                       </>
                     )}
                   </p>
-                  <p className="mt-1 text-xs text-[#666462]">
+                  <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
                     {zh
                       ? "任何角色描述、技能定义或人格文档"
                       : "Any character description, skill definition, or persona document"}
@@ -306,7 +306,7 @@ export default function CreatePersonaPage() {
       <button
         onClick={handleSubmit}
         disabled={!formValid || submitting}
-        className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-[#C4A882] px-6 py-3 text-sm font-semibold text-[#0C0C0C] transition-colors hover:bg-[#D4B892] disabled:opacity-40 disabled:cursor-not-allowed"
+        className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-warm)] px-6 py-3 text-sm font-semibold text-[color:var(--bg-primary)] transition-colors hover:bg-[color:var(--accent-warm-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {submitting ? (
           <>
@@ -329,13 +329,13 @@ function Field({ label, placeholder, value, onChange }: {
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-2.5 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50"
+        className="w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[#444] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)]"
       />
     </div>
   );
@@ -346,13 +346,13 @@ function FieldArea({ label, placeholder, value, onChange, rows = 4 }: {
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">{label}</label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-2.5 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
+        className="w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[#444] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)] resize-none"
       />
     </div>
   );

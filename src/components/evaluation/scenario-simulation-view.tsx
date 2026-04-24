@@ -104,7 +104,7 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
       <Button
         variant="ghost"
         onClick={onBack}
-        className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] -ml-2"
+        className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] -ml-2"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Report
@@ -112,11 +112,11 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
 
       {/* Header */}
       <div className="text-center space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#C4A882]/30 bg-[#C4A882]/5 px-4 py-1.5">
-          <TrendingUp className="h-4 w-4 text-[#C4A882]" />
-          <span className="text-sm font-medium text-[#C4A882]">{t("scenarioSimulation")}</span>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.05)] px-4 py-1.5">
+          <TrendingUp className="h-4 w-4 text-[color:var(--accent-warm)]" />
+          <span className="text-sm font-medium text-[color:var(--accent-warm)]">{t("scenarioSimulation")}</span>
         </div>
-        <p className="text-sm text-[#9B9594] max-w-lg mx-auto">
+        <p className="text-sm text-[color:var(--text-secondary)] max-w-lg mx-auto">
           A simulation of how personas would influence each other when discussing this topic in a real-world setting.
         </p>
       </div>
@@ -127,13 +127,13 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5"
         >
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-4 w-4 text-[#C4A882]" />
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-[#666462]">Summary</h3>
+            <Sparkles className="h-4 w-4 text-[color:var(--accent-warm)]" />
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-[color:var(--text-tertiary)]">Summary</h3>
           </div>
-          <p className="text-sm text-[#EAEAE8] leading-relaxed">{simulation.summary}</p>
+          <p className="text-sm text-[color:var(--text-primary)] leading-relaxed">{simulation.summary}</p>
         </motion.div>
       )}
 
@@ -144,7 +144,7 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
         transition={{ delay: 0.15 }}
         className="flex items-center justify-center gap-4 py-4"
       >
-        <span className="text-sm text-[#666462]">{t("adoptionShift")}</span>
+        <span className="text-sm text-[color:var(--text-tertiary)]">{t("adoptionShift")}</span>
         <span className={`text-3xl font-bold ${simulation.adoption_rate_shift >= 0 ? "text-[#4ADE80]" : "text-[#F87171]"}`}>
           {simulation.adoption_rate_shift >= 0 ? "+" : ""}{simulation.adoption_rate_shift}%
         </span>
@@ -156,9 +156,9 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5"
         >
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-[#666462] mb-4">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-[color:var(--text-tertiary)] mb-4">
             Stance Transitions
           </h3>
           <div className="space-y-3">
@@ -169,18 +169,18 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.25 + i * 0.05 }}
                 className={`flex items-center gap-3 rounded-lg p-3 transition-colors ${
-                  item.changed ? "bg-[#1C1C1C]" : "bg-transparent"
+                  item.changed ? "bg-[color:var(--bg-tertiary)]" : "bg-transparent"
                 }`}
               >
                 <span className="text-lg shrink-0">{getPersonaAvatar(item.persona_id)}</span>
-                <span className="text-sm text-[#EAEAE8] flex-1 min-w-0 truncate">
+                <span className="text-sm text-[color:var(--text-primary)] flex-1 min-w-0 truncate">
                   {getPersonaName(item.persona_id)}
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
                   <Badge className={`border text-xs ${stanceColors[item.initial_stance] || ""}`}>
                     {item.initial_stance}
                   </Badge>
-                  <ArrowRight className={`h-3.5 w-3.5 ${item.changed ? "text-[#C4A882]" : "text-[#333]"}`} />
+                  <ArrowRight className={`h-3.5 w-3.5 ${item.changed ? "text-[color:var(--accent-warm)]" : "text-[#333]"}`} />
                   <Badge className={`border text-xs ${stanceColors[item.final_stance] || ""}`}>
                     {item.final_stance}
                   </Badge>
@@ -200,11 +200,11 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Users className="h-4 w-4 text-[#C4A882]" />
-            <h3 className="text-sm font-semibold text-[#EAEAE8]">Influence Events</h3>
+            <Users className="h-4 w-4 text-[color:var(--accent-warm)]" />
+            <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">Influence Events</h3>
           </div>
           <div className="space-y-0">
             {influenceEvents.map((event, i) => (
@@ -216,24 +216,24 @@ export function ScenarioSimulationView({ simulation, personas, locale, onBack }:
                 className="flex gap-4"
               >
                 <div className="flex flex-col items-center">
-                  <div className="h-3 w-3 rounded-full border-2 border-[#C4A882] bg-[#0C0C0C]" />
+                  <div className="h-3 w-3 rounded-full border-2 border-[color:var(--accent-warm)] bg-[color:var(--bg-primary)]" />
                   {i < influenceEvents.length - 1 && (
-                    <div className="w-px flex-1 bg-[#2A2A2A]" />
+                    <div className="w-px flex-1 bg-[color:var(--border-default)]" />
                   )}
                 </div>
                 <div className="pb-5 flex-1 min-w-0">
                   {event.influencer_id && event.influenced_id && (
-                    <p className="text-xs text-[#C4A882] mb-1 font-medium">
+                    <p className="text-xs text-[color:var(--accent-warm)] mb-1 font-medium">
                       {getPersonaAvatar(event.influencer_id)} {getPersonaName(event.influencer_id)}{" "}
-                      <span className="text-[#666462]">influenced</span>{" "}
+                      <span className="text-[color:var(--text-tertiary)]">influenced</span>{" "}
                       {getPersonaAvatar(event.influenced_id)} {getPersonaName(event.influenced_id)}
                     </p>
                   )}
-                  <p className="text-sm text-[#EAEAE8] leading-relaxed">
+                  <p className="text-sm text-[color:var(--text-primary)] leading-relaxed">
                     {event.shift || event.description || event.event || JSON.stringify(event)}
                   </p>
                   {event.reason && (
-                    <p className="text-xs text-[#9B9594] mt-1 italic">{event.reason}</p>
+                    <p className="text-xs text-[color:var(--text-secondary)] mt-1 italic">{event.reason}</p>
                   )}
                 </div>
               </motion.div>

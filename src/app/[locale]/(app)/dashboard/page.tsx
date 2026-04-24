@@ -157,10 +157,10 @@ export default async function DashboardPage() {
       {/* Header */}
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-[#666462]">
+          <p className="text-sm text-[color:var(--text-tertiary)]">
             {zh ? "欢迎回来" : "Welcome back"}
           </p>
-          <h1 className="mt-1 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+          <h1 className="mt-1 text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
             {user.email?.split("@")[0] || (zh ? "用户" : "there")}
           </h1>
         </div>
@@ -168,10 +168,10 @@ export default async function DashboardPage() {
           <span
             className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${
               planKey === "max"
-                ? "border-[#C4A882] bg-[#C4A882]/10 text-[#D4B892]"
+                ? "border-[color:var(--accent-warm)] bg-[rgb(var(--accent-warm-rgb)/0.10)] text-[color:var(--accent-warm-hover)]"
                 : planKey === "pro"
-                ? "border-[#E2DDD5]/40 bg-[#E2DDD5]/5 text-[#EAEAE8]"
-                : "border-[#2A2A2A] bg-[#141414] text-[#9B9594]"
+                ? "border-[rgb(var(--accent-primary-rgb)/0.40)] bg-[rgb(var(--accent-primary-rgb)/0.05)] text-[color:var(--text-primary)]"
+                : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)]"
             }`}
           >
             {planKey !== "free" && <Sparkles className="h-3 w-3" />}
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
           {planKey === "free" && (
             <Link
               href={`/${locale}/pricing`}
-              className="inline-flex items-center gap-1 rounded-full bg-[#E2DDD5] px-3 py-1 text-xs font-semibold text-[#0C0C0C] hover:bg-[#D4CFC7] transition-colors"
+              className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-primary)] px-3 py-1 text-xs font-semibold text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-primary-hover)] transition-colors"
             >
               <Zap className="h-3 w-3" />
               {zh ? "升级" : "Upgrade"}
@@ -190,20 +190,20 @@ export default async function DashboardPage() {
       </header>
 
       {/* Usage card */}
-      <section className="mb-6 rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6">
+      <section className="mb-6 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold text-[#666462] uppercase tracking-wide">
+            <p className="text-xs font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wide">
               {zh ? "本周期使用情况" : "Usage this period"}
             </p>
-            <p className="mt-2 text-3xl font-semibold text-[#EAEAE8] tracking-tight">
+            <p className="mt-2 text-3xl font-semibold text-[color:var(--text-primary)] tracking-tight">
               {used}
-              <span className="text-base font-normal text-[#666462]"> / {limit}</span>
+              <span className="text-base font-normal text-[color:var(--text-tertiary)]"> / {limit}</span>
             </p>
-            <p className="mt-1 text-xs text-[#9B9594]">
+            <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
               {zh ? "讨论次数" : "discussions used"}
               {remainingDays !== null && (
-                <span className="ml-2 text-[#666462]">
+                <span className="ml-2 text-[color:var(--text-tertiary)]">
                   · {zh ? `${remainingDays} 天后重置` : `resets in ${remainingDays}d`}
                 </span>
               )}
@@ -212,14 +212,14 @@ export default async function DashboardPage() {
           <div className="flex gap-2">
             <Link
               href={`/${locale}/evaluate/new?mode=topic`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#2A2A2A] bg-[#0C0C0C] px-3.5 py-2 text-xs font-medium text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8] transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-3.5 py-2 text-xs font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)] transition-colors"
             >
               <MessageCircle className="h-3.5 w-3.5" />
               {zh ? "新话题" : "New Topic"}
             </Link>
             <Link
               href={`/${locale}/evaluate/new?mode=product`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#E2DDD5] px-3.5 py-2 text-xs font-semibold text-[#0C0C0C] hover:bg-[#D4CFC7] transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent-primary)] px-3.5 py-2 text-xs font-semibold text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-primary-hover)] transition-colors"
             >
               <Package className="h-3.5 w-3.5" />
               {zh ? "新评估" : "New Evaluation"}
@@ -229,10 +229,10 @@ export default async function DashboardPage() {
 
         {/* Progress bar */}
         <div className="mt-5">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#0C0C0C]">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--bg-primary)]">
             <div
               className={`h-full rounded-full transition-all ${
-                usagePct >= 90 ? "bg-[#F87171]" : usagePct >= 70 ? "bg-[#C4A882]" : "bg-[#E2DDD5]"
+                usagePct >= 90 ? "bg-[#F87171]" : usagePct >= 70 ? "bg-[color:var(--accent-warm)]" : "bg-[color:var(--accent-primary)]"
               }`}
               style={{ width: `${usagePct}%` }}
             />
@@ -252,13 +252,13 @@ export default async function DashboardPage() {
           label={zh ? "模式分布" : "Mode mix"}
           value={
             <span className="flex items-baseline gap-2 text-xl">
-              <span className="text-[#EAEAE8]">{topicCount}</span>
-              <span className="text-[#666462] text-xs">/</span>
-              <span className="text-[#EAEAE8]">{productCount}</span>
+              <span className="text-[color:var(--text-primary)]">{topicCount}</span>
+              <span className="text-[color:var(--text-tertiary)] text-xs">/</span>
+              <span className="text-[color:var(--text-primary)]">{productCount}</span>
               {compareCount > 0 && (
                 <>
-                  <span className="text-[#666462] text-xs">/</span>
-                  <span className="text-[#EAEAE8]">{compareCount}</span>
+                  <span className="text-[color:var(--text-tertiary)] text-xs">/</span>
+                  <span className="text-[color:var(--text-primary)]">{compareCount}</span>
                 </>
               )}
             </span>
@@ -287,13 +287,13 @@ export default async function DashboardPage() {
         {/* Recent discussions */}
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-[#EAEAE8]">
+            <h2 className="text-sm font-semibold text-[color:var(--text-primary)]">
               {zh ? "最近讨论" : "Recent discussions"}
             </h2>
             {recent.length > 0 && (
               <Link
                 href={`/${locale}/evaluate/new`}
-                className="text-xs text-[#9B9594] hover:text-[#EAEAE8] inline-flex items-center gap-1"
+                className="text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] inline-flex items-center gap-1"
               >
                 {zh ? "全部" : "View all"}
                 <ArrowRight className="h-3 w-3" />
@@ -319,12 +319,12 @@ export default async function DashboardPage() {
         {/* Top personas */}
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-[#EAEAE8]">
+            <h2 className="text-sm font-semibold text-[color:var(--text-primary)]">
               {zh ? "常用 Persona" : "Top personas"}
             </h2>
             <Link
               href={`/${locale}/marketplace`}
-              className="text-xs text-[#9B9594] hover:text-[#EAEAE8] inline-flex items-center gap-1"
+              className="text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] inline-flex items-center gap-1"
             >
               {zh ? "市场" : "Marketplace"}
               <ArrowRight className="h-3 w-3" />
@@ -332,8 +332,8 @@ export default async function DashboardPage() {
           </div>
 
           {topPersonas.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[#2A2A2A] bg-[#141414]/40 px-4 py-8 text-center">
-              <p className="text-xs text-[#666462]">
+            <div className="rounded-xl border border-dashed border-[color:var(--border-default)] bg-[rgb(var(--bg-secondary-rgb)/0.40)] px-4 py-8 text-center">
+              <p className="text-xs text-[color:var(--text-tertiary)]">
                 {zh ? "完成一次讨论后即可看到常用的 Persona" : "Top personas appear after your first discussion."}
               </p>
             </div>
@@ -345,16 +345,16 @@ export default async function DashboardPage() {
                 return (
                   <li
                     key={p.id}
-                    className="flex items-center gap-3 rounded-xl border border-[#2A2A2A] bg-[#141414] px-3 py-2.5"
+                    className="flex items-center gap-3 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-2.5"
                   >
                     <PersonaAvatar avatar={p.identity.avatar} size={32} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[#EAEAE8]">{displayName}</p>
-                      <p className="truncate text-[11px] text-[#666462]">
+                      <p className="truncate text-sm text-[color:var(--text-primary)]">{displayName}</p>
+                      <p className="truncate text-[11px] text-[color:var(--text-tertiary)]">
                         {p.demographics?.occupation ?? ""}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-[#0C0C0C] border border-[#2A2A2A] px-2 py-0.5 text-[10px] font-medium text-[#9B9594]">
+                    <span className="shrink-0 rounded-full bg-[color:var(--bg-primary)] border border-[color:var(--border-default)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--text-secondary)]">
                       ×{p.uses}
                     </span>
                   </li>
@@ -380,15 +380,15 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4">
-      <div className="flex items-center justify-between text-[#666462]">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4">
+      <div className="flex items-center justify-between text-[color:var(--text-tertiary)]">
         <span className="text-[11px] font-semibold uppercase tracking-wide">{label}</span>
         {icon}
       </div>
-      <div className="mt-2 text-xl font-semibold text-[#EAEAE8] tracking-tight">
+      <div className="mt-2 text-xl font-semibold text-[color:var(--text-primary)] tracking-tight">
         {value}
       </div>
-      <p className="mt-0.5 text-[11px] text-[#666462]">{sub}</p>
+      <p className="mt-0.5 text-[11px] text-[color:var(--text-tertiary)]">{sub}</p>
     </div>
   );
 }
@@ -403,10 +403,10 @@ function RecentItem({ ev, locale }: { ev: EvaluationRow; locale: string }) {
     ev.status === "completed"
       ? { label: zh ? "已完成" : "Completed", icon: CheckCircle2, color: "text-[#86EFAC]" }
       : ev.status === "processing"
-      ? { label: zh ? "处理中" : "Processing", icon: Loader2, color: "text-[#C4A882] animate-spin" }
+      ? { label: zh ? "处理中" : "Processing", icon: Loader2, color: "text-[color:var(--accent-warm)] animate-spin" }
       : ev.status === "failed"
       ? { label: zh ? "失败" : "Failed", icon: AlertCircle, color: "text-[#F87171]" }
-      : { label: zh ? "待处理" : "Pending", icon: Clock, color: "text-[#9B9594]" };
+      : { label: zh ? "待处理" : "Pending", icon: Clock, color: "text-[color:var(--text-secondary)]" };
 
   const StatusIcon = statusMeta.icon;
   const href =
@@ -418,14 +418,14 @@ function RecentItem({ ev, locale }: { ev: EvaluationRow; locale: string }) {
     <li>
       <Link
         href={href}
-        className="flex items-center gap-3 rounded-xl border border-[#2A2A2A] bg-[#141414] px-4 py-3 transition-colors hover:border-[#3A3A3A] hover:bg-[#1A1A1A]"
+        className="flex items-center gap-3 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-4 py-3 transition-colors hover:border-[color:var(--border-hover)] hover:bg-[color:var(--bg-hover)]"
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0C0C0C] text-[#9B9594]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color:var(--bg-primary)] text-[color:var(--text-secondary)]">
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm text-[#EAEAE8]">{title}</p>
-          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#666462]">
+          <p className="truncate text-sm text-[color:var(--text-primary)]">{title}</p>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[color:var(--text-tertiary)]">
             <span className={`inline-flex items-center gap-1 ${statusMeta.color}`}>
               <StatusIcon className={`h-3 w-3 ${ev.status === "processing" ? "animate-spin" : ""}`} />
               {statusMeta.label}
@@ -434,7 +434,7 @@ function RecentItem({ ev, locale }: { ev: EvaluationRow; locale: string }) {
             <span>{formatDate(ev.created_at, locale)}</span>
           </div>
         </div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-[#666462]" />
+        <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-tertiary)]" />
       </Link>
     </li>
   );
@@ -450,11 +450,11 @@ function EmptyState({
   ctaLabel: string;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-[#2A2A2A] bg-[#141414]/40 px-6 py-10 text-center">
-      <p className="text-sm text-[#9B9594]">{title}</p>
+    <div className="rounded-xl border border-dashed border-[color:var(--border-default)] bg-[rgb(var(--bg-secondary-rgb)/0.40)] px-6 py-10 text-center">
+      <p className="text-sm text-[color:var(--text-secondary)]">{title}</p>
       <Link
         href={ctaHref}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#E2DDD5] px-4 py-2 text-xs font-semibold text-[#0C0C0C] hover:bg-[#D4CFC7] transition-colors"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent-primary)] px-4 py-2 text-xs font-semibold text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-primary-hover)] transition-colors"
       >
         {ctaLabel}
         <ArrowRight className="h-3.5 w-3.5" />

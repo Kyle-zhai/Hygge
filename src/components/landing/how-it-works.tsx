@@ -62,7 +62,7 @@ export function HowItWorks({ heading, steps }: HowItWorksProps) {
               className="absolute left-6 top-0 bottom-0 w-px md:left-1/2 md:-translate-x-px"
               style={{
                 background:
-                  "linear-gradient(180deg, transparent, #2A2A2A 12%, #2A2A2A 88%, transparent)",
+                  "linear-gradient(180deg, transparent, var(--border-default) 12%, var(--border-default) 88%, transparent)",
               }}
             />
             {/* Soft glow behind the line */}

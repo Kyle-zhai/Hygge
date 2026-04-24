@@ -48,40 +48,40 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
-      <Card className="relative w-full max-w-md border-[#2A2A2A] bg-[#141414]">
+      <Card className="relative w-full max-w-md border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-semibold text-[#EAEAE8]">
+          <CardTitle className="text-center text-2xl font-semibold text-[color:var(--text-primary)]">
             {t("loginTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#9B9594]">{t("email")}</Label>
+              <Label htmlFor="email" className="text-[color:var(--text-secondary)]">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8] placeholder:text-[#666462] focus-visible:ring-[#E2DDD5] focus-visible:border-[#E2DDD5]"
+                className="border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] focus-visible:ring-[color:var(--accent-primary)] focus-visible:border-[color:var(--accent-primary)]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[#9B9594]">{t("password")}</Label>
+              <Label htmlFor="password" className="text-[color:var(--text-secondary)]">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8] placeholder:text-[#666462] focus-visible:ring-[#E2DDD5] focus-visible:border-[#E2DDD5]"
+                className="border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] focus-visible:ring-[color:var(--accent-primary)] focus-visible:border-[color:var(--accent-primary)]"
               />
             </div>
             {error && <p className="text-sm text-[#F87171]">{error}</p>}
             <Button
               type="submit"
-              className="w-full bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] font-semibold btn-glow"
+              className="w-full bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--bg-primary)] font-semibold btn-glow"
               disabled={loading}
             >
               {loading ? tc("loading") : tc("login")}
@@ -90,17 +90,17 @@ export default function LoginPage() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-[#2A2A2A]" />
+              <span className="w-full border-t border-[color:var(--border-default)]" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#141414] px-2 text-[#666462]">or</span>
+              <span className="bg-[color:var(--bg-secondary)] px-2 text-[color:var(--text-tertiary)]">or</span>
             </div>
           </div>
 
           <div className="space-y-2">
             <Button
               variant="outline"
-              className="w-full border-[#2A2A2A] bg-transparent text-[#EAEAE8] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+              className="w-full border-[color:var(--border-default)] bg-transparent text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
               onClick={() => handleOAuth("google")}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -113,7 +113,7 @@ export default function LoginPage() {
             </Button>
             <Button
               variant="outline"
-              className="w-full border-[#2A2A2A] bg-transparent text-[#EAEAE8] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+              className="w-full border-[color:var(--border-default)] bg-transparent text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
               onClick={() => handleOAuth("github")}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -124,9 +124,9 @@ export default function LoginPage() {
           </div>
         </CardContent>
         <CardFooter className="justify-center">
-          <p className="text-sm text-[#666462]">
+          <p className="text-sm text-[color:var(--text-tertiary)]">
             {t("noAccount")}{" "}
-            <Link href={`/${locale}/auth/register`} className="text-[#E2DDD5] hover:text-[#D4CFC7] underline">
+            <Link href={`/${locale}/auth/register`} className="text-[color:var(--accent-primary)] hover:text-[color:var(--accent-primary-hover)] underline">
               {tc("register")}
             </Link>
           </p>

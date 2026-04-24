@@ -72,7 +72,7 @@ export function ShareButton({ evaluationId }: ShareButtonProps) {
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-2 rounded-full border border-[#2A2A2A] bg-[#141414] px-3.5 py-1.5 text-xs font-medium text-[#C4A882] transition-colors hover:border-[#C4A882]/40 hover:bg-[#C4A882]/5"
+        className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3.5 py-1.5 text-xs font-medium text-[color:var(--accent-warm)] transition-colors hover:border-[rgb(var(--accent-warm-rgb)/0.40)] hover:bg-[rgb(var(--accent-warm-rgb)/0.05)]"
       >
         <Share2 className="h-3.5 w-3.5" />
         {L("分享", "Share")}
@@ -85,15 +85,15 @@ export function ShareButton({ evaluationId }: ShareButtonProps) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 shadow-xl"
+            className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-6 shadow-xl"
           >
             <div className="flex items-center gap-2 mb-1">
-              <Link2 className="h-4 w-4 text-[#C4A882]" />
-              <h3 className="text-sm font-semibold text-[#EAEAE8]">
+              <Link2 className="h-4 w-4 text-[color:var(--accent-warm)]" />
+              <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">
                 {L("分享这份评估", "Share this evaluation")}
               </h3>
             </div>
-            <p className="text-xs text-[#9B9594] mb-4">
+            <p className="text-xs text-[color:var(--text-secondary)] mb-4">
               {L(
                 "任何持有此链接的人都可以查看报告，无需登录。你可以随时撤销。",
                 "Anyone with this link can view the report without signing in. You can revoke it anytime.",
@@ -101,7 +101,7 @@ export function ShareButton({ evaluationId }: ShareButtonProps) {
             </p>
 
             {state.status === "loading" && (
-              <div className="flex items-center gap-2 py-6 justify-center text-xs text-[#9B9594]">
+              <div className="flex items-center gap-2 py-6 justify-center text-xs text-[color:var(--text-secondary)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {L("正在处理...", "Working...")}
               </div>
@@ -114,12 +114,12 @@ export function ShareButton({ evaluationId }: ShareButtonProps) {
                     readOnly
                     value={shareUrl(state.token)}
                     onFocus={(e) => e.currentTarget.select()}
-                    className="flex-1 min-w-0 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-xs text-[#EAEAE8] focus:outline-none focus:border-[#C4A882]/40"
+                    className="flex-1 min-w-0 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-3 py-2 text-xs text-[color:var(--text-primary)] focus:outline-none focus:border-[rgb(var(--accent-warm-rgb)/0.40)]"
                   />
                   <button
                     type="button"
                     onClick={() => copyUrl(shareUrl(state.token))}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#C4A882] px-3 py-2 text-xs font-medium text-[#0C0C0C] hover:bg-[#D4B892]"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--accent-warm)] px-3 py-2 text-xs font-medium text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-warm-hover)]"
                   >
                     {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied ? L("已复制", "Copied") : L("复制", "Copy")}
@@ -129,7 +129,7 @@ export function ShareButton({ evaluationId }: ShareButtonProps) {
                   <button
                     type="button"
                     onClick={revoke}
-                    className="inline-flex items-center gap-1.5 text-xs text-[#9B9594] hover:text-[#EF4444] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs text-[color:var(--text-secondary)] hover:text-[#EF4444] transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {L("撤销链接", "Revoke link")}
@@ -137,7 +137,7 @@ export function ShareButton({ evaluationId }: ShareButtonProps) {
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="text-xs text-[#9B9594] hover:text-[#EAEAE8]"
+                    className="text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
                   >
                     {L("关闭", "Close")}
                   </button>

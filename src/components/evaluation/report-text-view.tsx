@@ -379,13 +379,13 @@ function priorityStyle(priority: string) {
       };
     case "medium":
       return {
-        dot: "bg-[#C4A882]",
-        badge: "border-[#C4A882]/30 bg-[#C4A882]/10 text-[#C4A882]",
+        dot: "bg-[color:var(--accent-warm)]",
+        badge: "border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.10)] text-[color:var(--accent-warm)]",
       };
     default:
       return {
-        dot: "bg-[#666462]",
-        badge: "border-[#666462]/30 bg-[#666462]/10 text-[#666462]",
+        dot: "bg-[color:var(--text-tertiary)]",
+        badge: "border-[rgb(var(--text-tertiary-rgb)/0.30)] bg-[rgb(var(--text-tertiary-rgb)/0.10)] text-[color:var(--text-tertiary)]",
       };
   }
 }
@@ -462,7 +462,7 @@ function ScoreArc({ score, size = 112 }: { score: number; size?: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1C1C1C"
+          stroke="var(--bg-tertiary)"
           strokeWidth={5}
         />
         <motion.circle
@@ -488,7 +488,7 @@ function ScoreArc({ score, size = 112 }: { score: number; size?: number }) {
         >
           {score != null ? score.toFixed(1) : "--"}
         </motion.span>
-        <span className="text-[10px] text-[#666462] -mt-0.5">/10</span>
+        <span className="text-[10px] text-[color:var(--text-tertiary)] -mt-0.5">/10</span>
       </div>
     </div>
   );
@@ -515,7 +515,7 @@ function ConsensusArc({ score, size = 112 }: { score: number; size?: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1C1C1C"
+          stroke="var(--bg-tertiary)"
           strokeWidth={5}
         />
         <motion.circle
@@ -579,9 +579,9 @@ function PersonaPill({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-[#2A2A2A] bg-[#1C1C1C] ${
+      className={`inline-flex items-center gap-1 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] ${
         small ? "px-1.5 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"
-      } text-[#9B9594] whitespace-nowrap`}
+      } text-[color:var(--text-secondary)] whitespace-nowrap`}
     >
       <span className={small ? "text-[11px]" : "text-sm"}>{avatar}</span>
       <span className="truncate max-w-[72px]">{name}</span>
@@ -600,13 +600,13 @@ function SectionTitle({
 }) {
   return (
     <div className="flex items-center gap-3 mb-6">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1C1C1C] border border-[#2A2A2A]">
-        <Icon className="h-4 w-4 text-[#C4A882]" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color:var(--bg-tertiary)] border border-[color:var(--border-default)]">
+        <Icon className="h-4 w-4 text-[color:var(--accent-warm)]" />
       </div>
-      <h2 className="text-xl font-semibold text-[#EAEAE8] tracking-tight">
+      <h2 className="text-xl font-semibold text-[color:var(--text-primary)] tracking-tight">
         {children}
       </h2>
-      <div className="flex-1 h-px bg-gradient-to-r from-[#2A2A2A] to-transparent" />
+      <div className="flex-1 h-px bg-gradient-to-r from-[color:var(--border-default)] to-transparent" />
     </div>
   );
 }
@@ -621,17 +621,17 @@ function Callout({
   variant?: "info" | "success" | "warning";
 }) {
   const border = {
-    info: "border-[#C4A882]/30",
+    info: "border-[rgb(var(--accent-warm-rgb)/0.30)]",
     success: "border-[#4ADE80]/30",
     warning: "border-[#FBBF24]/30",
   };
   const bg = {
-    info: "bg-[#C4A882]/[0.04]",
+    info: "bg-[color:var(--accent-warm)]/[0.04]",
     success: "bg-[#4ADE80]/[0.04]",
     warning: "bg-[#FBBF24]/[0.04]",
   };
   const iconColor = {
-    info: "text-[#C4A882]",
+    info: "text-[color:var(--accent-warm)]",
     success: "text-[#4ADE80]",
     warning: "text-[#FBBF24]",
   };
@@ -643,7 +643,7 @@ function Callout({
       <Lightbulb
         className={`h-4 w-4 mt-0.5 shrink-0 ${iconColor[variant]}`}
       />
-      <div className="text-sm text-[#EAEAE8] leading-relaxed">{children}</div>
+      <div className="text-sm text-[color:var(--text-primary)] leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -661,17 +661,17 @@ function LeaningPill({ leaning, highlighted }: { leaning: string; highlighted?: 
   const map: Record<string, { label: string; color: string }> = {
     positive: { label: "Positive", color: "#4ADE80" },
     negative: { label: "Negative", color: "#F87171" },
-    neutral: { label: "Neutral", color: "#C4A882" },
-    mixed: { label: "Mixed", color: "#9B9594" },
+    neutral: { label: "Neutral", color: "var(--accent-warm)" },
+    mixed: { label: "Mixed", color: "var(--text-secondary)" },
     // Legacy
     support: { label: "Positive", color: "#4ADE80" },
     oppose: { label: "Negative", color: "#F87171" },
   };
-  const entry = map[leaning] ?? { label: leaning, color: "#9B9594" };
+  const entry = map[leaning] ?? { label: leaning, color: "var(--text-secondary)" };
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-        highlighted ? "ring-1 ring-[#C4A882]/40" : ""
+        highlighted ? "ring-1 ring-[rgb(var(--accent-warm-rgb)/0.40)]" : ""
       }`}
       style={{
         color: entry.color,
@@ -700,7 +700,7 @@ function TableOfContents({
 }) {
   return (
     <nav className="space-y-1">
-      <h3 className="text-[10px] font-semibold uppercase tracking-widest text-[#666462] mb-3 px-3">
+      <h3 className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--text-tertiary)] mb-3 px-3">
         {label}
       </h3>
       {items.map((item) => (
@@ -709,8 +709,8 @@ function TableOfContents({
           onClick={() => onItemClick(item.id)}
           className={`block w-full text-left rounded-lg px-3 py-2 text-[13px] transition-all duration-200 ${
             activeId === item.id
-              ? "bg-[#1C1C1C] text-[#E2DDD5] font-medium border-l-2 border-[#C4A882] pl-[10px]"
-              : "text-[#666462] hover:text-[#9B9594] hover:bg-[#141414]"
+              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--accent-primary)] font-medium border-l-2 border-[color:var(--accent-warm)] pl-[10px]"
+              : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-secondary)]"
           }`}
         >
           {item.label}
@@ -745,7 +745,7 @@ function MobileToc({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.2 }}
-            className="mb-2 rounded-xl border border-[#2A2A2A] bg-[#141414]/95 backdrop-blur-xl p-2 shadow-lg"
+            className="mb-2 rounded-xl border border-[color:var(--border-default)] bg-[rgb(var(--bg-secondary-rgb)/0.95)] backdrop-blur-xl p-2 shadow-lg"
           >
             {items.map((item) => (
               <button
@@ -756,8 +756,8 @@ function MobileToc({
                 }}
                 className={`block w-full text-left rounded-lg px-3 py-2.5 text-sm transition-colors ${
                   activeId === item.id
-                    ? "bg-[#1C1C1C] text-[#E2DDD5] font-medium"
-                    : "text-[#666462] hover:text-[#9B9594]"
+                    ? "bg-[color:var(--bg-tertiary)] text-[color:var(--accent-primary)] font-medium"
+                    : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)]"
                 }`}
               >
                 {item.label}
@@ -769,16 +769,16 @@ function MobileToc({
 
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between rounded-xl border border-[#2A2A2A] bg-[#141414]/95 backdrop-blur-xl px-4 py-3 shadow-lg"
+        className="flex w-full items-center justify-between rounded-xl border border-[color:var(--border-default)] bg-[rgb(var(--bg-secondary-rgb)/0.95)] backdrop-blur-xl px-4 py-3 shadow-lg"
       >
         <div className="flex items-center gap-2">
-          <List className="h-4 w-4 text-[#C4A882]" />
-          <span className="text-sm text-[#9B9594]">
+          <List className="h-4 w-4 text-[color:var(--accent-warm)]" />
+          <span className="text-sm text-[color:var(--text-secondary)]">
             {activeItem?.label ?? label}
           </span>
         </div>
         <ChevronUp
-          className={`h-4 w-4 text-[#666462] transition-transform duration-200 ${
+          className={`h-4 w-4 text-[color:var(--text-tertiary)] transition-transform duration-200 ${
             open ? "" : "rotate-180"
           }`}
         />
@@ -1010,14 +1010,14 @@ export function ReportTextView({
                 {isTopicMode ? (
                   <>
                     <ConsensusArc score={report.consensus_score ?? 0} />
-                    <span className="text-[11px] text-[#666462]">
+                    <span className="text-[11px] text-[color:var(--text-tertiary)]">
                       {locale === "zh" ? "观点统一度" : "Consensus"}
                     </span>
                   </>
                 ) : (
                   <>
                     <ScoreArc score={report.overall_score ?? 0} />
-                    <span className="text-[11px] text-[#666462]">
+                    <span className="text-[11px] text-[color:var(--text-tertiary)]">
                       {t("overallScore")}
                     </span>
                   </>
@@ -1028,7 +1028,7 @@ export function ReportTextView({
               <div className="flex-1 min-w-0 space-y-4">
                 {report.market_readiness && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-[#666462]">
+                    <span className="text-sm text-[color:var(--text-tertiary)]">
                       {report.readiness_label_en
                         ? (locale === "zh" ? (report.readiness_label_zh || report.readiness_label_en) : report.readiness_label_en)
                         : t("marketReadiness")}:
@@ -1052,7 +1052,7 @@ export function ReportTextView({
 
                 {keyTakeaways.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-[10px] font-semibold uppercase tracking-widest text-[#C4A882]">
+                    <h3 className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--accent-warm)]">
                       {t("keyFindings")}
                     </h3>
                     {keyTakeaways.map((item, i) => (
@@ -1064,7 +1064,7 @@ export function ReportTextView({
                         className="flex gap-2 items-start"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#4ADE80]" />
-                        <p className="text-sm text-[#EAEAE8] leading-relaxed">
+                        <p className="text-sm text-[color:var(--text-primary)] leading-relaxed">
                           {item.point}
                         </p>
                       </motion.div>
@@ -1081,25 +1081,25 @@ export function ReportTextView({
         ════════════════════════════════════════════════════════════ */}
         {isTopicMode && report.positions && (
           <AnimatedSection id="positions">
-            <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-              <p className="text-xs font-medium uppercase tracking-widest text-[#C4A882] mb-3">
+            <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+              <p className="text-xs font-medium uppercase tracking-widest text-[color:var(--accent-warm)] mb-3">
                 {locale === "zh" ? "观点框架" : "Positions"}
               </p>
-              <p className="text-sm text-[#9B9594] mb-4">{report.positions.question}</p>
+              <p className="text-sm text-[color:var(--text-secondary)] mb-4">{report.positions.question}</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-[#4ADE80]/20 bg-[#4ADE80]/5 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-[#4ADE80]" />
                     <span className="text-sm font-semibold text-[#4ADE80]">{report.positions.positive_label}</span>
                   </div>
-                  <p className="text-xs text-[#9B9594] leading-relaxed">{report.positions.positive_summary}</p>
+                  <p className="text-xs text-[color:var(--text-secondary)] leading-relaxed">{report.positions.positive_summary}</p>
                 </div>
                 <div className="rounded-lg border border-[#F87171]/20 bg-[#F87171]/5 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-[#F87171]" />
                     <span className="text-sm font-semibold text-[#F87171]">{report.positions.negative_label}</span>
                   </div>
-                  <p className="text-xs text-[#9B9594] leading-relaxed">{report.positions.negative_summary}</p>
+                  <p className="text-xs text-[color:var(--text-secondary)] leading-relaxed">{report.positions.negative_summary}</p>
                 </div>
               </div>
             </div>
@@ -1180,18 +1180,18 @@ export function ReportTextView({
                       duration: 0.4,
                       ease: [0.16, 1, 0.3, 1],
                     }}
-                    className="rounded-xl border border-[#2A2A2A] bg-[#141414] transition-colors duration-300 hover:border-[#3A3A3A] overflow-hidden"
+                    className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] transition-colors duration-300 hover:border-[color:var(--border-hover)] overflow-hidden"
                   >
                     {/* Header & Content */}
                     <div className="p-5 pb-4">
                       {/* Avatar row */}
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] border border-[#2A2A2A] text-lg">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] border border-[color:var(--border-default)] text-lg">
                           {avatar}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-[#EAEAE8]">
+                            <span className="font-semibold text-[color:var(--text-primary)]">
                               {name}
                             </span>
                             {overallStance ? (
@@ -1218,7 +1218,7 @@ export function ReportTextView({
                             )}
                           </div>
                           {occupation && (
-                            <p className="text-xs text-[#666462] mt-0.5">
+                            <p className="text-xs text-[color:var(--text-tertiary)] mt-0.5">
                               {occupation}
                             </p>
                           )}
@@ -1228,8 +1228,8 @@ export function ReportTextView({
                       {/* Core Viewpoint (quote style) */}
                       {analysisEntry?.core_viewpoint && (
                         <div className="relative pl-4 mb-4">
-                          <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-full bg-[#C4A882]/40" />
-                          <p className="text-sm text-[#EAEAE8] leading-relaxed italic">
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-full bg-[rgb(var(--accent-warm-rgb)/0.40)]" />
+                          <p className="text-sm text-[color:var(--text-primary)] leading-relaxed italic">
                             &ldquo;{analysisEntry.core_viewpoint}&rdquo;
                           </p>
                         </div>
@@ -1238,10 +1238,10 @@ export function ReportTextView({
                       {/* Scoring Rationale */}
                       {analysisEntry?.scoring_rationale && (
                         <div>
-                          <h4 className="text-[10px] font-semibold text-[#666462] uppercase tracking-widest mb-1">
+                          <h4 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-widest mb-1">
                             {t("rationale")}
                           </h4>
-                          <p className="text-sm text-[#9B9594] leading-relaxed">
+                          <p className="text-sm text-[color:var(--text-secondary)] leading-relaxed">
                             {analysisEntry.scoring_rationale}
                           </p>
                         </div>
@@ -1251,10 +1251,10 @@ export function ReportTextView({
                     {/* Expandable detail */}
                     {review && (
                       <>
-                        <div className="flex items-center border-t border-[#2A2A2A]/50">
+                        <div className="flex items-center border-t border-[rgb(var(--border-default-rgb)/0.50)]">
                           <button
                             onClick={() => togglePersona(personaId)}
-                            className="flex items-center gap-1.5 flex-1 px-5 py-2.5 text-left text-xs text-[#666462] hover:text-[#9B9594] transition-colors hover:bg-[#1C1C1C]/30"
+                            className="flex items-center gap-1.5 flex-1 px-5 py-2.5 text-left text-xs text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)] transition-colors hover:bg-[rgb(var(--bg-tertiary-rgb)/0.30)]"
                           >
                             {isExpanded ? (
                               <ChevronUp className="h-3.5 w-3.5" />
@@ -1270,7 +1270,7 @@ export function ReportTextView({
                           {onStartDebate && (
                             <button
                               onClick={() => onStartDebate(personaId)}
-                              className="no-print flex items-center gap-1.5 px-4 py-2.5 text-xs text-[#C4A882] hover:text-[#D4B892] transition-colors hover:bg-[#C4A882]/5 border-l border-[#2A2A2A]/50"
+                              className="no-print flex items-center gap-1.5 px-4 py-2.5 text-xs text-[color:var(--accent-warm)] hover:text-[color:var(--accent-warm-hover)] transition-colors hover:bg-[rgb(var(--accent-warm-rgb)/0.05)] border-l border-[rgb(var(--border-default-rgb)/0.50)]"
                             >
                               <MessageSquare className="h-3.5 w-3.5" />
                               <span>{locale === "zh" ? "对话" : "Chat"}</span>
@@ -1290,10 +1290,10 @@ export function ReportTextView({
                               }}
                               className="overflow-hidden"
                             >
-                              <div className="px-5 pb-5 pt-3 space-y-4 border-t border-[#2A2A2A]/50">
+                              <div className="px-5 pb-5 pt-3 space-y-4 border-t border-[rgb(var(--border-default-rgb)/0.50)]">
                                 {/* Full review text */}
                                 {review.review_text && (
-                                  <p className="text-sm text-[#9B9594] leading-[1.75]">
+                                  <p className="text-sm text-[color:var(--text-secondary)] leading-[1.75]">
                                     {review.review_text}
                                   </p>
                                 )}
@@ -1310,7 +1310,7 @@ export function ReportTextView({
                                           (s: string, si: number) => (
                                             <li
                                               key={si}
-                                              className="flex gap-1.5 text-xs text-[#9B9594] leading-relaxed"
+                                              className="flex gap-1.5 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                                             >
                                               <span className="text-[#4ADE80] shrink-0">
                                                 +
@@ -1332,7 +1332,7 @@ export function ReportTextView({
                                           (w: string, wi: number) => (
                                             <li
                                               key={wi}
-                                              className="flex gap-1.5 text-xs text-[#9B9594] leading-relaxed"
+                                              className="flex gap-1.5 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                                             >
                                               <span className="text-[#F87171] shrink-0">
                                                 -
@@ -1374,7 +1374,7 @@ export function ReportTextView({
                                         const labelOut = locale === "zh" ? zhLabels[stanceKey] : stance.color;
                                         return (
                                           <div key={dim} className="flex items-center gap-2">
-                                            <span className="w-20 text-[11px] text-[#666462] truncate">
+                                            <span className="w-20 text-[11px] text-[color:var(--text-tertiary)] truncate">
                                               {labelText}
                                             </span>
                                             <div className="flex-1 flex items-center gap-1">
@@ -1382,7 +1382,7 @@ export function ReportTextView({
                                                 <motion.div
                                                   key={s}
                                                   className="h-1.5 flex-1 rounded-full"
-                                                  style={{ background: si === idx ? stance.hex : "#1C1C1C" }}
+                                                  style={{ background: si === idx ? stance.hex : "var(--bg-tertiary)" }}
                                                   initial={{ opacity: 0 }}
                                                   animate={{ opacity: 1 }}
                                                   transition={{ duration: 0.4, delay: si * 0.04 }}
@@ -1400,10 +1400,10 @@ export function ReportTextView({
 
                                       return (
                                         <div key={dim} className="flex items-center gap-2">
-                                          <span className="w-20 text-[11px] text-[#666462] truncate">
+                                          <span className="w-20 text-[11px] text-[color:var(--text-tertiary)] truncate">
                                             {labelText}
                                           </span>
-                                          <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
+                                          <div className="h-1.5 flex-1 rounded-full bg-[color:var(--bg-tertiary)]">
                                             <motion.div
                                               className="h-full rounded-full"
                                               style={{ background: scoreGradientCSS(score) }}
@@ -1448,7 +1448,7 @@ export function ReportTextView({
             <div className="mt-6 flex justify-center no-print">
               <button
                 onClick={onViewScores}
-                className="inline-flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-5 py-2.5 text-sm font-medium text-[#E2DDD5] transition-all duration-200 hover:border-[#3A3A3A] hover:bg-[#222222]"
+                className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] px-5 py-2.5 text-sm font-medium text-[color:var(--accent-primary)] transition-all duration-200 hover:border-[color:var(--border-hover)] hover:bg-[color:var(--bg-hover)]"
               >
                 <BarChart3 className="h-4 w-4" />
                 {locale === "zh" ? "查看数值评分详情" : "View Numerical Scores"}
@@ -1481,12 +1481,12 @@ export function ReportTextView({
                     transition={{ delay: i * 0.06 }}
                     className="rounded-lg border border-[#4ADE80]/15 bg-[#4ADE80]/[0.03] p-4"
                   >
-                    <p className="text-sm text-[#EAEAE8] leading-relaxed mb-2">
+                    <p className="text-sm text-[color:var(--text-primary)] leading-relaxed mb-2">
                       {item.point}
                     </p>
                     {parseSupportingPersonas(item.supporting_personas).length > 0 && (
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] text-[#666462]">
+                          <span className="text-[10px] text-[color:var(--text-tertiary)]">
                             {t("supportedBy")}:
                           </span>
                           {parseSupportingPersonas(item.supporting_personas).map((pid) => (
@@ -1527,7 +1527,7 @@ export function ReportTextView({
                     transition={{ delay: i * 0.06 }}
                     className="rounded-lg border border-[#FBBF24]/15 bg-[#FBBF24]/[0.03] p-4"
                   >
-                    <p className="text-sm font-medium text-[#EAEAE8] mb-3">
+                    <p className="text-sm font-medium text-[color:var(--text-primary)] mb-3">
                       {item.point}
                     </p>
 
@@ -1571,7 +1571,7 @@ export function ReportTextView({
                     ) : null}
 
                     {reason && (
-                      <p className="text-xs text-[#666462] leading-relaxed italic">
+                      <p className="text-xs text-[color:var(--text-tertiary)] leading-relaxed italic">
                         {reason}
                       </p>
                     )}
@@ -1583,7 +1583,7 @@ export function ReportTextView({
           )}
 
           {consensusPoints.length === 0 && disagreements.length === 0 && (
-            <p className="text-sm text-[#666462] italic">
+            <p className="text-sm text-[color:var(--text-tertiary)] italic">
               {locale === "zh"
                 ? "暂无共识或分歧数据"
                 : "No consensus or disagreement data available."}
@@ -1628,7 +1628,7 @@ export function ReportTextView({
                   >
                     {/* Dimension header */}
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-base font-semibold text-[#EAEAE8]">
+                      <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                         {(locale === "zh" ? dim.label_zh : dim.label_en) || dim.dimension}
                       </h3>
                       {isStanceMode ? (
@@ -1657,12 +1657,12 @@ export function ReportTextView({
                       if (total === 0) return null;
                       return (
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[#1C1C1C]">
+                          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-[color:var(--bg-tertiary)]">
                             {neg > 0 && <div className="bg-[#F87171]" style={{ width: `${(neg / total) * 100}%` }} />}
                             {neu > 0 && <div className="bg-[#FBBF24]" style={{ width: `${(neu / total) * 100}%` }} />}
                             {pos > 0 && <div className="bg-[#4ADE80]" style={{ width: `${(pos / total) * 100}%` }} />}
                           </div>
-                          <span className="text-[10px] text-[#666462] shrink-0">
+                          <span className="text-[10px] text-[color:var(--text-tertiary)] shrink-0">
                             {pos}{locale === "zh" ? "正面" : "P"} · {neu}{locale === "zh" ? "中立" : "N"} · {neg}{locale === "zh" ? "负面" : "Neg"}
                           </span>
                         </div>
@@ -1671,7 +1671,7 @@ export function ReportTextView({
 
                     {/* Analysis paragraph */}
                     {dim.analysis && (
-                      <p className="text-sm text-[#9B9594] leading-[1.8] mb-4">
+                      <p className="text-sm text-[color:var(--text-secondary)] leading-[1.8] mb-4">
                         {dim.analysis}
                       </p>
                     )}
@@ -1682,13 +1682,13 @@ export function ReportTextView({
                         {(dim.key_arguments.positive || dim.key_arguments.for) && (
                           <div className="flex-1 rounded-lg bg-[#4ADE80]/5 border border-[#4ADE80]/10 p-3">
                             <span className="text-[10px] font-semibold text-[#4ADE80] uppercase">{locale === "zh" ? "正面论点" : "Positive"}</span>
-                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.positive || dim.key_arguments.for}</p>
+                            <p className="mt-1.5 text-xs text-[color:var(--text-secondary)] leading-relaxed">{dim.key_arguments.positive || dim.key_arguments.for}</p>
                           </div>
                         )}
                         {(dim.key_arguments.negative || dim.key_arguments.against) && (
                           <div className="flex-1 rounded-lg bg-[#F87171]/5 border border-[#F87171]/10 p-3">
                             <span className="text-[10px] font-semibold text-[#F87171] uppercase">{locale === "zh" ? "负面论点" : "Negative"}</span>
-                            <p className="mt-1.5 text-xs text-[#9B9594] leading-relaxed">{dim.key_arguments.negative || dim.key_arguments.against}</p>
+                            <p className="mt-1.5 text-xs text-[color:var(--text-secondary)] leading-relaxed">{dim.key_arguments.negative || dim.key_arguments.against}</p>
                           </div>
                         )}
                       </div>
@@ -1700,7 +1700,7 @@ export function ReportTextView({
                               {dim.strengths.map((s: string, si: number) => (
                                 <li
                                   key={si}
-                                  className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                                  className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                                 >
                                   <Circle className="h-1.5 w-1.5 mt-1.5 shrink-0 fill-[#4ADE80] text-[#4ADE80]" />
                                   {s}
@@ -1715,7 +1715,7 @@ export function ReportTextView({
                               {dim.weaknesses.map((w: string, wi: number) => (
                                 <li
                                   key={wi}
-                                  className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                                  className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                                 >
                                   <Circle className="h-1.5 w-1.5 mt-1.5 shrink-0 fill-[#F87171] text-[#F87171]" />
                                   {w}
@@ -1729,7 +1729,7 @@ export function ReportTextView({
 
                     {/* Separator */}
                     {i < dimensions.length - 1 && (
-                      <div className="mt-6 h-px bg-gradient-to-r from-[#2A2A2A] via-[#2A2A2A]/50 to-transparent" />
+                      <div className="mt-6 h-px bg-gradient-to-r from-[color:var(--border-default)] via-[rgb(var(--border-default-rgb)/0.50)] to-transparent" />
                     )}
                   </motion.div>
                 );
@@ -1744,7 +1744,7 @@ export function ReportTextView({
         {report.opinion_drift && report.opinion_drift.length > 0 && (
           <AnimatedSection id="opinion-drift">
             <SectionTitle icon={TrendingUp}>{t("opinionDrift")}</SectionTitle>
-            <p className="mb-6 text-sm text-[#9B9594] max-w-3xl leading-relaxed">
+            <p className="mb-6 text-sm text-[color:var(--text-secondary)] max-w-3xl leading-relaxed">
               {t("opinionDriftSubtitle")}
             </p>
             <div className="space-y-3">
@@ -1762,18 +1762,18 @@ export function ReportTextView({
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.04 }}
-                    className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4"
+                    className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4"
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">{avatar}</span>
-                      <span className="text-sm font-medium text-[#EAEAE8]">{name}</span>
+                      <span className="text-sm font-medium text-[color:var(--text-primary)]">{name}</span>
                       <div className="ml-auto flex items-center gap-2 text-xs">
                         <LeaningPill leaning={drift.initial_leaning} />
-                        <ArrowRight className={`h-3 w-3 ${shifted ? "text-[#C4A882]" : "text-[#3A3A3A]"}`} />
+                        <ArrowRight className={`h-3 w-3 ${shifted ? "text-[color:var(--accent-warm)]" : "text-[color:var(--border-hover)]"}`} />
                         <LeaningPill leaning={drift.final_leaning} highlighted={shifted} />
                       </div>
                     </div>
-                    <p className="text-xs text-[#9B9594] leading-relaxed pl-9">{drift.reasoning}</p>
+                    <p className="text-xs text-[color:var(--text-secondary)] leading-relaxed pl-9">{drift.reasoning}</p>
                   </motion.div>
                 );
               })}
@@ -1790,8 +1790,8 @@ export function ReportTextView({
               {locale === "zh" ? "综合结论" : "Synthesis"}
             </SectionTitle>
 
-            <div className="rounded-xl border border-[#C4A882]/15 bg-[#C4A882]/[0.02] p-6">
-              <p className="text-sm text-[#EAEAE8] leading-[1.9] whitespace-pre-line">
+            <div className="rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.15)] bg-[color:var(--accent-warm)]/[0.02] p-6">
+              <p className="text-sm text-[color:var(--text-primary)] leading-[1.9] whitespace-pre-line">
                 {report.synthesis}
               </p>
             </div>
@@ -1814,11 +1814,11 @@ export function ReportTextView({
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.08 }}
-                  className="rounded-xl border border-[#2A2A2A] bg-[#141414] overflow-hidden"
+                  className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] overflow-hidden"
                 >
                   {/* Highlight topic */}
                   <div className="px-5 pt-5 pb-3">
-                    <h3 className="text-sm font-semibold text-[#EAEAE8]">
+                    <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">
                       {highlight.topic}
                     </h3>
                   </div>
@@ -1829,14 +1829,14 @@ export function ReportTextView({
                       const colors = [
                         "border-[#4ADE80]/15 bg-[#4ADE80]/[0.03]",
                         "border-[#FBBF24]/15 bg-[#FBBF24]/[0.03]",
-                        "border-[#C4A882]/15 bg-[#C4A882]/[0.03]",
+                        "border-[rgb(var(--accent-warm-rgb)/0.15)] bg-[color:var(--accent-warm)]/[0.03]",
                         "border-[#F87171]/15 bg-[#F87171]/[0.03]",
                         "border-[#60A5FA]/15 bg-[#60A5FA]/[0.03]",
                       ];
                       const nameColors = [
                         "text-[#4ADE80]",
                         "text-[#FBBF24]",
-                        "text-[#C4A882]",
+                        "text-[color:var(--accent-warm)]",
                         "text-[#F87171]",
                         "text-[#60A5FA]",
                       ];
@@ -1848,7 +1848,7 @@ export function ReportTextView({
                           <span className={`text-xs font-semibold ${nameColors[pi % nameColors.length]}`}>
                             {p.persona_name}
                           </span>
-                          <p className="text-xs text-[#9B9594] mt-1 leading-relaxed">
+                          <p className="text-xs text-[color:var(--text-secondary)] mt-1 leading-relaxed">
                             {p.stance}
                           </p>
                         </div>
@@ -1860,8 +1860,8 @@ export function ReportTextView({
                   {highlight.significance && (
                     <div className="px-5 pb-5 pt-1">
                       <div className="flex gap-2 items-start">
-                        <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#C4A882]" />
-                        <p className="text-xs text-[#666462] leading-relaxed italic">
+                        <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[color:var(--accent-warm)]" />
+                        <p className="text-xs text-[color:var(--text-tertiary)] leading-relaxed italic">
                           {highlight.significance}
                         </p>
                       </div>
@@ -1882,14 +1882,14 @@ export function ReportTextView({
           {/* Goal Assessment */}
           {goals.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-sm font-semibold text-[#E2DDD5] mb-4">
+              <h3 className="text-sm font-semibold text-[color:var(--accent-primary)] mb-4">
                 {t("goalAssessment")}
               </h3>
               <div className="space-y-3">
                 {goals.map((goal, i) => (
                   <div
                     key={i}
-                    className="rounded-lg border border-[#2A2A2A] bg-[#141414] p-4"
+                    className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4"
                   >
                     <div className="flex items-start gap-2.5 mb-2">
                       {goal.achievable ? (
@@ -1898,7 +1898,7 @@ export function ReportTextView({
                         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-[#F87171]" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#EAEAE8]">
+                        <p className="text-sm font-medium text-[color:var(--text-primary)]">
                           {goal.goal}
                         </p>
                         <Badge
@@ -1916,8 +1916,8 @@ export function ReportTextView({
                     </div>
 
                     {goal.current_status && (
-                      <p className="text-xs text-[#9B9594] mt-2 ml-[26px]">
-                        <span className="text-[#666462]">
+                      <p className="text-xs text-[color:var(--text-secondary)] mt-2 ml-[26px]">
+                        <span className="text-[color:var(--text-tertiary)]">
                           {t("currentStatus")}:
                         </span>{" "}
                         {goal.current_status}
@@ -1926,7 +1926,7 @@ export function ReportTextView({
 
                     {Array.isArray(goal.gaps) && goal.gaps.length > 0 && (
                       <div className="mt-2 ml-[26px]">
-                        <span className="text-[10px] text-[#666462] uppercase tracking-wider">
+                        <span className="text-[10px] text-[color:var(--text-tertiary)] uppercase tracking-wider">
                           {t("gaps")}:
                         </span>
                         <div className="flex flex-wrap gap-1.5 mt-1">
@@ -1959,14 +1959,14 @@ export function ReportTextView({
 
                 {Array.isArray(ifFeasible.next_steps) && ifFeasible.next_steps.length > 0 && (
                   <div className="mb-4">
-                    <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                    <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                       {t("nextSteps")}
                     </h5>
                     <ol className="space-y-1.5">
                       {ifFeasible.next_steps.map((step, i) => (
                         <li
                           key={i}
-                          className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                          className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                         >
                           <span className="text-[#4ADE80] font-mono shrink-0">
                             {i + 1}.
@@ -1981,14 +1981,14 @@ export function ReportTextView({
                 {Array.isArray(ifFeasible.optimizations) &&
                   ifFeasible.optimizations.length > 0 && (
                     <div className="mb-4">
-                      <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                      <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                         {t("optimizations")}
                       </h5>
                       <ul className="space-y-1">
                         {ifFeasible.optimizations.map((opt, i) => (
                           <li
                             key={i}
-                            className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                            className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                           >
                             <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-[#4ADE80]" />
                             {opt}
@@ -2000,14 +2000,14 @@ export function ReportTextView({
 
                 {Array.isArray(ifFeasible.risks) && ifFeasible.risks.length > 0 && (
                   <div>
-                    <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                    <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                       {t("risks")}
                     </h5>
                     <ul className="space-y-1">
                       {ifFeasible.risks.map((risk, i) => (
                         <li
                           key={i}
-                          className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                          className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                         >
                           <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-[#FBBF24]" />
                           {risk}
@@ -2021,18 +2021,18 @@ export function ReportTextView({
 
             {/* If Not Feasible */}
             {ifNotFeasible && (
-              <div className="rounded-xl border border-[#C4A882]/15 bg-[#C4A882]/[0.02] p-5">
-                <h4 className="text-sm font-semibold text-[#C4A882] mb-4 flex items-center gap-2">
+              <div className="rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.15)] bg-[color:var(--accent-warm)]/[0.02] p-5">
+                <h4 className="text-sm font-semibold text-[color:var(--accent-warm)] mb-4 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   {t("ifNotFeasible")}
                 </h4>
 
                 {ifNotFeasible.direction && (
                   <div className="mb-4">
-                    <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                    <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                       {t("direction")}
                     </h5>
-                    <p className="text-xs text-[#9B9594] leading-relaxed">
+                    <p className="text-xs text-[color:var(--text-secondary)] leading-relaxed">
                       {ifNotFeasible.direction}
                     </p>
                   </div>
@@ -2041,16 +2041,16 @@ export function ReportTextView({
                 {Array.isArray(ifNotFeasible.modifications) &&
                   ifNotFeasible.modifications.length > 0 && (
                     <div className="mb-4">
-                      <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                      <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                         {t("modifications")}
                       </h5>
                       <ul className="space-y-1">
                         {ifNotFeasible.modifications.map((mod, i) => (
                           <li
                             key={i}
-                            className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                            className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                           >
-                            <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-[#C4A882]" />
+                            <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-[color:var(--accent-warm)]" />
                             {mod}
                           </li>
                         ))}
@@ -2061,16 +2061,16 @@ export function ReportTextView({
                 {Array.isArray(ifNotFeasible.priorities) &&
                   ifNotFeasible.priorities.length > 0 && (
                     <div className="mb-4">
-                      <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                      <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                         {t("priorities")}
                       </h5>
                       <ol className="space-y-1">
                         {ifNotFeasible.priorities.map((p, i) => (
                           <li
                             key={i}
-                            className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                            className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                           >
-                            <span className="text-[#C4A882] font-mono shrink-0">
+                            <span className="text-[color:var(--accent-warm)] font-mono shrink-0">
                               {i + 1}.
                             </span>
                             {p}
@@ -2083,16 +2083,16 @@ export function ReportTextView({
                 {Array.isArray(ifNotFeasible.reference_cases) &&
                   ifNotFeasible.reference_cases.length > 0 && (
                     <div>
-                      <h5 className="text-[10px] font-semibold text-[#666462] uppercase tracking-wider mb-2">
+                      <h5 className="text-[10px] font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wider mb-2">
                         {t("referenceCases")}
                       </h5>
                       <ul className="space-y-1">
                         {ifNotFeasible.reference_cases.map((ref, i) => (
                           <li
                             key={i}
-                            className="flex gap-2 text-xs text-[#9B9594] leading-relaxed"
+                            className="flex gap-2 text-xs text-[color:var(--text-secondary)] leading-relaxed"
                           >
-                            <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-[#C4A882]" />
+                            <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-[color:var(--accent-warm)]" />
                             {ref}
                           </li>
                         ))}
@@ -2104,7 +2104,7 @@ export function ReportTextView({
           </div>
 
           {!ifFeasible && !ifNotFeasible && goals.length === 0 && (
-            <p className="text-sm text-[#666462] italic">
+            <p className="text-sm text-[color:var(--text-tertiary)] italic">
               {locale === "zh"
                 ? "暂无建议数据"
                 : "No recommendation data available."}
@@ -2130,7 +2130,7 @@ export function ReportTextView({
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="rounded-lg border border-[#2A2A2A] bg-[#141414] p-4 flex gap-3"
+                    className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 flex gap-3"
                   >
                     {/* Priority dot */}
                     <div className="mt-1.5 shrink-0">
@@ -2138,7 +2138,7 @@ export function ReportTextView({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#EAEAE8] leading-relaxed mb-2">
+                      <p className="text-sm text-[color:var(--text-primary)] leading-relaxed mb-2">
                         {item.description}
                       </p>
 
@@ -2156,7 +2156,7 @@ export function ReportTextView({
                           )}
                         </Badge>
                         {item.expected_impact && (
-                          <Badge className="border text-[10px] font-medium border-[#E2DDD5]/20 bg-[#E2DDD5]/[0.04] text-[#E2DDD5]">
+                          <Badge className="border text-[10px] font-medium border-[rgb(var(--accent-primary-rgb)/0.20)] bg-[color:var(--accent-primary)]/[0.04] text-[color:var(--accent-primary)]">
                             {t("impact")}: {item.expected_impact}
                           </Badge>
                         )}
@@ -2198,23 +2198,23 @@ export function ReportTextView({
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.04 }}
-                  className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4"
+                  className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1C1C1C] text-[10px] font-mono text-[#666462]">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[color:var(--bg-tertiary)] text-[10px] font-mono text-[color:var(--text-tertiary)]">
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#EAEAE8]">{ref.title}</p>
-                      <p className="mt-1 text-xs text-[#9B9594] leading-relaxed">{ref.detail}</p>
+                      <p className="text-sm font-medium text-[color:var(--text-primary)]">{ref.title}</p>
+                      <p className="mt-1 text-xs text-[color:var(--text-secondary)] leading-relaxed">{ref.detail}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {ref.source && (
-                          <span className="rounded-md bg-[#C4A882]/10 px-2 py-0.5 text-[10px] text-[#C4A882]">
+                          <span className="rounded-md bg-[rgb(var(--accent-warm-rgb)/0.10)] px-2 py-0.5 text-[10px] text-[color:var(--accent-warm)]">
                             {ref.source}
                           </span>
                         )}
                         {ref.persona_name && (
-                          <span className="rounded-md bg-[#1C1C1C] px-2 py-0.5 text-[10px] text-[#666462]">
+                          <span className="rounded-md bg-[color:var(--bg-tertiary)] px-2 py-0.5 text-[10px] text-[color:var(--text-tertiary)]">
                             {locale === "zh" ? "引用者" : "Cited by"}: {ref.persona_name}
                           </span>
                         )}
@@ -2235,35 +2235,35 @@ export function ReportTextView({
             {report.scenario_simulation && onViewSimulation && (
               <button
                 onClick={onViewSimulation}
-                className="group inline-flex w-full sm:w-auto items-center gap-3 rounded-xl border border-[#C4A882]/30 bg-[#C4A882]/5 px-6 py-4 transition-all duration-200 hover:border-[#C4A882]/50 hover:bg-[#C4A882]/10"
+                className="group inline-flex w-full sm:w-auto items-center gap-3 rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.05)] px-6 py-4 transition-all duration-200 hover:border-[rgb(var(--accent-warm-rgb)/0.50)] hover:bg-[rgb(var(--accent-warm-rgb)/0.10)]"
               >
-                <TrendingUp className="h-5 w-5 text-[#C4A882]" />
+                <TrendingUp className="h-5 w-5 text-[color:var(--accent-warm)]" />
                 <div className="text-left flex-1">
-                  <div className="text-sm font-semibold text-[#EAEAE8]">
+                  <div className="text-sm font-semibold text-[color:var(--text-primary)]">
                     {t("scenarioSimulation")}
                   </div>
-                  <div className="text-xs text-[#9B9594]">
+                  <div className="text-xs text-[color:var(--text-secondary)]">
                     {locale === "zh" ? "模拟真实场景中角色如何相互影响" : "See how personas influence each other"}
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-[#C4A882] transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="h-4 w-4 text-[color:var(--accent-warm)] transition-transform group-hover:translate-x-1" />
               </button>
             )}
             {report.round_table_debate && onViewDebate && (
               <button
                 onClick={onViewDebate}
-                className="group inline-flex w-full sm:w-auto items-center gap-3 rounded-xl border border-[#C4A882]/30 bg-[#C4A882]/5 px-6 py-4 transition-all duration-200 hover:border-[#C4A882]/50 hover:bg-[#C4A882]/10"
+                className="group inline-flex w-full sm:w-auto items-center gap-3 rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.05)] px-6 py-4 transition-all duration-200 hover:border-[rgb(var(--accent-warm-rgb)/0.50)] hover:bg-[rgb(var(--accent-warm-rgb)/0.10)]"
               >
-                <Users className="h-5 w-5 text-[#C4A882]" />
+                <Users className="h-5 w-5 text-[color:var(--accent-warm)]" />
                 <div className="text-left flex-1">
-                  <div className="text-sm font-semibold text-[#EAEAE8]">
+                  <div className="text-sm font-semibold text-[color:var(--text-primary)]">
                     {t("roundTable")}
                   </div>
-                  <div className="text-xs text-[#9B9594]">
+                  <div className="text-xs text-[color:var(--text-secondary)]">
                     {locale === "zh" ? "观看持不同意见的角色激烈辩论" : "Watch divergent personas debate each other"}
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-[#C4A882] transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="h-4 w-4 text-[color:var(--accent-warm)] transition-transform group-hover:translate-x-1" />
               </button>
             )}
           </div>

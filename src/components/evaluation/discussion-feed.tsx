@@ -45,7 +45,7 @@ function getStanceLabel(
   t: Translator,
 ): { label: string; color: string } {
   const values = scores ? Object.values(scores) : [];
-  if (values.length === 0) return { label: "—", color: "#666462" };
+  if (values.length === 0) return { label: "—", color: "var(--text-tertiary)" };
 
   // Topic mode: string stances
   if (typeof values[0] === "string") {
@@ -68,7 +68,7 @@ function getStanceLabel(
 
   // Product mode: numeric scores
   const numeric = values.filter((v): v is number => typeof v === "number");
-  if (numeric.length === 0) return { label: "—", color: "#666462" };
+  if (numeric.length === 0) return { label: "—", color: "var(--text-tertiary)" };
   const avg = numeric.reduce((a, b) => a + b, 0) / numeric.length;
   return {
     label: avg.toFixed(1),
@@ -98,7 +98,7 @@ function WaveDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block h-[4px] w-[4px] rounded-full bg-[#C4A882]"
+          className="inline-block h-[4px] w-[4px] rounded-full bg-[color:var(--accent-warm)]"
           style={{
             animation: "wave-bounce 1.4s ease-in-out infinite",
             animationDelay: `${i * 0.16}s`,
@@ -118,18 +118,18 @@ function ThinkingCard({ persona, t }: { persona: PersonaInfo; t: Translator }) {
       aria-label={`${persona.name} — ${t("thinking")}`}
       style={{
         background:
-          "conic-gradient(from var(--border-angle), transparent 60%, #C4A882 100%)",
+          "conic-gradient(from var(--border-angle), transparent 60%, var(--accent-warm) 100%)",
         animation: "border-rotate 2s linear infinite",
       }}
     >
-      <div className="flex items-center gap-3 rounded-[11px] bg-[#141414] p-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-base">
+      <div className="flex items-center gap-3 rounded-[11px] bg-[color:var(--bg-secondary)] p-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-base">
           {persona.avatar}
         </div>
-        <span className="flex-1 text-sm font-medium text-[#EAEAE8]">
+        <span className="flex-1 text-sm font-medium text-[color:var(--text-primary)]">
           {persona.name}
         </span>
-        <span className="flex items-center text-xs text-[#C4A882]">
+        <span className="flex items-center text-xs text-[color:var(--accent-warm)]">
           {t("thinking")}
           <WaveDots />
         </span>
@@ -141,17 +141,17 @@ function ThinkingCard({ persona, t }: { persona: PersonaInfo; t: Translator }) {
 function WaitingCard({ persona, t }: { persona: PersonaInfo; t: Translator }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 opacity-60"
+      className="flex items-center gap-3 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 opacity-60"
       role="status"
       aria-label={t("waitingFor", { name: persona.name })}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-base">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-base">
         {persona.avatar}
       </div>
-      <span className="flex-1 text-sm font-medium text-[#EAEAE8]">
+      <span className="flex-1 text-sm font-medium text-[color:var(--text-primary)]">
         {persona.name}
       </span>
-      <span className="text-xs text-[#9B9594]">{t("waiting")}</span>
+      <span className="text-xs text-[color:var(--text-secondary)]">{t("waiting")}</span>
     </div>
   );
 }
@@ -177,10 +177,10 @@ function CompletedCard({
   return (
     <div className="rounded-xl border border-[#4ADE80]/20 bg-[#4ADE80]/[0.03] p-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-base">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-base">
           {persona.avatar}
         </div>
-        <span className="flex-1 text-sm font-medium text-[#EAEAE8]">
+        <span className="flex-1 text-sm font-medium text-[color:var(--text-primary)]">
           {persona.name}
         </span>
         <span
@@ -195,7 +195,7 @@ function CompletedCard({
       </div>
 
       <div className="mt-3 pl-12">
-        <p className="text-sm leading-relaxed text-[#9B9594]">
+        <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">
           &ldquo;{expanded ? reviewText : truncate(reviewText, 150)}&rdquo;
         </p>
 
@@ -222,7 +222,7 @@ function CompletedCard({
 
         <button
           onClick={onToggle}
-          className="mt-2 flex items-center gap-1 text-xs text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
+          className="mt-2 flex items-center gap-1 text-xs text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--text-primary)]"
           aria-expanded={expanded}
         >
           {expanded ? (
@@ -278,24 +278,24 @@ function SummaryCard({
     Number.isFinite(consensusScore);
 
   return (
-    <div className="rounded-xl border border-[#E2DDD5]/20 bg-[#E2DDD5]/[0.03] p-5">
+    <div className="rounded-xl border border-[rgb(var(--accent-primary-rgb)/0.20)] bg-[color:var(--accent-primary)]/[0.03] p-5">
       <div className="flex items-center gap-2 mb-3">
-        <FileText className="h-4 w-4 text-[#E2DDD5]" />
-        <span className="text-sm font-semibold text-[#EAEAE8]">
+        <FileText className="h-4 w-4 text-[color:var(--accent-primary)]" />
+        <span className="text-sm font-semibold text-[color:var(--text-primary)]">
           {t("discussionSummary")}
         </span>
         {showConsensus && (
-          <span className="ml-auto rounded-full bg-[#E2DDD5]/15 px-2.5 py-0.5 text-xs font-medium text-[#E2DDD5]">
+          <span className="ml-auto rounded-full bg-[rgb(var(--accent-primary-rgb)/0.15)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--accent-primary)]">
             {t("consensusBadge", { score: Math.round(consensusScore) })}
           </span>
         )}
       </div>
-      <p className="text-sm leading-relaxed text-[#9B9594]">{excerpt}</p>
+      <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">{excerpt}</p>
       <Button
         onClick={() =>
           router.push(`/${locale}/evaluate/${evaluationId}/result`)
         }
-        className="mt-4 bg-[#E2DDD5] text-[#0C0C0C] hover:bg-[#D4CFC7] font-semibold px-6"
+        className="mt-4 bg-[color:var(--accent-primary)] text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-primary-hover)] font-semibold px-6"
       >
         {t("viewFullReport")}
         <ArrowRight className="ml-2 h-4 w-4" />
@@ -482,13 +482,13 @@ export function DiscussionFeed({
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
       {/* Header */}
       <div className="text-center">
-        <p className="text-xs font-medium uppercase tracking-widest text-[#C4A882]">
+        <p className="text-xs font-medium uppercase tracking-widest text-[color:var(--accent-warm)]">
           {t("roundTable")}
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <h1 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
           {topicTitle}
         </h1>
-        <p className="mt-1 text-sm text-[#9B9594]">
+        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {t("perspectives", { count: personas.length })}
         </p>
       </div>
@@ -529,9 +529,9 @@ export function DiscussionFeed({
           animate={{ opacity: 1 }}
           role="status"
           aria-live="polite"
-          className="flex items-center justify-center gap-2 py-4 text-sm text-[#9B9594]"
+          className="flex items-center justify-center gap-2 py-4 text-sm text-[color:var(--text-secondary)]"
         >
-          <FileText className="h-4 w-4 animate-pulse text-[#E2DDD5]" />
+          <FileText className="h-4 w-4 animate-pulse text-[color:var(--accent-primary)]" />
           <span>{t("generatingSummary")}</span>
           <WaveDots />
         </motion.div>
@@ -583,7 +583,7 @@ export function DiscussionFeed({
               {retrying ? t("retrying") : t("retryButton")}
             </Button>
           </div>
-          <p className="text-xs text-[#9B9594]">{t("retryRefundHint")}</p>
+          <p className="text-xs text-[color:var(--text-secondary)]">{t("retryRefundHint")}</p>
         </motion.div>
       )}
 

@@ -145,14 +145,14 @@ function NewEvaluationContent() {
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8">
           <div className="mb-8 flex flex-col items-center">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4">
-              <circle cx="10" cy="10" r="7" stroke="#C4A882" strokeWidth="1.2" opacity="0.4" />
-              <circle cx="14" cy="10" r="7" stroke="#E2DDD5" strokeWidth="1.2" opacity="0.6" />
-              <circle cx="12" cy="14" r="7" stroke="#E2DDD5" strokeWidth="1.2" opacity="0.8" />
+              <circle cx="10" cy="10" r="7" stroke="var(--accent-warm)" strokeWidth="1.2" opacity="0.4" />
+              <circle cx="14" cy="10" r="7" stroke="var(--accent-primary)" strokeWidth="1.2" opacity="0.6" />
+              <circle cx="12" cy="14" r="7" stroke="var(--accent-primary)" strokeWidth="1.2" opacity="0.8" />
             </svg>
-            <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+            <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
               {mode === "product" ? t("modeProduct") : t("modeTopic")}
             </h1>
-            <p className="mt-2 text-sm text-[#666462]">
+            <p className="mt-2 text-sm text-[color:var(--text-tertiary)]">
               {mode === "product" ? t("modeProductDesc") : t("modeTopicDesc")}
             </p>
           </div>
@@ -167,12 +167,12 @@ function NewEvaluationContent() {
       {step === 2 && projectData && (
         <div className="mx-auto w-full max-w-3xl px-4 py-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+            <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
               {t("selectPersonas")}
             </h1>
             <button
               onClick={() => setStep(1)}
-              className="text-sm text-[#9B9594] hover:text-[#EAEAE8] transition-colors"
+              className="text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors"
             >
               {t("step1")}
             </button>

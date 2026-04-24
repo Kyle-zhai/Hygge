@@ -22,6 +22,19 @@
   --accent-primary-hover: #08070A;
   --accent-ink: #FAF8F3;
   --accent-warm: #B8955F;
+  --accent-warm-hover: #9A7A4D;
+  /* RGB channels for alpha composition */
+  --bg-primary-rgb: 250, 248, 243;
+  --bg-secondary-rgb: 255, 255, 255;
+  --bg-tertiary-rgb: 243, 241, 234;
+  --bg-hover-rgb: 237, 234, 224;
+  --text-primary-rgb: 21, 20, 26;
+  --text-secondary-rgb: 107, 106, 112;
+  --text-tertiary-rgb: 154, 155, 160;
+  --border-default-rgb: 228, 225, 215;
+  --border-hover-rgb: 208, 205, 193;
+  --accent-primary-rgb: 21, 20, 26;
+  --accent-warm-rgb: 184, 149, 95;
   --atmosphere-warm-rgb: 184, 149, 95;
   --atmosphere-cool-rgb: 79, 122, 196;
   --atmosphere-cream-rgb: 60, 50, 30;
@@ -69,6 +82,18 @@
   --accent-primary-hover: #F0EBE3;
   --accent-ink: #0C0C0C;
   --accent-warm: #C4A882;
+  --accent-warm-hover: #D4B892;
+  --bg-primary-rgb: 12, 12, 12;
+  --bg-secondary-rgb: 20, 20, 20;
+  --bg-tertiary-rgb: 28, 28, 28;
+  --bg-hover-rgb: 34, 34, 34;
+  --text-primary-rgb: 234, 234, 232;
+  --text-secondary-rgb: 155, 149, 148;
+  --text-tertiary-rgb: 102, 100, 98;
+  --border-default-rgb: 42, 42, 42;
+  --border-hover-rgb: 58, 58, 58;
+  --accent-primary-rgb: 226, 221, 213;
+  --accent-warm-rgb: 196, 168, 130;
   --atmosphere-warm-rgb: 196, 168, 130;
   --atmosphere-cool-rgb: 96, 165, 250;
   --atmosphere-cream-rgb: 226, 221, 213;
@@ -204,24 +229,24 @@ body::after {
   background: transparent;
 }
 .scrollbar-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--text-tertiary-rgb), 0.25);
   border-radius: 3px;
   transition: background 0.2s;
 }
 .scrollbar-sidebar:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--text-tertiary-rgb), 0.45);
 }
 .scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(var(--text-tertiary-rgb), 0.65);
 }
 /* Firefox */
 @supports (scrollbar-width: thin) {
   .scrollbar-sidebar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+    scrollbar-color: rgba(var(--text-tertiary-rgb), 0.25) transparent;
   }
   .scrollbar-sidebar:hover {
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: rgba(var(--text-tertiary-rgb), 0.45) transparent;
   }
 }
 

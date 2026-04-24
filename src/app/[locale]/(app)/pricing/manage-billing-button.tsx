@@ -27,7 +27,7 @@ export function ManageBillingButton({ label }: { label: string }) {
       variant="outline"
       onClick={handleClick}
       disabled={loading}
-      className="border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+      className="border-[color:var(--border-default)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : label}
     </Button>

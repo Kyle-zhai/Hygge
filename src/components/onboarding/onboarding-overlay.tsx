@@ -92,24 +92,24 @@ export function OnboardingOverlay() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-      <div className="relative w-full max-w-lg rounded-2xl border border-[#2A2A2A] bg-[#141414] p-8 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-8 shadow-2xl">
         <button
           type="button"
           onClick={handleSkip}
           aria-label={zh ? "跳过" : "Skip"}
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+          className="absolute right-4 top-4 rounded-lg p-1.5 text-[color:var(--text-tertiary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#C4A882]/10 text-[#C4A882]">
+        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[rgb(var(--accent-warm-rgb)/0.10)] text-[color:var(--accent-warm)]">
           <Icon className="h-6 w-6" />
         </div>
 
-        <h2 className="mb-2 text-xl font-semibold text-[#EAEAE8] tracking-tight">
+        <h2 className="mb-2 text-xl font-semibold text-[color:var(--text-primary)] tracking-tight">
           {zh ? current.titleZh : current.titleEn}
         </h2>
-        <p className="text-sm leading-relaxed text-[#9B9594]">
+        <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">
           {zh ? current.bodyZh : current.bodyEn}
         </p>
 
@@ -119,10 +119,10 @@ export function OnboardingOverlay() {
               key={idx}
               className={`h-1.5 rounded-full transition-all ${
                 idx === step
-                  ? "w-6 bg-[#C4A882]"
+                  ? "w-6 bg-[color:var(--accent-warm)]"
                   : idx < step
-                  ? "w-1.5 bg-[#C4A882]/50"
-                  : "w-1.5 bg-[#2A2A2A]"
+                  ? "w-1.5 bg-[rgb(var(--accent-warm-rgb)/0.50)]"
+                  : "w-1.5 bg-[color:var(--border-default)]"
               }`}
             />
           ))}
@@ -132,14 +132,14 @@ export function OnboardingOverlay() {
           <button
             type="button"
             onClick={handleSkip}
-            className="text-xs text-[#666462] transition-colors hover:text-[#9B9594]"
+            className="text-xs text-[color:var(--text-tertiary)] transition-colors hover:text-[color:var(--text-secondary)]"
           >
             {zh ? "跳过引导" : "Skip tour"}
           </button>
           <button
             type="button"
             onClick={handleNext}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#E2DDD5] px-4 py-2 text-sm font-semibold text-[#0C0C0C] transition-colors hover:bg-[#D4CFC7]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[color:var(--bg-primary)] transition-colors hover:bg-[color:var(--accent-primary-hover)]"
           >
             {isLast
               ? zh ? "开始第一次评估" : "Start first evaluation"

@@ -164,7 +164,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0C0C0C]">
+    <div className="flex min-h-screen bg-[color:var(--bg-primary)]">
       <Sidebar
         userEmail={user?.email ?? null}
         history={history}

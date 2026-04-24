@@ -11,7 +11,7 @@ export function PricingBackButton() {
   return (
     <button
       onClick={() => router.back()}
-      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#9B9594] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
     >
       <ArrowLeft className="h-4 w-4" />
       <span>{locale === "zh" ? "返回" : "Back"}</span>

@@ -331,7 +331,7 @@ export default function LLMSettingsPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[#666462]" />
+        <Loader2 className="h-5 w-5 animate-spin text-[color:var(--text-tertiary)]" />
       </div>
     );
   }
@@ -339,27 +339,27 @@ export default function LLMSettingsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
           {zh ? "LLM 供应商链路" : "LLM Provider Chain"}
         </h1>
-        <p className="mt-1 text-sm text-[#9B9594]">
+        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {zh
             ? "按顺序排列多个模型（BYOK）。首项失败会自动切到下一项，直到全部失败才报错。"
             : "Order multiple providers (BYOK). On failure the worker falls through the chain until one succeeds."}
         </p>
-        <p className="mt-2 rounded-lg border border-[#C4A882]/30 bg-[#C4A882]/5 px-3 py-2 text-xs text-[#C4A882]">
+        <p className="mt-2 rounded-lg border border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.05)] px-3 py-2 text-xs text-[color:var(--accent-warm)]">
           {zh
             ? "✨ 配置任意一个密钥即解锁全部高级功能，且不占用每月额度。"
             : "✨ Any saved entry unlocks every premium feature and removes the monthly quota."}
         </p>
-        <p className="mt-2 text-xs text-[#9B9594]">
+        <p className="mt-2 text-xs text-[color:var(--text-secondary)]">
           {zh
             ? `当前计划：${PLAN_LABEL[plan].zh}。仅可配置该计划范围内的供应商。`
             : `Current plan: ${PLAN_LABEL[plan].en}. Only providers included in this plan are available.`}
           {plan !== "max" && (
             <>
               {" "}
-              <a href={`/${locale}/pricing`} className="underline hover:text-[#C4A882]">
+              <a href={`/${locale}/pricing`} className="underline hover:text-[color:var(--accent-warm)]">
                 {zh ? "升级以解锁更多供应商" : "Upgrade for more providers"}
               </a>
             </>
@@ -374,11 +374,11 @@ export default function LLMSettingsPage() {
           <div
             className={`mb-4 flex items-center justify-between rounded-lg border px-3 py-2 ${
               paused
-                ? "border-[#666462]/40 bg-[#141414]"
-                : "border-[#C4A882]/30 bg-[#C4A882]/5"
+                ? "border-[rgb(var(--text-tertiary-rgb)/0.40)] bg-[color:var(--bg-secondary)]"
+                : "border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.05)]"
             }`}
           >
-            <span className={`text-xs ${paused ? "text-[#9B9594]" : "text-[#C4A882]"}`}>
+            <span className={`text-xs ${paused ? "text-[color:var(--text-secondary)]" : "text-[color:var(--accent-warm)]"}`}>
               {paused
                 ? zh
                   ? `BYOK 已暂停 · ${entries.length} 个模型已保存，将使用平台默认`
@@ -391,7 +391,7 @@ export default function LLMSettingsPage() {
               type="button"
               onClick={handleDeleteAll}
               disabled={deleting}
-              className="flex items-center gap-1.5 text-xs text-[#9B9594] transition-colors hover:text-[#F87171]"
+              className="flex items-center gap-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:text-[#F87171]"
             >
               {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
               {zh ? "清空全部" : "Clear all"}
@@ -422,11 +422,11 @@ export default function LLMSettingsPage() {
         type="button"
         onClick={add}
         disabled={entries.length >= MAX_ENTRIES}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#2A2A2A] bg-[#0C0C0C] py-3 text-sm text-[#9B9594] transition-colors hover:border-[#C4A882]/50 hover:text-[#C4A882] disabled:opacity-40"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-primary)] py-3 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[rgb(var(--accent-warm-rgb)/0.50)] hover:text-[color:var(--accent-warm)] disabled:opacity-40"
       >
         <Plus className="h-4 w-4" />
         {zh ? "添加备选模型" : "Add fallback entry"}
-        <span className="text-xs text-[#666462]">
+        <span className="text-xs text-[color:var(--text-tertiary)]">
           ({entries.length}/{MAX_ENTRIES})
         </span>
       </button>
@@ -449,7 +449,7 @@ export default function LLMSettingsPage() {
         </div>
       )}
 
-      <p className="mt-4 text-xs text-[#666462]">
+      <p className="mt-4 text-xs text-[color:var(--text-tertiary)]">
         {zh
           ? "⚠ API Key 会加密存储于数据库，仅你的账号可读。"
           : "⚠ API keys are encrypted at rest and readable only by your account."}
@@ -460,7 +460,7 @@ export default function LLMSettingsPage() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#E2DDD5] px-5 py-2.5 text-sm font-semibold text-[#0C0C0C] transition-colors hover:bg-[#D4CFC7] disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-[color:var(--accent-primary)] px-5 py-2.5 text-sm font-semibold text-[color:var(--bg-primary)] transition-colors hover:bg-[color:var(--accent-primary-hover)] disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           {zh ? "保存链路" : "Save chain"}
@@ -520,22 +520,22 @@ function EntryCard({
 
   return (
     <div
-      className={`rounded-xl border bg-[#141414] p-5 space-y-4 transition-opacity ${
-        entry.enabled ? "border-[#2A2A2A]" : "border-[#2A2A2A]/60 opacity-60"
+      className={`rounded-xl border bg-[color:var(--bg-secondary)] p-5 space-y-4 transition-opacity ${
+        entry.enabled ? "border-[color:var(--border-default)]" : "border-[rgb(var(--border-default-rgb)/0.60)] opacity-60"
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <span className="rounded-md bg-[#C4A882]/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[#C4A882]">
+          <span className="rounded-md bg-[rgb(var(--accent-warm-rgb)/0.10)] px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-warm)]">
             #{idx + 1} · {roleLabel}
           </span>
           {entry.hadKey && (
-            <span className="text-[11px] text-[#666462]">
+            <span className="text-[11px] text-[color:var(--text-tertiary)]">
               {zh ? "已保存" : "saved"}
             </span>
           )}
           {!entry.enabled && (
-            <span className="rounded-md bg-[#666462]/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#9B9594]">
+            <span className="rounded-md bg-[rgb(var(--text-tertiary-rgb)/0.15)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">
               {zh ? "已暂停" : "paused"}
             </span>
           )}
@@ -563,7 +563,7 @@ function EntryCard({
       </div>
 
       <div>
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#666462]">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
           {zh ? "快速选择" : "Presets"}
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -572,7 +572,7 @@ function EntryCard({
               key={p.label}
               type="button"
               onClick={() => onPreset(p)}
-              className="rounded-md border border-[#2A2A2A] bg-[#0C0C0C] px-2.5 py-1 text-[11px] text-[#9B9594] transition-colors hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+              className="rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-2.5 py-1 text-[11px] text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
             >
               {p.label}
             </button>
@@ -581,7 +581,7 @@ function EntryCard({
       </div>
 
       <div>
-        <p className="mb-1.5 text-xs font-medium text-[#9B9594]">
+        <p className="mb-1.5 text-xs font-medium text-[color:var(--text-secondary)]">
           {zh ? "供应商类型" : "Provider type"} <span className="text-[#F87171]">*</span>
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -594,12 +594,12 @@ function EntryCard({
                 onClick={() => onUpdate({ providerType: opt.value })}
                 className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                   active
-                    ? "border-[#C4A882]/60 bg-[#C4A882]/10 text-[#EAEAE8]"
-                    : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    ? "border-[rgb(var(--accent-warm-rgb)/0.60)] bg-[rgb(var(--accent-warm-rgb)/0.10)] text-[color:var(--text-primary)]"
+                    : "border-[color:var(--border-default)] bg-[color:var(--bg-primary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                 }`}
               >
                 <div className="text-sm font-medium">{opt.label}</div>
-                <div className="text-[11px] text-[#666462]">{opt.hint}</div>
+                <div className="text-[11px] text-[color:var(--text-tertiary)]">{opt.hint}</div>
               </button>
             );
           })}
@@ -679,8 +679,8 @@ function IconButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex h-7 w-7 items-center justify-center rounded-md border border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-        danger ? "hover:border-[#F87171]/50 hover:text-[#F87171]" : "hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+      className={`flex h-7 w-7 items-center justify-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] text-[color:var(--text-secondary)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+        danger ? "hover:border-[#F87171]/50 hover:text-[#F87171]" : "hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
       }`}
     >
       {children}
@@ -706,13 +706,13 @@ function ToggleSwitch({
       aria-checked={enabled}
       className={`relative mr-1 inline-flex h-5 w-9 items-center rounded-full border transition-colors ${
         enabled
-          ? "border-[#C4A882]/60 bg-[#C4A882]/40"
-          : "border-[#2A2A2A] bg-[#0C0C0C]"
+          ? "border-[rgb(var(--accent-warm-rgb)/0.60)] bg-[rgb(var(--accent-warm-rgb)/0.40)]"
+          : "border-[color:var(--border-default)] bg-[color:var(--bg-primary)]"
       }`}
     >
       <span
         className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform ${
-          enabled ? "translate-x-[18px] bg-[#EAEAE8]" : "translate-x-[3px] bg-[#666462]"
+          enabled ? "translate-x-[18px] bg-[color:var(--text-primary)]" : "translate-x-[3px] bg-[color:var(--text-tertiary)]"
         }`}
       />
     </button>
@@ -738,19 +738,19 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-[#9B9594]">
+      <span className="mb-1.5 block text-xs font-medium text-[color:var(--text-secondary)]">
         {label} {required && <span className="text-[#F87171]">*</span>}
       </span>
       <div className="relative">
         {icon && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666462]">{icon}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--text-tertiary)]">{icon}</span>
         )}
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] py-2.5 text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none transition-colors focus:border-[#C4A882]/50 ${
+          className={`w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)] ${
             icon ? "pl-9 pr-3" : "px-3"
           }`}
         />

@@ -90,24 +90,24 @@ export function PersonaReviewCard({
   }
 
   return (
-    <Card className="card-glow border-[#2A2A2A] bg-[#141414] transition-all duration-300 hover:border-[#3A3A3A]">
+    <Card className="card-glow border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] transition-all duration-300 hover:border-[color:var(--border-hover)]">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1C] text-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-lg">
             {personaAvatar}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[#EAEAE8]">{personaName}</span>
+              <span className="font-semibold text-[color:var(--text-primary)]">{personaName}</span>
               <Badge variant="secondary" className={`text-xs font-medium ${headerBadge.className}`}>
                 {headerBadge.label}
               </Badge>
             </div>
-            <p className="text-xs text-[#666462]">{personaOccupation}</p>
+            <p className="text-xs text-[color:var(--text-tertiary)]">{personaOccupation}</p>
           </div>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="rounded-lg p-1 text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+            className="rounded-lg p-1 text-[color:var(--text-tertiary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
           >
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
@@ -125,14 +125,14 @@ export function PersonaReviewCard({
               transition={{ duration: 0.2 }}
               className="space-y-4 overflow-hidden pt-2"
             >
-              <p className="text-sm leading-relaxed text-[#9B9594]">{reviewText}</p>
+              <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">{reviewText}</p>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-lg border border-[#4ADE80]/20 bg-[#4ADE80]/5 p-3">
                   <h4 className="mb-2 text-xs font-semibold text-[#4ADE80]">{t("strengths")}</h4>
                   <ul className="space-y-1">
                     {(Array.isArray(strengths) ? strengths : []).map((s, i) => (
-                      <li key={i} className="text-xs text-[#9B9594]">+ {s}</li>
+                      <li key={i} className="text-xs text-[color:var(--text-secondary)]">+ {s}</li>
                     ))}
                   </ul>
                 </div>
@@ -140,7 +140,7 @@ export function PersonaReviewCard({
                   <h4 className="mb-2 text-xs font-semibold text-[#F87171]">{t("weaknesses")}</h4>
                   <ul className="space-y-1">
                     {(Array.isArray(weaknesses) ? weaknesses : []).map((w, i) => (
-                      <li key={i} className="text-xs text-[#9B9594]">- {w}</li>
+                      <li key={i} className="text-xs text-[color:var(--text-secondary)]">- {w}</li>
                     ))}
                   </ul>
                 </div>

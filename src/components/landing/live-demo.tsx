@@ -89,7 +89,7 @@ function ThinkingCard({ persona, thinkingLabel }: { persona: DemoPersona; thinki
       className="rounded-xl p-[1px]"
       style={{
         background:
-          "conic-gradient(from var(--border-angle), transparent 60%, #C4A882 100%)",
+          "conic-gradient(from var(--border-angle), transparent 60%, var(--accent-warm) 100%)",
         animation: "border-rotate 2s linear infinite",
       }}
     >

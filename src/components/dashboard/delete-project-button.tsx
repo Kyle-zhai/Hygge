@@ -46,22 +46,22 @@ export function DeleteProjectButton({ projectId, locale }: DeleteProjectButtonPr
           e.stopPropagation();
           setOpen(true);
         }}
-        className="rounded-md p-1 text-[#666462] transition-colors hover:bg-[#1C1C1C] hover:text-[#F87171]"
+        className="rounded-md p-1 text-[color:var(--text-tertiary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[#F87171]"
         title={isZh ? "删除" : "Delete"}
       >
         <X className="h-4 w-4" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="border-[#2A2A2A] bg-[#141414] sm:max-w-[400px]">
+        <DialogContent className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] sm:max-w-[400px]">
           <DialogHeader>
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#F87171]/10 mb-2">
               <Trash2 className="h-5 w-5 text-[#F87171]" />
             </div>
-            <DialogTitle className="text-center text-[#EAEAE8]">
+            <DialogTitle className="text-center text-[color:var(--text-primary)]">
               {isZh ? "确认删除" : "Delete Record"}
             </DialogTitle>
-            <DialogDescription className="text-center text-[#9B9594]">
+            <DialogDescription className="text-center text-[color:var(--text-secondary)]">
               {isZh
                 ? "此操作将永久删除该记录及其所有评估数据，无法撤销。"
                 : "This will permanently delete this record and all associated evaluation data. This cannot be undone."}
@@ -72,7 +72,7 @@ export function DeleteProjectButton({ projectId, locale }: DeleteProjectButtonPr
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={deleting}
-              className="border-[#2A2A2A] bg-transparent text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+              className="border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
             >
               {isZh ? "取消" : "Cancel"}
             </Button>

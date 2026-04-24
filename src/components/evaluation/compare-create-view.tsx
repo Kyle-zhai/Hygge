@@ -89,11 +89,11 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-8 text-center">
-        <Scale className="mx-auto mb-3 h-8 w-8 text-[#C4A882]" />
-        <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <Scale className="mx-auto mb-3 h-8 w-8 text-[color:var(--accent-warm)]" />
+        <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
           {locale === "zh" ? "版本对比" : "Compare Versions"}
         </h1>
-        <p className="mt-1 text-sm text-[#9B9594]">
+        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {locale === "zh"
             ? "选择一份历史产品评估作为基线，提交新版本进行对比"
             : "Select a past product evaluation as baseline, then submit a new version to compare"}
@@ -102,17 +102,17 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
 
       {/* Step 1: Select base evaluation */}
       <div className="mb-6">
-        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[#666462]">
+        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[color:var(--text-tertiary)]">
           {locale === "zh" ? "第一步：选择基线" : "Step 1: Select Baseline"}
         </p>
         {evaluations.length === 0 ? (
-          <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] px-6 py-10 text-center">
-            <p className="text-sm text-[#9B9594]">
+          <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-6 py-10 text-center">
+            <p className="text-sm text-[color:var(--text-secondary)]">
               {locale === "zh" ? "暂无已完成的评估" : "No completed evaluations yet"}
             </p>
           </div>
         ) : (
-          <div className="space-y-2 rounded-xl border border-[#2A2A2A] bg-[#141414] p-2">
+          <div className="space-y-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-2">
             {evaluations.map((ev) => {
               const active = selectedId === ev.evaluationId;
               return (
@@ -121,20 +121,20 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
                   onClick={() => setSelectedId(active ? null : ev.evaluationId)}
                   className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors ${
                     active
-                      ? "bg-[#C4A882]/10 border border-[#C4A882]/30"
-                      : "hover:bg-[#1C1C1C] border border-transparent"
+                      ? "bg-[rgb(var(--accent-warm-rgb)/0.10)] border border-[rgb(var(--accent-warm-rgb)/0.30)]"
+                      : "hover:bg-[color:var(--bg-tertiary)] border border-transparent"
                   }`}
                 >
                   {active ? (
-                    <Check className="h-4 w-4 shrink-0 text-[#C4A882]" />
+                    <Check className="h-4 w-4 shrink-0 text-[color:var(--accent-warm)]" />
                   ) : (
-                    <Package className="h-4 w-4 shrink-0 text-[#666462]" />
+                    <Package className="h-4 w-4 shrink-0 text-[color:var(--text-tertiary)]" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm truncate ${active ? "text-[#EAEAE8] font-medium" : "text-[#9B9594]"}`}>
+                    <p className={`text-sm truncate ${active ? "text-[color:var(--text-primary)] font-medium" : "text-[color:var(--text-secondary)]"}`}>
                       {ev.title}
                     </p>
-                    <p className="text-[10px] text-[#666462]">
+                    <p className="text-[10px] text-[color:var(--text-tertiary)]">
                       {ev.personaCount} personas · {ev.completedAt ? new Date(ev.completedAt).toLocaleDateString() : ""}
                     </p>
                   </div>
@@ -148,10 +148,10 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
       {/* Step 2: New version input */}
       {selected && (
         <div className="mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[#666462]">
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[color:var(--text-tertiary)]">
             {locale === "zh" ? "第二步：输入新版本" : "Step 2: Enter New Version"}
           </p>
-          <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 space-y-3">
+          <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 space-y-3">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -161,14 +161,14 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
                   : "Describe the new version (optional — leave blank if uploading files only)..."
               }
               rows={5}
-              className="w-full resize-none rounded-lg bg-[#0C0C0C] border border-[#2A2A2A] px-4 py-3 text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none focus:border-[#C4A882]/40"
+              className="w-full resize-none rounded-lg bg-[color:var(--bg-primary)] border border-[color:var(--border-default)] px-4 py-3 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] outline-none focus:border-[rgb(var(--accent-warm-rgb)/0.40)]"
             />
 
             {/* File upload */}
             <div className="flex items-center gap-2">
               <label
                 htmlFor={inputId}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#2A2A2A] px-3 py-1.5 text-xs text-[#9B9594] transition-colors hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
               >
                 <Upload className="h-3.5 w-3.5" />
                 {locale === "zh" ? "上传文件" : "Upload Files"}
@@ -185,7 +185,7 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
                 className="hidden"
               />
               {files.length > 0 && (
-                <span className="text-[10px] text-[#666462]">{files.length} file(s)</span>
+                <span className="text-[10px] text-[color:var(--text-tertiary)]">{files.length} file(s)</span>
               )}
             </div>
 
@@ -197,12 +197,12 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
                   return (
                     <div
                       key={i}
-                      className="flex items-center gap-1.5 rounded-md bg-[#1C1C1C] px-2 py-1 text-xs text-[#9B9594]"
+                      className="flex items-center gap-1.5 rounded-md bg-[color:var(--bg-tertiary)] px-2 py-1 text-xs text-[color:var(--text-secondary)]"
                     >
                       <Icon className="h-3 w-3" />
                       <span className="max-w-[120px] truncate">{f.name}</span>
                       <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}>
-                        <X className="h-3 w-3 text-[#666462] hover:text-[#F87171]" />
+                        <X className="h-3 w-3 text-[color:var(--text-tertiary)] hover:text-[#F87171]" />
                       </button>
                     </div>
                   );
@@ -219,7 +219,7 @@ export function CompareCreateView({ evaluations, locale }: CompareCreateViewProp
           <Button
             onClick={handleSubmit}
             disabled={submitting || (!text.trim() && files.length === 0)}
-            className="bg-[#C4A882] text-[#0C0C0C] hover:bg-[#D4B892] font-semibold px-8 disabled:opacity-40"
+            className="bg-[color:var(--accent-warm)] text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-warm-hover)] font-semibold px-8 disabled:opacity-40"
           >
             {submitting ? (
               <>

@@ -87,15 +87,15 @@ function toNumericValues(scores: Record<string, number | string>): number[] {
 }
 
 function scoreColor(score: number | null): string {
-  if (score == null) return "#666462";
+  if (score == null) return "var(--text-tertiary)";
   if (score >= 7) return "#4ADE80";
-  if (score >= 5) return "#C4A882";
+  if (score >= 5) return "var(--accent-warm)";
   return "#F87171";
 }
 
 function DeltaIndicator({ delta }: { delta: number | null }) {
   if (delta == null) return null;
-  const color = delta > 0 ? "#4ADE80" : delta < 0 ? "#F87171" : "#666462";
+  const color = delta > 0 ? "#4ADE80" : delta < 0 ? "#F87171" : "var(--text-tertiary)";
   const Icon = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : Minus;
   return (
     <span className="inline-flex items-center gap-0.5 text-xs font-medium tabular-nums" style={{ color }}>
@@ -152,26 +152,26 @@ export function CompareResultView({
     >
       {/* Header */}
       <div className="text-center">
-        <Scale className="mx-auto mb-2 h-6 w-6 text-[#C4A882]" />
-        <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <Scale className="mx-auto mb-2 h-6 w-6 text-[color:var(--accent-warm)]" />
+        <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
           {locale === "zh" ? "版本对比" : "Version Compare"}
         </h1>
       </div>
 
       {/* Title row */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] px-5 py-3 text-center">
-          <p className="text-[10px] font-semibold uppercase text-[#666462] mb-1">
+        <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-5 py-3 text-center">
+          <p className="text-[10px] font-semibold uppercase text-[color:var(--text-tertiary)] mb-1">
             {locale === "zh" ? "基线" : "Baseline"}
           </p>
-          <p className="text-sm font-medium text-[#9B9594] truncate">{baseTitle}</p>
+          <p className="text-sm font-medium text-[color:var(--text-secondary)] truncate">{baseTitle}</p>
         </div>
-        <ArrowRight className="h-5 w-5 text-[#666462]" />
-        <div className="rounded-xl border border-[#C4A882]/20 bg-[#C4A882]/5 px-5 py-3 text-center">
-          <p className="text-[10px] font-semibold uppercase text-[#C4A882] mb-1">
+        <ArrowRight className="h-5 w-5 text-[color:var(--text-tertiary)]" />
+        <div className="rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.20)] bg-[rgb(var(--accent-warm-rgb)/0.05)] px-5 py-3 text-center">
+          <p className="text-[10px] font-semibold uppercase text-[color:var(--accent-warm)] mb-1">
             {locale === "zh" ? "新版本" : "New Version"}
           </p>
-          <p className="text-sm font-medium text-[#EAEAE8] truncate">{newTitle}</p>
+          <p className="text-sm font-medium text-[color:var(--text-primary)] truncate">{newTitle}</p>
         </div>
       </div>
 
@@ -185,7 +185,7 @@ export function CompareResultView({
           </div>
           <div className="text-center px-4">
             <DeltaIndicator delta={scoreDelta} />
-            <p className="text-[10px] text-[#666462] mt-1">
+            <p className="text-[10px] text-[color:var(--text-tertiary)] mt-1">
               {isTopicMode ? (locale === "zh" ? "共识度" : "Consensus") : (locale === "zh" ? "总分" : "Overall")}
             </p>
           </div>
@@ -199,8 +199,8 @@ export function CompareResultView({
 
       {/* Dimension comparison */}
       {allDims.size > 0 && (
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+        <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
             {t("dimensionAnalysis")}
           </p>
           <div className="space-y-3">
@@ -218,7 +218,7 @@ export function CompareResultView({
                     </span>
                   </div>
                   <div className="text-center min-w-[120px]">
-                    <p className="text-xs text-[#9B9594]">{getDimLabel(key)}</p>
+                    <p className="text-xs text-[color:var(--text-secondary)]">{getDimLabel(key)}</p>
                     {delta !== null && (
                       <DeltaIndicator delta={delta} />
                     )}
@@ -237,8 +237,8 @@ export function CompareResultView({
 
       {/* Per-persona comparison */}
       {baseReviews.length > 0 && (
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+        <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
             {t("personaAnalysis")}
           </p>
           <div className="space-y-4">
@@ -255,12 +255,12 @@ export function CompareResultView({
               const avgDelta = baseAvg != null && newAvg != null ? newAvg - baseAvg : null;
 
               return (
-                <div key={baseReview.persona_id} className="rounded-lg border border-[#2A2A2A] p-4">
+                <div key={baseReview.persona_id} className="rounded-lg border border-[color:var(--border-default)] p-4">
                   <div className="flex items-center gap-3 mb-3">
                     <PersonaAvatar avatar={persona.identity.avatar} size={32} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#EAEAE8] truncate">{localized.name}</p>
-                      <p className="text-[10px] text-[#666462]">{persona.demographics.occupation}</p>
+                      <p className="text-sm font-medium text-[color:var(--text-primary)] truncate">{localized.name}</p>
+                      <p className="text-[10px] text-[color:var(--text-tertiary)]">{persona.demographics.occupation}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium tabular-nums" style={{ color: scoreColor(baseAvg) }}>
@@ -275,17 +275,17 @@ export function CompareResultView({
 
                   {newReview && (
                     <div className="grid gap-3 sm:grid-cols-2 text-xs">
-                      <div className="rounded-lg bg-[#0C0C0C] p-3">
-                        <p className="text-[10px] font-semibold text-[#666462] mb-1 uppercase">
+                      <div className="rounded-lg bg-[color:var(--bg-primary)] p-3">
+                        <p className="text-[10px] font-semibold text-[color:var(--text-tertiary)] mb-1 uppercase">
                           {locale === "zh" ? "基线" : "Baseline"}
                         </p>
-                        <p className="text-[#9B9594] line-clamp-3">{baseReview.review_text}</p>
+                        <p className="text-[color:var(--text-secondary)] line-clamp-3">{baseReview.review_text}</p>
                       </div>
-                      <div className="rounded-lg bg-[#C4A882]/5 border border-[#C4A882]/10 p-3">
-                        <p className="text-[10px] font-semibold text-[#C4A882] mb-1 uppercase">
+                      <div className="rounded-lg bg-[rgb(var(--accent-warm-rgb)/0.05)] border border-[rgb(var(--accent-warm-rgb)/0.10)] p-3">
+                        <p className="text-[10px] font-semibold text-[color:var(--accent-warm)] mb-1 uppercase">
                           {locale === "zh" ? "新版本" : "New Version"}
                         </p>
-                        <p className="text-[#9B9594] line-clamp-3">{newReview.review_text}</p>
+                        <p className="text-[color:var(--text-secondary)] line-clamp-3">{newReview.review_text}</p>
                       </div>
                     </div>
                   )}
@@ -299,23 +299,23 @@ export function CompareResultView({
       {/* Consensus comparison */}
       {safeArray(baseReport?.persona_analysis?.consensus).length > 0 && safeArray(newReport?.persona_analysis?.consensus).length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+          <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
               {locale === "zh" ? "基线 — 共识" : "Baseline — Consensus"}
             </p>
             <ul className="space-y-2">
               {safeArray<{ point: string }>(baseReport?.persona_analysis?.consensus).map((c, i) => (
-                <li key={i} className="text-xs text-[#9B9594]">• {stripInlineUuidMeta(c.point || "")}</li>
+                <li key={i} className="text-xs text-[color:var(--text-secondary)]">• {stripInlineUuidMeta(c.point || "")}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-[#C4A882]/20 bg-[#C4A882]/5 p-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#C4A882]">
+          <div className="rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.20)] bg-[rgb(var(--accent-warm-rgb)/0.05)] p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-warm)]">
               {locale === "zh" ? "新版本 — 共识" : "New Version — Consensus"}
             </p>
             <ul className="space-y-2">
               {safeArray<{ point: string }>(newReport?.persona_analysis?.consensus).map((c, i) => (
-                <li key={i} className="text-xs text-[#9B9594]">• {stripInlineUuidMeta(c.point || "")}</li>
+                <li key={i} className="text-xs text-[color:var(--text-secondary)]">• {stripInlineUuidMeta(c.point || "")}</li>
               ))}
             </ul>
           </div>
@@ -325,14 +325,14 @@ export function CompareResultView({
       {/* Action items comparison */}
       {safeArray(baseReport?.action_items).length > 0 && safeArray(newReport?.action_items).length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+          <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
               {locale === "zh" ? "基线 — 行动项" : "Baseline — Action Items"}
             </p>
             <ul className="space-y-2">
               {safeArray<{ description: string; priority: string }>(baseReport?.action_items).slice(0, 5).map((a, i) => (
-                <li key={i} className="text-xs text-[#9B9594] flex items-start gap-2">
-                  <Badge variant="secondary" className={`shrink-0 text-[9px] ${a.priority === "critical" ? "bg-[#F87171]/10 text-[#F87171]" : "bg-[#1C1C1C] text-[#666462]"}`}>
+                <li key={i} className="text-xs text-[color:var(--text-secondary)] flex items-start gap-2">
+                  <Badge variant="secondary" className={`shrink-0 text-[9px] ${a.priority === "critical" ? "bg-[#F87171]/10 text-[#F87171]" : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-tertiary)]"}`}>
                     {a.priority}
                   </Badge>
                   <span>{a.description}</span>
@@ -340,14 +340,14 @@ export function CompareResultView({
               ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-[#C4A882]/20 bg-[#C4A882]/5 p-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#C4A882]">
+          <div className="rounded-xl border border-[rgb(var(--accent-warm-rgb)/0.20)] bg-[rgb(var(--accent-warm-rgb)/0.05)] p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-warm)]">
               {locale === "zh" ? "新版本 — 行动项" : "New Version — Action Items"}
             </p>
             <ul className="space-y-2">
               {safeArray<{ description: string; priority: string }>(newReport?.action_items).slice(0, 5).map((a, i) => (
-                <li key={i} className="text-xs text-[#9B9594] flex items-start gap-2">
-                  <Badge variant="secondary" className={`shrink-0 text-[9px] ${a.priority === "critical" ? "bg-[#F87171]/10 text-[#F87171]" : "bg-[#1C1C1C] text-[#666462]"}`}>
+                <li key={i} className="text-xs text-[color:var(--text-secondary)] flex items-start gap-2">
+                  <Badge variant="secondary" className={`shrink-0 text-[9px] ${a.priority === "critical" ? "bg-[#F87171]/10 text-[#F87171]" : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-tertiary)]"}`}>
                     {a.priority}
                   </Badge>
                   <span>{a.description}</span>
