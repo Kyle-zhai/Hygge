@@ -10,6 +10,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      storageKey="hygge-theme"
+      themes={["light", "dark", "system"]}
     >
       {children}
     </NextThemesProvider>
