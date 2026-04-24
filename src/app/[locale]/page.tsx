@@ -606,7 +606,7 @@ export default async function LandingPage() {
           }
           items={faqItems}
           footerLabel={isZh ? "还有疑问?" : "Still have questions?"}
-          footerText={isZh ? "写信给 yn.zhai0205@gmail.com" : "Email yn.zhai0205@gmail.com"}
+          footerText={isZh ? "写信给: yn.zhai0205@gmail.com" : "Email: yn.zhai0205@gmail.com"}
           footerHref="mailto:yn.zhai0205@gmail.com"
         />
 
