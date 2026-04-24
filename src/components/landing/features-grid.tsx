@@ -9,7 +9,7 @@ import {
   Zap,
   Layers,
 } from "lucide-react";
-import { cardReveal, staggerContainer, fadeInUp } from "@/lib/animations";
+import { fadeInUp, staggerContainer } from "@/lib/animations";
 
 const iconMap = {
   Brain,
@@ -27,104 +27,92 @@ interface Feature {
 }
 
 interface FeaturesGridProps {
+  overline?: string;
   heading: string;
   subtitle: string;
   features: Feature[];
 }
 
 export function FeaturesGrid({
+  overline,
   heading,
   subtitle,
   features,
 }: FeaturesGridProps) {
   return (
-    <section className="relative px-4 py-32 overflow-hidden">
-      {/* Atmospheric layers */}
+    <section className="relative overflow-hidden px-4 py-28 sm:py-36">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 30% 0%, rgba(var(--atmosphere-warm-rgb),0.05), transparent 60%), radial-gradient(ellipse 60% 50% at 75% 100%, rgba(var(--atmosphere-cream-rgb),0.05), transparent 60%)",
+            "radial-gradient(ellipse 60% 40% at 50% 50%, rgba(var(--atmosphere-cream-rgb),0.025), transparent 70%)",
         }}
       />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.15) 50%, transparent)",
+            "linear-gradient(90deg, transparent, rgba(var(--hairline-rgb),0.1) 50%, transparent)",
         }}
       />
 
       <div className="relative z-10 mx-auto max-w-6xl">
         <motion.div
-          variants={staggerContainer(0.06)}
+          variants={staggerContainer(0.08)}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
-          className="space-y-12"
+          className="mb-16 text-center"
         >
-          {/* Heading */}
-          <div className="text-center">
-            <motion.h2
+          {overline && (
+            <motion.span
               variants={fadeInUp}
-              className="text-3xl font-semibold tracking-[-0.02em] text-[color:var(--text-primary)] sm:text-4xl"
+              className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--accent-warm)]"
             >
-              {heading}
-            </motion.h2>
-            <motion.p
-              variants={fadeInUp}
-              className="mx-auto mt-4 max-w-xl text-base text-[color:var(--text-secondary)]"
-            >
-              {subtitle}
-            </motion.p>
-          </div>
-
-          {/* 2x3 grid */}
-          <motion.div
-            variants={staggerContainer(0.06)}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              {overline}
+            </motion.span>
+          )}
+          <motion.h2
+            variants={fadeInUp}
+            className="mx-auto mt-4 max-w-3xl text-3xl font-semibold tracking-[-0.02em] text-[color:var(--text-primary)] sm:text-[2.4rem] sm:leading-[1.1]"
           >
-            {features.map((feature, i) => {
-              const Icon = iconMap[feature.iconName];
-              return (
-                <motion.div
-                  key={feature.title}
-                  variants={cardReveal(i)}
-                  className="group relative overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-gradient-to-b from-[color:var(--panel-grad-top)] to-[color:var(--panel-grad-bottom)] p-6 transition-all duration-500 hover:border-[color:var(--border-hover)] hover:-translate-y-1 hover:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9),0_0_0_1px_rgba(var(--atmosphere-cream-rgb),0.05)_inset]"
-                  style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
-                >
-                  {/* Hover spotlight */}
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                      background:
-                        "radial-gradient(circle at 50% 0%, rgba(var(--atmosphere-cream-rgb),0.08), transparent 70%)",
-                    }}
-                  />
-                  {/* Top hairline that brightens on hover */}
-                  <div
-                    className="pointer-events-none absolute inset-x-6 top-0 h-px opacity-40 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.5), transparent)",
-                    }}
-                  />
-                  <div className="relative mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[color:var(--bg-tertiary)] to-[color:var(--bg-secondary)] ring-1 ring-[color:var(--border-default)] transition-all duration-500 group-hover:ring-[color:var(--border-hover)] group-hover:shadow-[0_0_20px_-5px_rgba(var(--atmosphere-cream-rgb),0.15)]">
-                    <Icon className="h-5 w-5 text-[color:var(--accent-primary)]" />
-                  </div>
-                  <h3 className="relative mb-2 text-base font-semibold text-[color:var(--text-primary)]">
-                    {feature.title}
-                  </h3>
-                  <p className="relative text-sm leading-relaxed text-[color:var(--text-secondary)]">
-                    {feature.desc}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+            {heading}
+          </motion.h2>
+          <motion.p
+            variants={fadeInUp}
+            className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[color:var(--text-secondary)]"
+          >
+            {subtitle}
+          </motion.p>
+        </motion.div>
+
+        <motion.div
+          variants={staggerContainer(0.05)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-60px" }}
+          className="grid gap-px overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--border-default)] sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {features.map((feature) => {
+            const Icon = iconMap[feature.iconName];
+            return (
+              <motion.div
+                key={feature.title}
+                variants={fadeInUp}
+                className="group relative bg-[color:var(--bg-primary)] p-7 transition-colors duration-300 hover:bg-[color:var(--bg-secondary)]/50"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--bg-secondary)] ring-1 ring-[color:var(--border-default)] transition-colors duration-300 group-hover:ring-[color:var(--border-hover)]">
+                  <Icon className="h-4 w-4 text-[color:var(--accent-warm)]" />
+                </div>
+                <h3 className="mt-5 text-[15px] font-semibold text-[color:var(--text-primary)]">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">
+                  {feature.desc}
+                </p>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </section>
