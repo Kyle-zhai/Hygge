@@ -28,7 +28,11 @@ import {
   Settings,
   Users,
   Languages,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 
 interface HistoryItem {
@@ -68,6 +72,13 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gate SSR mismatch
+    setThemeMounted(true);
+  }, []);
+  const currentTheme = themeMounted ? theme ?? "system" : "system";
   const filterBtnRef = useRef<HTMLButtonElement>(null);
   const discussionRef = useRef<HTMLDivElement>(null);
 
@@ -768,6 +779,51 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                       }`}
                     >
                       中文
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[color:var(--text-secondary)]">
+                  {currentTheme === "dark" ? (
+                    <Moon className="h-4 w-4 shrink-0" />
+                  ) : currentTheme === "light" ? (
+                    <Sun className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <Monitor className="h-4 w-4 shrink-0" />
+                  )}
+                  <span className="flex-1">{locale === "zh" ? "主题" : "Theme"}</span>
+                  <div className="flex items-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] p-0.5 text-[11px] font-medium">
+                    <button
+                      onClick={() => setTheme("system")}
+                      title={locale === "zh" ? "跟随系统" : "System"}
+                      className={`rounded px-1.5 py-0.5 transition-colors ${
+                        currentTheme === "system"
+                          ? "bg-[rgb(var(--accent-warm-rgb)/0.20)] text-[color:var(--accent-warm)]"
+                          : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]"
+                      }`}
+                    >
+                      <Monitor className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => setTheme("light")}
+                      title={locale === "zh" ? "浅色" : "Light"}
+                      className={`rounded px-1.5 py-0.5 transition-colors ${
+                        currentTheme === "light"
+                          ? "bg-[rgb(var(--accent-warm-rgb)/0.20)] text-[color:var(--accent-warm)]"
+                          : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]"
+                      }`}
+                    >
+                      <Sun className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => setTheme("dark")}
+                      title={locale === "zh" ? "深色" : "Dark"}
+                      className={`rounded px-1.5 py-0.5 transition-colors ${
+                        currentTheme === "dark"
+                          ? "bg-[rgb(var(--accent-warm-rgb)/0.20)] text-[color:var(--accent-warm)]"
+                          : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]"
+                      }`}
+                    >
+                      <Moon className="h-3 w-3" />
                     </button>
                   </div>
                 </div>

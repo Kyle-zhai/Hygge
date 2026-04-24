@@ -26,6 +26,7 @@ interface PersonaShowcaseProps {
 
 const AUTOPLAY_STEP_DEG = 12;
 const AUTOPLAY_INTERVAL_MS = 3000;
+const AUTOPLAY_RESUME_MS = 4000;
 const DRAG_FACTOR = 0.25;
 const MOMENTUM = 0.1;
 const CLICK_THRESHOLD_PX = 6;
@@ -75,11 +76,11 @@ export function PersonaShowcase({
     isDragging: false,
     isHovered: false,
     isVisible: false,
-    userEngaged: false,
     startX: 0,
     startRot: 0,
     dragDist: 0,
     autoTimer: null as ReturnType<typeof setInterval> | null,
+    resumeTimer: null as ReturnType<typeof setTimeout> | null,
     reduceMotion: false,
   });
 
@@ -133,17 +134,19 @@ export function PersonaShowcase({
       }
     };
     const startAuto = () => {
-      if (state.reduceMotion || state.userEngaged) return;
+      if (state.reduceMotion) return;
       stopAuto();
       state.autoTimer = setInterval(() => {
-        if (state.isDragging || state.isHovered || !state.isVisible || state.userEngaged) return;
+        if (state.isDragging || state.isHovered || !state.isVisible) return;
         state.rotateY -= AUTOPLAY_STEP_DEG;
         apply();
       }, AUTOPLAY_INTERVAL_MS);
     };
-    const disableAuto = () => {
-      state.userEngaged = true;
-      stopAuto();
+    const scheduleResume = () => {
+      if (state.resumeTimer) clearTimeout(state.resumeTimer);
+      state.resumeTimer = setTimeout(() => {
+        if (!state.isDragging && !state.isHovered && state.isVisible) startAuto();
+      }, AUTOPLAY_RESUME_MS);
     };
 
     const onDown = (clientX: number) => {
@@ -152,7 +155,11 @@ export function PersonaShowcase({
       state.startRot = state.rotateY;
       state.dragDist = 0;
       track.classList.add("is-dragging");
-      disableAuto();
+      stopAuto();
+      if (state.resumeTimer) {
+        clearTimeout(state.resumeTimer);
+        state.resumeTimer = null;
+      }
     };
     const onMove = (clientX: number) => {
       if (!state.isDragging) return;
@@ -168,6 +175,7 @@ export function PersonaShowcase({
       const momentum = (clientX - state.startX) * MOMENTUM;
       state.rotateY += momentum;
       apply();
+      scheduleResume();
     };
 
     const mouseDown = (e: MouseEvent) => {
@@ -188,13 +196,15 @@ export function PersonaShowcase({
     };
     const mouseLeave = () => {
       state.isHovered = false;
+      scheduleResume();
     };
     const wheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
         e.preventDefault();
         state.rotateY -= e.deltaX * 0.5;
         apply();
-        disableAuto();
+        stopAuto();
+        scheduleResume();
       }
     };
 
@@ -230,6 +240,7 @@ export function PersonaShowcase({
       viewport.removeEventListener("wheel", wheel);
       io.disconnect();
       stopAuto();
+      if (state.resumeTimer) clearTimeout(state.resumeTimer);
     };
   }, [apply]);
 
