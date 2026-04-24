@@ -16,7 +16,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-3xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+      <h1 className="text-3xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
         {t("title")}
       </h1>
       <ProfileForm

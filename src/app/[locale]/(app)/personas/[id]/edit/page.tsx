@@ -75,7 +75,7 @@ export default function EditPersonaPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-6 w-6 animate-spin text-[#666462]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[color:var(--text-tertiary)]" />
       </div>
     );
   }
@@ -85,10 +85,10 @@ export default function EditPersonaPage() {
   if (notFound) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <p className="mb-4 text-sm text-[#9B9594]">{zh ? "未找到人格或无法编辑" : "Persona not found or not editable"}</p>
+        <p className="mb-4 text-sm text-[color:var(--text-secondary)]">{zh ? "未找到人格或无法编辑" : "Persona not found or not editable"}</p>
         <Link
           href={`/${locale}/personas`}
-          className="text-sm text-[#C4A882] transition-colors hover:text-[#D4B892]"
+          className="text-sm text-[color:var(--accent-warm)] transition-colors hover:text-[color:var(--accent-warm-hover)]"
         >
           {zh ? "返回我的人格" : "Back to My Personas"}
         </Link>
@@ -100,16 +100,16 @@ export default function EditPersonaPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Link
         href={`/${locale}/personas`}
-        className="mb-6 inline-flex items-center gap-2 text-sm text-[#9B9594] transition-colors hover:text-[#EAEAE8]"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--text-primary)]"
       >
         <ArrowLeft className="h-4 w-4" />
         {zh ? "我的人格" : "My Personas"}
       </Link>
 
-      <h1 className="mb-1 text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+      <h1 className="mb-1 text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
         {zh ? "编辑人格" : "Edit Persona"}
       </h1>
-      <p className="mb-8 text-sm text-[#666462]">
+      <p className="mb-8 text-sm text-[color:var(--text-tertiary)]">
         {zh ? "更新人格对外展示的信息" : "Update your persona's public-facing information"}
       </p>
 
@@ -160,14 +160,14 @@ export default function EditPersonaPage() {
       <div className="mt-8 flex gap-3">
         <Link
           href={`/${locale}/personas`}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#2A2A2A] px-6 py-3 text-sm text-[#9B9594] transition-colors hover:border-[#444] hover:text-[#EAEAE8]"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] px-6 py-3 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[#444] hover:text-[color:var(--text-primary)]"
         >
           {zh ? "取消" : "Cancel"}
         </Link>
         <button
           onClick={handleSave}
           disabled={!name || saving}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#C4A882] px-6 py-3 text-sm font-semibold text-[#0C0C0C] transition-colors hover:bg-[#D4B892] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-warm)] px-6 py-3 text-sm font-semibold text-[color:var(--bg-primary)] transition-colors hover:bg-[color:var(--accent-warm-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -186,13 +186,13 @@ function Field({ label, value, onChange, placeholder }: {
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-2.5 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50"
+        className="w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[#444] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)]"
       />
     </div>
   );
@@ -203,13 +203,13 @@ function FieldArea({ label, value, onChange, placeholder, rows = 3 }: {
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">{label}</label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-2.5 text-sm text-[#EAEAE8] placeholder:text-[#444] outline-none transition-colors focus:border-[#C4A882]/50 resize-none"
+        className="w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[#444] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)] resize-none"
       />
     </div>
   );

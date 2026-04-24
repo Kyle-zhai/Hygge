@@ -20,7 +20,7 @@ export function LocaleSwitcher() {
       variant="ghost"
       size="sm"
       onClick={switchLocale}
-      className="text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] text-xs font-medium"
+      className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] text-xs font-medium"
     >
       {locale === "zh" ? "EN" : "\u4E2D\u6587"}
     </Button>

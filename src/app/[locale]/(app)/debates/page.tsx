@@ -93,7 +93,7 @@ export default function DebatesPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#C4A882]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[color:var(--accent-warm)]" />
       </div>
     );
   }
@@ -101,11 +101,11 @@ export default function DebatesPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="text-center mb-8">
-        <MessageSquare className="mx-auto mb-2 h-6 w-6 text-[#C4A882]" />
-        <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <MessageSquare className="mx-auto mb-2 h-6 w-6 text-[color:var(--accent-warm)]" />
+        <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
           {locale === "zh" ? "1v1 辩论" : "1v1 Debate"}
         </h1>
-        <p className="mt-2 text-sm text-[#666462]">
+        <p className="mt-2 text-sm text-[color:var(--text-tertiary)]">
           {locale === "zh"
             ? "选择一次评估，然后挑战某个 Persona 进行辩论"
             : "Pick an evaluation, then challenge a persona to debate"}
@@ -122,7 +122,7 @@ export default function DebatesPage() {
             className="space-y-2"
           >
             {evaluations.length === 0 && (
-              <p className="text-center text-sm text-[#666462] py-8">
+              <p className="text-center text-sm text-[color:var(--text-tertiary)] py-8">
                 {locale === "zh" ? "没有已完成的评估" : "No completed evaluations yet"}
               </p>
             )}
@@ -134,17 +134,17 @@ export default function DebatesPage() {
                 <button
                   key={ev.id}
                   onClick={() => setSelected(ev)}
-                  className="w-full flex items-center justify-between rounded-xl border border-[#2A2A2A] bg-[#141414] px-4 py-3 text-left transition-colors hover:border-[#C4A882]/30 hover:bg-[#C4A882]/5"
+                  className="w-full flex items-center justify-between rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-4 py-3 text-left transition-colors hover:border-[rgb(var(--accent-warm-rgb)/0.30)] hover:bg-[rgb(var(--accent-warm-rgb)/0.05)]"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[#EAEAE8] truncate">{title}</p>
-                    <p className="text-[10px] text-[#666462] mt-0.5">
+                    <p className="text-sm font-medium text-[color:var(--text-primary)] truncate">{title}</p>
+                    <p className="text-[10px] text-[color:var(--text-tertiary)] mt-0.5">
                       {locale === "zh"
                         ? `${ev.persona_reviews.length} 个人格 · ${new Date(ev.created_at).toLocaleDateString("zh-CN")}`
                         : `${ev.persona_reviews.length} personas · ${new Date(ev.created_at).toLocaleDateString()}`}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-[#666462]" />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-tertiary)]" />
                 </button>
               );
             })}
@@ -158,13 +158,13 @@ export default function DebatesPage() {
           >
             <button
               onClick={() => setSelected(null)}
-              className="flex items-center gap-1.5 text-xs text-[#666462] hover:text-[#9B9594] mb-4 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)] mb-4 transition-colors"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               {locale === "zh" ? "返回" : "Back"}
             </button>
 
-            <p className="text-xs font-medium text-[#666462] uppercase tracking-wide mb-3">
+            <p className="text-xs font-medium text-[color:var(--text-tertiary)] uppercase tracking-wide mb-3">
               {locale === "zh" ? "选择 Persona 开始辩论" : "Choose a Persona to Debate"}
             </p>
 
@@ -177,13 +177,13 @@ export default function DebatesPage() {
                     key={review.persona_id}
                     onClick={() => startDebate(selected.id, review.persona_id)}
                     disabled={starting === review.persona_id}
-                    className="w-full flex items-center gap-3 rounded-xl border border-[#2A2A2A] bg-[#141414] px-4 py-3 text-left transition-colors hover:border-[#C4A882]/30 hover:bg-[#C4A882]/5 disabled:opacity-50"
+                    className="w-full flex items-center gap-3 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-4 py-3 text-left transition-colors hover:border-[rgb(var(--accent-warm-rgb)/0.30)] hover:bg-[rgb(var(--accent-warm-rgb)/0.05)] disabled:opacity-50"
                   >
                     <PersonaAvatar avatar={persona.identity.avatar} size={36} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#EAEAE8]">{getPersonaName(persona)}</p>
-                      <p className="text-[10px] text-[#666462]">{persona.demographics.occupation}</p>
-                      <p className="text-xs text-[#9B9594] mt-1 line-clamp-2">{review.review_text}</p>
+                      <p className="text-sm font-medium text-[color:var(--text-primary)]">{getPersonaName(persona)}</p>
+                      <p className="text-[10px] text-[color:var(--text-tertiary)]">{persona.demographics.occupation}</p>
+                      <p className="text-xs text-[color:var(--text-secondary)] mt-1 line-clamp-2">{review.review_text}</p>
                     </div>
                     {review.overall_stance && (
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -191,15 +191,15 @@ export default function DebatesPage() {
                           ? "bg-[#4ADE80]/10 text-[#4ADE80]"
                           : review.overall_stance.includes("negative")
                           ? "bg-[#F87171]/10 text-[#F87171]"
-                          : "bg-[#666462]/10 text-[#666462]"
+                          : "bg-[rgb(var(--text-tertiary-rgb)/0.10)] text-[color:var(--text-tertiary)]"
                       }`}>
                         {review.overall_stance}
                       </span>
                     )}
                     {starting === review.persona_id ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#C4A882]" />
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[color:var(--accent-warm)]" />
                     ) : (
-                      <ArrowRight className="h-4 w-4 shrink-0 text-[#666462]" />
+                      <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-tertiary)]" />
                     )}
                   </button>
                 );

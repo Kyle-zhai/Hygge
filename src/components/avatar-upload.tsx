@@ -40,19 +40,19 @@ export function AvatarUpload({
 
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#EAEAE8]">Avatar</label>
+      <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">Avatar</label>
       <div className="flex items-center gap-4">
         <div className="relative">
           {value ? (
             <PersonaAvatar avatar={value} size={64} />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1C1C1C] text-[#666462]">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-[color:var(--text-tertiary)]">
               <Camera className="h-6 w-6" />
             </div>
           )}
           {uploading && (
             <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60">
-              <Loader2 className="h-5 w-5 animate-spin text-[#C4A882]" />
+              <Loader2 className="h-5 w-5 animate-spin text-[color:var(--accent-warm)]" />
             </div>
           )}
         </div>
@@ -61,7 +61,7 @@ export function AvatarUpload({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="rounded-lg border border-[#2A2A2A] px-3 py-1.5 text-xs text-[#9B9594] transition-colors hover:border-[#444] hover:text-[#EAEAE8] disabled:opacity-40"
+            className="rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:border-[#444] hover:text-[color:var(--text-primary)] disabled:opacity-40"
           >
             {isImageUrl ? "Change image" : "Upload image"}
           </button>
@@ -69,12 +69,12 @@ export function AvatarUpload({
             <button
               type="button"
               onClick={() => onChange("")}
-              className="text-left text-xs text-[#666462] transition-colors hover:text-[#9B9594]"
+              className="text-left text-xs text-[color:var(--text-tertiary)] transition-colors hover:text-[color:var(--text-secondary)]"
             >
               Remove image
             </button>
           )}
-          <p className="text-[10px] text-[#666462]">PNG, JPG, WebP · Max 2MB</p>
+          <p className="text-[10px] text-[color:var(--text-tertiary)]">PNG, JPG, WebP · Max 2MB</p>
         </div>
         <input
           ref={inputRef}

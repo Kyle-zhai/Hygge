@@ -112,14 +112,14 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
             key={plan.key}
             className={`relative flex flex-col rounded-2xl border transition-all duration-300 ${
               plan.isPopular
-                ? "border-[#E2DDD5]/60 bg-[#141414] shadow-[0_0_40px_-12px_rgba(226,221,213,0.12)]"
-                : "border-[#2A2A2A] bg-[#141414] hover:border-[#3A3A3A]"
+                ? "border-[rgb(var(--accent-primary-rgb)/0.60)] bg-[color:var(--bg-secondary)] shadow-[0_0_40px_-12px_rgba(226,221,213,0.12)]"
+                : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] hover:border-[color:var(--border-hover)]"
             }`}
           >
             {/* Popular badge */}
             {plan.isPopular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="border-0 bg-[#E2DDD5] px-3 py-1 text-xs font-semibold text-[#0C0C0C]">
+                <Badge className="border-0 bg-[color:var(--accent-primary)] px-3 py-1 text-xs font-semibold text-[color:var(--bg-primary)]">
                   <Sparkles className="mr-1 h-3 w-3" />
                   {t("mostPopular")}
                 </Badge>
@@ -127,12 +127,12 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
             )}
 
             {/* Header: name + price */}
-            <div className="px-6 pt-8 pb-5 text-center border-b border-[#2A2A2A]/50">
-              <h3 className="text-lg font-semibold text-[#EAEAE8]">{plan.name}</h3>
+            <div className="px-6 pt-8 pb-5 text-center border-b border-[rgb(var(--border-default-rgb)/0.50)]">
+              <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">{plan.name}</h3>
               <div className="mt-3 flex items-baseline justify-center gap-1">
-                <span className="text-4xl font-bold text-[#EAEAE8]">{plan.price}</span>
+                <span className="text-4xl font-bold text-[color:var(--text-primary)]">{plan.price}</span>
                 {plan.price !== "$0" && (
-                  <span className="text-sm text-[#666462]">{t("perMonth")}</span>
+                  <span className="text-sm text-[color:var(--text-tertiary)]">{t("perMonth")}</span>
                 )}
               </div>
             </div>
@@ -143,21 +143,21 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
                 {plan.base.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#4ADE80]" />
-                    <span className="text-[#9B9594]">{feature}</span>
+                    <span className="text-[color:var(--text-secondary)]">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               {plan.extras.length > 0 && (
-                <div className="mt-3 border-t border-[#C4A882]/20 pt-3">
-                  <p className="mb-2.5 text-xs text-[#C4A882]">
+                <div className="mt-3 border-t border-[rgb(var(--accent-warm-rgb)/0.20)] pt-3">
+                  <p className="mb-2.5 text-xs text-[color:var(--accent-warm)]">
                     {t("includedIn", { plan: plan.key === "max" ? t("pro") : t("free") })}
                   </p>
                   <ul className="space-y-3">
                     {plan.extras.map((extra, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#C4A882]" />
-                        <span className="text-[#EAEAE8] font-medium">{extra}</span>
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--accent-warm)]" />
+                        <span className="text-[color:var(--text-primary)] font-medium">{extra}</span>
                       </li>
                     ))}
                   </ul>
@@ -171,7 +171,7 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
                 <Button
                   variant="outline"
                   disabled
-                  className="w-full border-[#2A2A2A] bg-transparent text-[#666462]"
+                  className="w-full border-[color:var(--border-default)] bg-transparent text-[color:var(--text-tertiary)]"
                 >
                   {t("currentPlan")}
                 </Button>
@@ -179,8 +179,8 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
                 <Button
                   className={`w-full font-semibold ${
                     plan.isPopular
-                      ? "bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] btn-glow"
-                      : "bg-[#1C1C1C] text-[#EAEAE8] hover:bg-[#222222] border border-[#2A2A2A]"
+                      ? "bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--bg-primary)] btn-glow"
+                      : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-hover)] border border-[color:var(--border-default)]"
                   }`}
                   disabled={isLoading}
                   onClick={() => handleAction(plan.key)}
@@ -196,7 +196,7 @@ export function PricingComparison({ currentPlan }: PricingComparisonProps) {
                 <button
                   onClick={() => handleAction(plan.key)}
                   disabled={isLoading || plan.key === "free"}
-                  className="w-full py-2 text-center text-sm text-[#666462] transition-colors hover:text-[#9B9594] disabled:opacity-40"
+                  className="w-full py-2 text-center text-sm text-[color:var(--text-tertiary)] transition-colors hover:text-[color:var(--text-secondary)] disabled:opacity-40"
                 >
                   {isLoading ? (
                     <Loader2 className="mx-auto h-4 w-4 animate-spin" />

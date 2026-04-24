@@ -28,25 +28,25 @@ export function UserMenu({ email }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <Avatar className="h-8 w-8 border border-[#2A2A2A] bg-[#1C1C1C]">
-          <AvatarFallback className="bg-[#1C1C1C] text-[#E2DDD5] text-sm font-medium">
+        <Avatar className="h-8 w-8 border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)]">
+          <AvatarFallback className="bg-[color:var(--bg-tertiary)] text-[color:var(--accent-primary)] text-sm font-medium">
             {email[0].toUpperCase()}
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-[#2A2A2A] bg-[#141414]">
-        <DropdownMenuItem className="text-sm text-[#666462]" disabled>
+      <DropdownMenuContent align="end" className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
+        <DropdownMenuItem className="text-sm text-[color:var(--text-tertiary)]" disabled>
           {email}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => router.push("/settings")}
-          className="text-[#9B9594] hover:text-[#EAEAE8] focus:bg-[#1C1C1C] focus:text-[#EAEAE8]"
+          className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] focus:bg-[color:var(--bg-tertiary)] focus:text-[color:var(--text-primary)]"
         >
           {t("settings")}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={handleLogout}
-          className="text-[#9B9594] hover:text-[#EAEAE8] focus:bg-[#1C1C1C] focus:text-[#EAEAE8]"
+          className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] focus:bg-[color:var(--bg-tertiary)] focus:text-[color:var(--text-primary)]"
         >
           {t("logout")}
         </DropdownMenuItem>

@@ -70,12 +70,12 @@ export default async function PublicSharePage({
 
   return (
     <div>
-      <div className="border-b border-[#2A2A2A] bg-[#141414]/60 backdrop-blur-sm">
+      <div className="border-b border-[color:var(--border-default)] bg-[rgb(var(--bg-secondary-rgb)/0.60)] backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
-          <span className="text-xs text-[#9B9594]">{banner}</span>
+          <span className="text-xs text-[color:var(--text-secondary)]">{banner}</span>
           <Link
             href={`/${locale}`}
-            className="text-xs font-medium text-[#C4A882] hover:text-[#D4B892]"
+            className="text-xs font-medium text-[color:var(--accent-warm)] hover:text-[color:var(--accent-warm-hover)]"
           >
             {cta} →
           </Link>

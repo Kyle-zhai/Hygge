@@ -14,10 +14,10 @@ export function Paywall({ locale, onDismiss }: PaywallProps) {
   return (
     <div
       role="alert"
-      className="mx-auto mt-4 max-w-2xl rounded-2xl border border-[#C4A882]/30 bg-[#1C1C1C] p-6 text-[#EAEAE8] shadow-lg"
+      className="mx-auto mt-4 max-w-2xl rounded-2xl border border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[color:var(--bg-tertiary)] p-6 text-[color:var(--text-primary)] shadow-lg"
     >
       <h2 className="text-lg font-semibold tracking-[-0.01em]">{t("heading")}</h2>
-      <p className="mt-2 text-sm text-[#9B9594]">{t("body")}</p>
+      <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t("body")}</p>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button asChild>
           <Link href={`/${locale}/pricing?reason=quota`}>{t("upgradeCta")}</Link>

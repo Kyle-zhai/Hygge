@@ -18,29 +18,29 @@ export function ProfileForm({ email, plan, evaluationsUsed, evaluationsLimit }: 
 
   return (
     <div className="space-y-6">
-      <Card className="border-[#2A2A2A] bg-[#141414]">
+      <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
         <CardHeader>
-          <CardTitle className="text-[#EAEAE8]">{t("profile")}</CardTitle>
+          <CardTitle className="text-[color:var(--text-primary)]">{t("profile")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[#9B9594]">{t("email")}</Label>
+            <Label className="text-[color:var(--text-secondary)]">{t("email")}</Label>
             <Input
               value={email}
               disabled
-              className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8] disabled:opacity-60"
+              className="border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] disabled:opacity-60"
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-[#2A2A2A] bg-[#141414]">
+      <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
         <CardHeader>
-          <CardTitle className="text-[#EAEAE8]">{t("subscription")}</CardTitle>
+          <CardTitle className="text-[color:var(--text-primary)]">{t("subscription")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-sm text-[#EAEAE8]">{td("plan", { plan: plan.toUpperCase() })}</p>
-          <p className="text-sm text-[#9B9594]">
+          <p className="text-sm text-[color:var(--text-primary)]">{td("plan", { plan: plan.toUpperCase() })}</p>
+          <p className="text-sm text-[color:var(--text-secondary)]">
             {td("evaluationsUsed", { used: evaluationsUsed, limit: evaluationsLimit })}
           </p>
         </CardContent>

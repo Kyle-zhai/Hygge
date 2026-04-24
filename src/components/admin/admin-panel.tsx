@@ -91,9 +91,9 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-[#2A2A2A] bg-[#141414]">
+      <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
         <CardHeader>
-          <CardTitle className="text-[#EAEAE8]">Look up user</CardTitle>
+          <CardTitle className="text-[color:var(--text-primary)]">Look up user</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={search} className="flex gap-2">
@@ -105,7 +105,7 @@ export function AdminPanel() {
                 placeholder="user@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border-[#2A2A2A] bg-[#1C1C1C] text-[#EAEAE8]"
+                className="border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)]"
                 autoComplete="off"
               />
             </div>
@@ -119,18 +119,18 @@ export function AdminPanel() {
       </Card>
 
       {result && result.user === null && (
-        <Card className="border-[#2A2A2A] bg-[#141414]">
+        <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
           <CardContent className="py-6">
-            <p className="text-sm text-[#9B9594]">No user found for that email.</p>
+            <p className="text-sm text-[color:var(--text-secondary)]">No user found for that email.</p>
           </CardContent>
         </Card>
       )}
 
       {result?.user && (
         <>
-          <Card className="border-[#2A2A2A] bg-[#141414]">
+          <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
             <CardHeader>
-              <CardTitle className="text-[#EAEAE8]">User</CardTitle>
+              <CardTitle className="text-[color:var(--text-primary)]">User</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <Row label="Email" value={result.user.email} />
@@ -140,9 +140,9 @@ export function AdminPanel() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#2A2A2A] bg-[#141414]">
+          <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
             <CardHeader>
-              <CardTitle className="text-[#EAEAE8]">Subscription</CardTitle>
+              <CardTitle className="text-[color:var(--text-primary)]">Subscription</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {result.subscription ? (
@@ -162,7 +162,7 @@ export function AdminPanel() {
                   />
                   <Row label="Stripe sub" value={result.subscription.stripe_subscription_id ?? "—"} mono />
 
-                  <div className="mt-4 flex flex-wrap gap-2 border-t border-[#2A2A2A] pt-4">
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-[color:var(--border-default)] pt-4">
                     {PLANS.map((p) => (
                       <Button
                         key={p}
@@ -185,25 +185,25 @@ export function AdminPanel() {
                   </div>
                 </>
               ) : (
-                <p className="text-[#9B9594]">No subscription row.</p>
+                <p className="text-[color:var(--text-secondary)]">No subscription row.</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-[#2A2A2A] bg-[#141414]">
+          <Card className="border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
             <CardHeader>
-              <CardTitle className="text-[#EAEAE8]">Recent evaluations</CardTitle>
+              <CardTitle className="text-[color:var(--text-primary)]">Recent evaluations</CardTitle>
             </CardHeader>
             <CardContent>
               {result.recentEvaluations && result.recentEvaluations.length > 0 ? (
                 <ul className="space-y-2 text-sm">
                   {result.recentEvaluations.map((e) => (
-                    <li key={e.id} className="rounded border border-[#2A2A2A] bg-[#1C1C1C] px-3 py-2">
+                    <li key={e.id} className="rounded border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] px-3 py-2">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="font-mono text-xs text-[#9B9594]">{e.id.slice(0, 8)}</span>
-                        <span className="text-[#9B9594]">{e.mode}</span>
+                        <span className="font-mono text-xs text-[color:var(--text-secondary)]">{e.id.slice(0, 8)}</span>
+                        <span className="text-[color:var(--text-secondary)]">{e.mode}</span>
                         <span className={statusColor(e.status)}>{e.status}</span>
-                        <span className="text-[#9B9594]">{new Date(e.created_at).toLocaleString()}</span>
+                        <span className="text-[color:var(--text-secondary)]">{new Date(e.created_at).toLocaleString()}</span>
                       </div>
                       {e.error_message && (
                         <p className="mt-1 text-xs text-red-400">{e.error_message.slice(0, 200)}</p>
@@ -212,7 +212,7 @@ export function AdminPanel() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-[#9B9594]">No evaluations yet.</p>
+                <p className="text-sm text-[color:var(--text-secondary)]">No evaluations yet.</p>
               )}
             </CardContent>
           </Card>
@@ -225,8 +225,8 @@ export function AdminPanel() {
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-[#9B9594]">{label}</span>
-      <span className={mono ? "font-mono text-xs text-[#EAEAE8]" : "text-[#EAEAE8]"}>{value}</span>
+      <span className="text-[color:var(--text-secondary)]">{label}</span>
+      <span className={mono ? "font-mono text-xs text-[color:var(--text-primary)]" : "text-[color:var(--text-primary)]"}>{value}</span>
     </div>
   );
 }

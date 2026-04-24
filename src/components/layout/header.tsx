@@ -20,9 +20,9 @@ export async function Header() {
         <Link href={`/${locale}`} className="flex items-center gap-2">
           {/* Logo — three overlapping circles: multi-perspective warmth */}
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-            <circle cx="10" cy="10" r="7" stroke="#C4A882" strokeWidth="1.5" opacity="0.5" />
-            <circle cx="14" cy="10" r="7" stroke="#E2DDD5" strokeWidth="1.5" opacity="0.7" />
-            <circle cx="12" cy="14" r="7" stroke="#E2DDD5" strokeWidth="1.5" opacity="0.9" />
+            <circle cx="10" cy="10" r="7" stroke="var(--accent-warm)" strokeWidth="1.5" opacity="0.5" />
+            <circle cx="14" cy="10" r="7" stroke="var(--accent-primary)" strokeWidth="1.5" opacity="0.7" />
+            <circle cx="12" cy="14" r="7" stroke="var(--accent-primary)" strokeWidth="1.5" opacity="0.9" />
           </svg>
           <span className="text-xl font-semibold italic text-[color:var(--text-primary)]">
             Hygge

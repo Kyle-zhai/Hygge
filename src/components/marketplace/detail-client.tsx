@@ -149,34 +149,34 @@ export function MarketplaceDetailClient({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <header className="rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6">
+      <header className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-6">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1C1C1C] text-2xl">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-2xl">
             {persona.identity.avatar}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-semibold text-[#EAEAE8] tracking-[-0.01em]">
+            <h1 className="text-xl font-semibold text-[color:var(--text-primary)] tracking-[-0.01em]">
               {persona.identity.name}
             </h1>
-            <p className="text-sm text-[#9B9594] mt-0.5">{persona.demographics.occupation}</p>
-            <p className="text-xs text-[#666462] mt-1.5">{persona.identity.tagline}</p>
+            <p className="text-sm text-[color:var(--text-secondary)] mt-0.5">{persona.demographics.occupation}</p>
+            <p className="text-xs text-[color:var(--text-tertiary)] mt-1.5">{persona.identity.tagline}</p>
           </div>
           <button
             type="button"
             onClick={toggleSave}
             disabled={savingBookmark}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#2A2A2A] px-3 py-1.5 text-xs text-[#C4A882] hover:border-[#C4A882]/40 hover:bg-[#C4A882]/5 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-default)] px-3 py-1.5 text-xs text-[color:var(--accent-warm)] hover:border-[rgb(var(--accent-warm-rgb)/0.40)] hover:bg-[rgb(var(--accent-warm-rgb)/0.05)] transition-colors disabled:opacity-50"
           >
             {saved ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
             {saved ? L(locale, "已收藏", "Saved") : L(locale, "收藏", "Save")}
           </button>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-4 text-xs text-[#9B9594]">
+        <div className="mt-5 flex flex-wrap items-center gap-4 text-xs text-[color:var(--text-secondary)]">
           {summary.avg !== null && summary.count > 0 && (
             <div className="flex items-center gap-1.5">
-              <Star className="h-3.5 w-3.5 fill-[#C4A882] text-[#C4A882]" />
-              <span className="font-semibold text-[#EAEAE8]">{summary.avg?.toFixed(1)}</span>
+              <Star className="h-3.5 w-3.5 fill-[color:var(--accent-warm)] text-[color:var(--accent-warm)]" />
+              <span className="font-semibold text-[color:var(--text-primary)]">{summary.avg?.toFixed(1)}</span>
               <span>
                 ({summary.count} {L(locale, "评价", "reviews")})
               </span>
@@ -188,7 +188,7 @@ export function MarketplaceDetailClient({
             </span>
           )}
           {(persona.tags ?? []).slice(0, 5).map((t) => (
-            <span key={t} className="rounded bg-[#1C1C1C] px-2 py-0.5 text-[10px] text-[#9B9594]">
+            <span key={t} className="rounded bg-[color:var(--bg-tertiary)] px-2 py-0.5 text-[10px] text-[color:var(--text-secondary)]">
               {t}
             </span>
           ))}
@@ -196,13 +196,13 @@ export function MarketplaceDetailClient({
       </header>
 
       {/* Detail sections */}
-      <section className="rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 space-y-5">
+      <section className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-6 space-y-5">
         {persona.description && (
           <div>
-            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[#C4A882] mb-2">
+            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--accent-warm)] mb-2">
               {L(locale, "简介", "About")}
             </h2>
-            <p className="text-sm text-[#EAEAE8] leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-[color:var(--text-primary)] leading-relaxed whitespace-pre-wrap">
               {persona.description}
             </p>
           </div>
@@ -210,10 +210,10 @@ export function MarketplaceDetailClient({
 
         {persona.evaluation_lens?.primary_question && (
           <div>
-            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[#C4A882] mb-2">
+            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--accent-warm)] mb-2">
               {L(locale, "评估视角", "Evaluation Lens")}
             </h2>
-            <p className="text-sm text-[#9B9594] leading-relaxed italic">
+            <p className="text-sm text-[color:var(--text-secondary)] leading-relaxed italic">
               &ldquo;{persona.evaluation_lens.primary_question}&rdquo;
             </p>
           </div>
@@ -221,12 +221,12 @@ export function MarketplaceDetailClient({
 
         {(persona.latent_needs ?? []).length > 0 && (
           <div>
-            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[#C4A882] mb-2">
+            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--accent-warm)] mb-2">
               {L(locale, "潜在需求", "Latent Needs")}
             </h2>
             <ul className="space-y-1.5">
               {(persona.latent_needs ?? []).map((n, i) => (
-                <li key={i} className="text-sm text-[#9B9594] leading-relaxed">
+                <li key={i} className="text-sm text-[color:var(--text-secondary)] leading-relaxed">
                   • {n}
                 </li>
               ))}
@@ -236,14 +236,14 @@ export function MarketplaceDetailClient({
 
         {(persona.scenarios ?? []).length > 0 && (
           <div>
-            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[#C4A882] mb-2">
+            <h2 className="text-[10px] font-semibold uppercase tracking-widest text-[color:var(--accent-warm)] mb-2">
               {L(locale, "适用场景", "Best for")}
             </h2>
             <div className="flex flex-wrap gap-1.5">
               {(persona.scenarios ?? []).map((s) => (
                 <span
                   key={s}
-                  className="rounded-full border border-[#2A2A2A] bg-[#1C1C1C] px-2.5 py-1 text-xs text-[#9B9594]"
+                  className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] px-2.5 py-1 text-xs text-[color:var(--text-secondary)]"
                 >
                   {s}
                 </span>
@@ -254,17 +254,17 @@ export function MarketplaceDetailClient({
       </section>
 
       {/* Reviews */}
-      <section className="rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6">
+      <section className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-6">
         <div className="flex items-baseline justify-between mb-5">
-          <h2 className="text-sm font-semibold text-[#EAEAE8]">
+          <h2 className="text-sm font-semibold text-[color:var(--text-primary)]">
             {L(locale, "评价", "Reviews")}
           </h2>
-          <span className="text-xs text-[#666462]">{reviews.length}</span>
+          <span className="text-xs text-[color:var(--text-tertiary)]">{reviews.length}</span>
         </div>
 
         {canReview && (
-          <div className="mb-6 rounded-xl border border-[#2A2A2A] bg-[#0C0C0C] p-4">
-            <p className="text-xs text-[#9B9594] mb-2">
+          <div className="mb-6 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] p-4">
+            <p className="text-xs text-[color:var(--text-secondary)] mb-2">
               {existingOwn
                 ? L(locale, "更新你的评价", "Update your review")
                 : L(locale, "留下你的评价", "Leave a review")}
@@ -281,8 +281,8 @@ export function MarketplaceDetailClient({
                   <Star
                     className={`h-5 w-5 transition-colors ${
                       n <= draftRating
-                        ? "fill-[#C4A882] text-[#C4A882]"
-                        : "text-[#3A3A3A] hover:text-[#9B9594]"
+                        ? "fill-[color:var(--accent-warm)] text-[color:var(--accent-warm)]"
+                        : "text-[color:var(--border-hover)] hover:text-[color:var(--text-secondary)]"
                     }`}
                   />
                 </button>
@@ -293,7 +293,7 @@ export function MarketplaceDetailClient({
               onChange={(e) => setDraftContent(e.target.value)}
               placeholder={L(locale, "分享你的使用感受（可选）", "Share your experience (optional)")}
               rows={3}
-              className="w-full resize-none rounded-lg border border-[#2A2A2A] bg-[#141414] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#666462] focus:outline-none focus:border-[#C4A882]/40"
+              className="w-full resize-none rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] focus:outline-none focus:border-[rgb(var(--accent-warm-rgb)/0.40)]"
             />
             {error && <p className="mt-2 text-xs text-[#EF4444]">{error}</p>}
             <div className="mt-3 flex items-center gap-2">
@@ -301,7 +301,7 @@ export function MarketplaceDetailClient({
                 type="button"
                 onClick={submitReview}
                 disabled={submitting || !draftRating}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#C4A882] px-4 py-2 text-xs font-medium text-[#0C0C0C] hover:bg-[#D4B892] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--accent-warm)] px-4 py-2 text-xs font-medium text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-warm-hover)] disabled:opacity-50"
               >
                 {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {existingOwn
@@ -313,7 +313,7 @@ export function MarketplaceDetailClient({
                   type="button"
                   onClick={deleteOwnReview}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 text-xs text-[#9B9594] hover:text-[#EF4444] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs text-[color:var(--text-secondary)] hover:text-[#EF4444] transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   {L(locale, "删除", "Delete")}
@@ -324,13 +324,13 @@ export function MarketplaceDetailClient({
         )}
 
         {reviews.length === 0 ? (
-          <p className="text-xs text-[#666462] py-4">
+          <p className="text-xs text-[color:var(--text-tertiary)] py-4">
             {L(locale, "暂无评价", "No reviews yet")}
           </p>
         ) : (
           <ul className="space-y-4">
             {reviews.map((r) => (
-              <li key={r.id} className="border-t border-[#2A2A2A]/60 pt-4 first:border-t-0 first:pt-0">
+              <li key={r.id} className="border-t border-[rgb(var(--border-default-rgb)/0.60)] pt-4 first:border-t-0 first:pt-0">
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="flex items-center gap-0.5">
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -338,23 +338,23 @@ export function MarketplaceDetailClient({
                         key={n}
                         className={`h-3.5 w-3.5 ${
                           n <= r.rating
-                            ? "fill-[#C4A882] text-[#C4A882]"
-                            : "text-[#3A3A3A]"
+                            ? "fill-[color:var(--accent-warm)] text-[color:var(--accent-warm)]"
+                            : "text-[color:var(--border-hover)]"
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="text-[10px] text-[#666462]">
+                  <span className="text-[10px] text-[color:var(--text-tertiary)]">
                     {formatDate(r.created_at, locale)}
                   </span>
                   {r.author_id === currentUserId && (
-                    <span className="text-[10px] text-[#C4A882]/80">
+                    <span className="text-[10px] text-[rgb(var(--accent-warm-rgb)/0.80)]">
                       {L(locale, "你", "you")}
                     </span>
                   )}
                 </div>
                 {r.content && (
-                  <p className="text-sm text-[#9B9594] leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-[color:var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
                     {r.content}
                   </p>
                 )}

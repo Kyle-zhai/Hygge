@@ -20,7 +20,7 @@ export function PersonaAvatar({
   if (isUrl(avatar)) {
     return (
       <div
-        className={`shrink-0 overflow-hidden rounded-full bg-[#1C1C1C] ${className}`}
+        className={`shrink-0 overflow-hidden rounded-full bg-[color:var(--bg-tertiary)] ${className}`}
         style={{ width: size, height: size }}
       >
         <Image
@@ -36,7 +36,7 @@ export function PersonaAvatar({
 
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] ${className}`}
       style={{ width: size, height: size, fontSize: size * 0.5 }}
     >
       {avatar}

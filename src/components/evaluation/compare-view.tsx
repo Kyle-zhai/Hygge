@@ -48,9 +48,9 @@ function pointText(raw: unknown): string {
 }
 
 function scoreColor(score: number | null): string {
-  if (score === null) return "#666462";
+  if (score === null) return "var(--text-tertiary)";
   if (score >= 7) return "#4ADE80";
-  if (score >= 5) return "#C4A882";
+  if (score >= 5) return "var(--accent-warm)";
   return "#F87171";
 }
 
@@ -81,16 +81,16 @@ export function CompareView({ items, locale }: CompareViewProps) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#1C1C1C]">
-            <Scale className="h-6 w-6 text-[#666462]" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)]">
+            <Scale className="h-6 w-6 text-[color:var(--text-tertiary)]" />
           </div>
-          <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+          <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
             {t("compareTitle")}
           </h1>
-          <p className="mt-2 text-sm text-[#9B9594]">{t("compareEmpty")}</p>
+          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t("compareEmpty")}</p>
           <Link
             href={`/${locale}/evaluate/new?mode=topic`}
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#E2DDD5] px-4 py-2 text-sm font-medium text-[#0C0C0C] hover:bg-[#D4CFC7]"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[color:var(--accent-primary)] px-4 py-2 text-sm font-medium text-[color:var(--bg-primary)] hover:bg-[color:var(--accent-primary-hover)]"
           >
             {tCommon("newEvaluation")}
           </Link>
@@ -103,12 +103,12 @@ export function CompareView({ items, locale }: CompareViewProps) {
     <div className="mx-auto w-full max-w-6xl px-4 py-8 space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <Scale className="h-5 w-5 text-[#C4A882]" />
-          <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+          <Scale className="h-5 w-5 text-[color:var(--accent-warm)]" />
+          <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
             {t("compareTitle")}
           </h1>
         </div>
-        <p className="text-sm text-[#9B9594]">{t("compareSubtitle")}</p>
+        <p className="text-sm text-[color:var(--text-secondary)]">{t("compareSubtitle")}</p>
       </div>
 
       {/* Slot pickers */}
@@ -137,15 +137,15 @@ export function CompareView({ items, locale }: CompareViewProps) {
           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] items-center">
             <SlotHeader item={left} locale={locale} t={t} />
             <div className="hidden md:flex items-center justify-center">
-              <ArrowRight className="h-5 w-5 text-[#666462]" />
+              <ArrowRight className="h-5 w-5 text-[color:var(--text-tertiary)]" />
             </div>
             <SlotHeader item={right} locale={locale} t={t} />
           </div>
 
           {/* Overall score delta */}
           {left.overallScore != null && right.overallScore != null && (
-            <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+            <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
                 {t("overallScore")}
               </p>
               <div className="flex items-end justify-between gap-6">
@@ -156,7 +156,7 @@ export function CompareView({ items, locale }: CompareViewProps) {
                   >
                     {left.overallScore.toFixed(1)}
                   </div>
-                  <p className="mt-1 text-xs text-[#666462] truncate max-w-[240px]">{left.title}</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-tertiary)] truncate max-w-[240px]">{left.title}</p>
                 </div>
                 {scoreDelta !== null && (
                   <div className="text-center">
@@ -164,13 +164,13 @@ export function CompareView({ items, locale }: CompareViewProps) {
                       className="text-lg font-medium"
                       style={{
                         color:
-                          scoreDelta > 0 ? "#4ADE80" : scoreDelta < 0 ? "#F87171" : "#9B9594",
+                          scoreDelta > 0 ? "#4ADE80" : scoreDelta < 0 ? "#F87171" : "var(--text-secondary)",
                       }}
                     >
                       {scoreDelta > 0 ? "+" : ""}
                       {scoreDelta.toFixed(1)}
                     </div>
-                    <p className="text-[10px] uppercase text-[#666462]">Δ</p>
+                    <p className="text-[10px] uppercase text-[color:var(--text-tertiary)]">Δ</p>
                   </div>
                 )}
                 <div className="text-right">
@@ -180,7 +180,7 @@ export function CompareView({ items, locale }: CompareViewProps) {
                   >
                     {right.overallScore.toFixed(1)}
                   </div>
-                  <p className="mt-1 text-xs text-[#666462] truncate max-w-[240px] ml-auto">{right.title}</p>
+                  <p className="mt-1 text-xs text-[color:var(--text-tertiary)] truncate max-w-[240px] ml-auto">{right.title}</p>
                 </div>
               </div>
             </div>
@@ -239,12 +239,12 @@ function SlotPicker({
 }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#666462]">{label}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">{label}</p>
       <div className="relative">
         <select
           value={selectedId ?? ""}
           onChange={(e) => onSelect(e.target.value)}
-          className="w-full appearance-none rounded-lg border border-[#2A2A2A] bg-[#141414] px-3 py-2.5 text-sm text-[#EAEAE8] focus:outline-none focus:border-[#3A3A3A]"
+          className="w-full appearance-none rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] focus:outline-none focus:border-[color:var(--border-hover)]"
         >
           {items.map((item) => (
             <option key={item.evaluationId} value={item.evaluationId} disabled={item.evaluationId === otherId}>
@@ -267,17 +267,17 @@ function SlotHeader({
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] font-semibold uppercase text-[#666462]">
+        <span className="text-[10px] font-semibold uppercase text-[color:var(--text-tertiary)]">
           {item.mode === "product" ? t("modeProduct") : t("modeTopic")}
         </span>
-        <span className="text-[10px] text-[#666462]">·</span>
-        <span className="text-[10px] text-[#666462]">
+        <span className="text-[10px] text-[color:var(--text-tertiary)]">·</span>
+        <span className="text-[10px] text-[color:var(--text-tertiary)]">
           {formatDate(item.completedAt || item.createdAt, locale)}
         </span>
       </div>
-      <p className="text-sm font-medium text-[#EAEAE8] line-clamp-2">{item.title}</p>
+      <p className="text-sm font-medium text-[color:var(--text-primary)] line-clamp-2">{item.title}</p>
     </div>
   );
 }
@@ -310,8 +310,8 @@ function DimensionsDiff({
   }
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
         {t("dimensionAnalysis")}
       </p>
       <div className="space-y-3">
@@ -330,12 +330,12 @@ function DimensionsDiff({
                 </span>
               </div>
               <div className="text-center min-w-[100px]">
-                <p className="text-xs text-[#9B9594]">{key}</p>
+                <p className="text-xs text-[color:var(--text-secondary)]">{key}</p>
                 {delta !== null && (
                   <p
                     className="text-[10px] tabular-nums"
                     style={{
-                      color: delta > 0 ? "#4ADE80" : delta < 0 ? "#F87171" : "#666462",
+                      color: delta > 0 ? "#4ADE80" : delta < 0 ? "#F87171" : "var(--text-tertiary)",
                     }}
                   >
                     {delta > 0 ? "+" : ""}
@@ -385,15 +385,15 @@ function PointsPanel({
   );
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">{title}</p>
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">{title}</p>
       <div className="space-y-3">
         {overlap.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[10px] uppercase text-[#9B9594]">Shared</p>
+            <p className="mb-1.5 text-[10px] uppercase text-[color:var(--text-secondary)]">Shared</p>
             <ul className="space-y-1.5">
               {overlap.slice(0, 3).map((p, i) => (
-                <li key={i} className="flex gap-2 text-xs text-[#EAEAE8]">
+                <li key={i} className="flex gap-2 text-xs text-[color:var(--text-primary)]">
                   <Check className="h-3 w-3 mt-0.5 shrink-0" style={{ color: accent }} />
                   <span className="line-clamp-2">{p}</span>
                 </li>
@@ -403,11 +403,11 @@ function PointsPanel({
         )}
         {leftUnique.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[10px] uppercase text-[#9B9594] truncate">A · {leftLabel}</p>
+            <p className="mb-1.5 text-[10px] uppercase text-[color:var(--text-secondary)] truncate">A · {leftLabel}</p>
             <ul className="space-y-1.5">
               {leftUnique.slice(0, 3).map((p, i) => (
-                <li key={i} className="flex gap-2 text-xs text-[#9B9594]">
-                  <span className="text-[#666462]">·</span>
+                <li key={i} className="flex gap-2 text-xs text-[color:var(--text-secondary)]">
+                  <span className="text-[color:var(--text-tertiary)]">·</span>
                   <span className="line-clamp-2">{p}</span>
                 </li>
               ))}
@@ -416,11 +416,11 @@ function PointsPanel({
         )}
         {rightUnique.length > 0 && (
           <div>
-            <p className="mb-1.5 text-[10px] uppercase text-[#9B9594] truncate">B · {rightLabel}</p>
+            <p className="mb-1.5 text-[10px] uppercase text-[color:var(--text-secondary)] truncate">B · {rightLabel}</p>
             <ul className="space-y-1.5">
               {rightUnique.slice(0, 3).map((p, i) => (
-                <li key={i} className="flex gap-2 text-xs text-[#9B9594]">
-                  <span className="text-[#666462]">·</span>
+                <li key={i} className="flex gap-2 text-xs text-[color:var(--text-secondary)]">
+                  <span className="text-[color:var(--text-tertiary)]">·</span>
                   <span className="line-clamp-2">{p}</span>
                 </li>
               ))}
@@ -428,7 +428,7 @@ function PointsPanel({
           </div>
         )}
         {overlap.length === 0 && leftUnique.length === 0 && rightUnique.length === 0 && (
-          <p className="text-xs text-[#666462]">—</p>
+          <p className="text-xs text-[color:var(--text-tertiary)]">—</p>
         )}
       </div>
     </div>
@@ -444,21 +444,21 @@ function ActionItemsPanel({
 }) {
   const items = item.actionItems.slice(0, 4);
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-5">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462] truncate">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-5">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)] truncate">
         {t("actionItems")} · {item.title}
       </p>
       {items.length === 0 ? (
-        <p className="text-xs text-[#666462]">—</p>
+        <p className="text-xs text-[color:var(--text-tertiary)]">—</p>
       ) : (
         <ul className="space-y-2">
           {items.map((a, i) => (
             <li key={i} className="flex gap-2 text-xs">
-              <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-[#C4A882]" />
+              <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-[color:var(--accent-warm)]" />
               <div className="min-w-0">
-                <p className="text-[#EAEAE8] line-clamp-2">{a.title || a.description || "—"}</p>
+                <p className="text-[color:var(--text-primary)] line-clamp-2">{a.title || a.description || "—"}</p>
                 {a.priority && (
-                  <p className="mt-0.5 text-[10px] uppercase text-[#666462]">{a.priority}</p>
+                  <p className="mt-0.5 text-[10px] uppercase text-[color:var(--text-tertiary)]">{a.priority}</p>
                 )}
               </div>
             </li>

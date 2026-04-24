@@ -17,7 +17,7 @@ const priorityColors: Record<string, string> = {
   critical: "bg-[#F87171]/10 text-[#F87171] border-[#F87171]/20",
   high: "bg-[#F97316]/10 text-[#F97316] border-[#F97316]/20",
   medium: "bg-[#FBBF24]/10 text-[#FBBF24] border-[#FBBF24]/20",
-  low: "bg-[#1C1C1C] text-[#9B9594] border-[#2A2A2A]",
+  low: "bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)] border-[color:var(--border-default)]",
 };
 
 interface PersonaIdentityLike {
@@ -198,7 +198,7 @@ function scoreColor(score: number): string {
   if (score >= 6) return "#FBBF24";
   if (score >= 4) return "#F97316";
   if (score > 0) return "#F87171";
-  return "#666462";
+  return "var(--text-tertiary)";
 }
 
 function scoreGradient(score: number): string {
@@ -320,7 +320,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
         <Button
           variant="ghost"
           onClick={onBack}
-          className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] -ml-2"
+          className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] -ml-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           {locale === "zh" ? "返回文字报告" : "Back to Report"}
@@ -333,12 +333,12 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 text-center"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 text-center"
         >
-          <div className="text-3xl font-bold" style={{ color: isTopicMode ? "#EAEAE8" : scoreColor(displayScore) }}>
+          <div className="text-3xl font-bold" style={{ color: isTopicMode ? "var(--text-primary)" : scoreColor(displayScore) }}>
             {isTopicMode ? `${report?.consensus_score ?? 0}%` : displayScore}
           </div>
-          <p className="mt-1 text-xs text-[#666462]">
+          <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
             {isTopicMode ? (locale === "zh" ? "共识度" : "Consensus") : (locale === "zh" ? "综合评分" : "Overall Score")}
           </p>
           {report && (
@@ -352,13 +352,13 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 text-center"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 text-center"
         >
           <div className="flex items-center justify-center gap-1.5">
-            <Users className="h-5 w-5 text-[#9B9594]" />
-            <span className="text-3xl font-bold text-[#EAEAE8]">{reviews.length}</span>
+            <Users className="h-5 w-5 text-[color:var(--text-secondary)]" />
+            <span className="text-3xl font-bold text-[color:var(--text-primary)]">{reviews.length}</span>
           </div>
-          <p className="mt-1 text-xs text-[#666462]">
+          <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
             {locale === "zh" ? "评估者" : "Personas"}
           </p>
         </motion.div>
@@ -367,13 +367,13 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 text-center"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 text-center"
         >
           <div className="flex items-center justify-center gap-1">
             <TrendingUp className="h-4 w-4 text-[#4ADE80]" />
             <span className="text-lg font-bold text-[#4ADE80]">{topDim?.avg.toFixed(1) ?? "-"}</span>
           </div>
-          <p className="mt-1 text-xs text-[#666462] truncate" title={topDim ? dimLabel(topDim.dim) : ""}>
+          <p className="mt-1 text-xs text-[color:var(--text-tertiary)] truncate" title={topDim ? dimLabel(topDim.dim) : ""}>
             {topDim ? dimLabel(topDim.dim) : "-"}
           </p>
           <p className="text-[10px] text-[#555]">{locale === "zh" ? "最强维度" : "Top Dimension"}</p>
@@ -383,13 +383,13 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 text-center"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 text-center"
         >
           <div className="flex items-center justify-center gap-1">
             <TrendingDown className="h-4 w-4 text-[#F97316]" />
             <span className="text-lg font-bold text-[#F97316]">{weakDim?.avg.toFixed(1) ?? "-"}</span>
           </div>
-          <p className="mt-1 text-xs text-[#666462] truncate" title={weakDim ? dimLabel(weakDim.dim) : ""}>
+          <p className="mt-1 text-xs text-[color:var(--text-tertiary)] truncate" title={weakDim ? dimLabel(weakDim.dim) : ""}>
             {weakDim ? dimLabel(weakDim.dim) : "-"}
           </p>
           <p className="text-[10px] text-[#555]">{locale === "zh" ? "最弱维度" : "Needs Attention"}</p>
@@ -399,15 +399,15 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {/* ═══ Score Heatmap Matrix ═══ */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-[#9B9594]" />
-          <h2 className="text-lg font-semibold text-[#EAEAE8]">
+          <BarChart3 className="h-5 w-5 text-[color:var(--text-secondary)]" />
+          <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">
             {locale === "zh" ? "评分矩阵" : "Score Matrix"}
           </h2>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#0C0C0C]">
+        <div className="overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)]">
           <table className="w-full min-w-[600px]">
             <thead>
-              <tr className="border-b border-[#2A2A2A]">
+              <tr className="border-b border-[color:var(--border-default)]">
                 <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-[#555]">
                   {locale === "zh" ? "评估者" : "Persona"}
                 </th>
@@ -416,7 +416,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                     {dimLabel(dim)}
                   </th>
                 ))}
-                <th className="px-3 py-3 text-center text-[11px] font-medium uppercase tracking-wider text-[#9B9594]">
+                <th className="px-3 py-3 text-center text-[11px] font-medium uppercase tracking-wider text-[color:var(--text-secondary)]">
                   {locale === "zh" ? "均分" : "AVG"}
                 </th>
               </tr>
@@ -428,12 +428,12 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.05 * idx }}
-                  className={idx < personaRankings.length - 1 ? "border-b border-[#1A1A1A]" : ""}
+                  className={idx < personaRankings.length - 1 ? "border-b border-[color:var(--bg-hover)]" : ""}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="text-base">{p.avatar}</span>
-                      <span className="text-sm font-medium text-[#EAEAE8] truncate max-w-[120px]">{p.name}</span>
+                      <span className="text-sm font-medium text-[color:var(--text-primary)] truncate max-w-[120px]">{p.name}</span>
                     </div>
                   </td>
                   {p.entries.map(entry => {
@@ -464,8 +464,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 </motion.tr>
               ))}
               {/* Average row */}
-              <tr className="border-t-2 border-[#2A2A2A] bg-[#111]">
-                <td className="px-4 py-3 text-sm font-semibold text-[#9B9594]">
+              <tr className="border-t-2 border-[color:var(--border-default)] bg-[#111]">
+                <td className="px-4 py-3 text-sm font-semibold text-[color:var(--text-secondary)]">
                   {locale === "zh" ? "平均值" : "Average"}
                 </td>
                 {dimensionStats.map(stat => {
@@ -479,7 +479,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                   );
                 })}
                 <td className="px-3 py-3 text-center">
-                  <span className="text-sm font-bold text-[#EAEAE8]">{globalStats.avg.toFixed(1)}</span>
+                  <span className="text-sm font-bold text-[color:var(--text-primary)]">{globalStats.avg.toFixed(1)}</span>
                 </td>
               </tr>
             </tbody>
@@ -499,8 +499,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {/* ═══ Dimension Rankings ═══ */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-[#9B9594]" />
-          <h2 className="text-lg font-semibold text-[#EAEAE8]">
+          <Target className="h-5 w-5 text-[color:var(--text-secondary)]" />
+          <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">
             {locale === "zh" ? "维度排名" : "Dimension Rankings"}
           </h2>
         </div>
@@ -516,12 +516,12 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.06 * i }}
-                className="rounded-lg border border-[#2A2A2A] bg-[#141414] p-4"
+                className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-[#555] w-5">#{i + 1}</span>
-                    <span className="text-sm font-medium text-[#EAEAE8]">{dimLabel(stat.dim)}</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">{dimLabel(stat.dim)}</span>
                   </div>
                   <span className="text-lg font-bold" style={{ color: scoreColor(normalized) }}>
                     {stat.avg.toFixed(1)}
@@ -529,7 +529,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                   </span>
                 </div>
                 {/* Bar with range */}
-                <div className="relative h-2 rounded-full bg-[#1C1C1C] overflow-hidden">
+                <div className="relative h-2 rounded-full bg-[color:var(--bg-tertiary)] overflow-hidden">
                   {stat.count > 1 && (
                     <div
                       className="absolute h-full bg-[#222] rounded-full"
@@ -551,7 +551,7 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 </div>
                 {/* Analysis snippet from report */}
                 {stat.analysis?.analysis && (
-                  <p className="mt-2 text-xs text-[#666462] leading-relaxed line-clamp-2">{stat.analysis.analysis}</p>
+                  <p className="mt-2 text-xs text-[color:var(--text-tertiary)] leading-relaxed line-clamp-2">{stat.analysis.analysis}</p>
                 )}
               </motion.div>
             );
@@ -562,8 +562,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {/* ═══ Persona Rankings ═══ */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-[#9B9594]" />
-          <h2 className="text-lg font-semibold text-[#EAEAE8]">
+          <Users className="h-5 w-5 text-[color:var(--text-secondary)]" />
+          <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">
             {locale === "zh" ? "评估者排名" : "Persona Rankings"}
           </h2>
         </div>
@@ -577,21 +577,21 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.06 * rank }}
-                className="flex items-center gap-3 rounded-lg border border-[#2A2A2A] bg-[#141414] p-3"
+                className="flex items-center gap-3 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-3"
               >
-                <span className="text-xl font-bold text-[#2A2A2A] w-8 text-center shrink-0">
+                <span className="text-xl font-bold text-[color:var(--border-default)] w-8 text-center shrink-0">
                   {rank + 1}
                 </span>
                 <span className="text-xl shrink-0">{p.avatar}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-[#EAEAE8] truncate">{p.name}</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)] truncate">{p.name}</span>
                     <span className="text-sm font-bold shrink-0" style={{ color: scoreColor(normalized) }}>
                       {p.avg.toFixed(1)}
                     </span>
                   </div>
                   {/* Mini bar */}
-                  <div className="h-1 rounded-full bg-[#1C1C1C] overflow-hidden">
+                  <div className="h-1 rounded-full bg-[color:var(--bg-tertiary)] overflow-hidden">
                     <motion.div
                       className="h-full rounded-full"
                       style={{ background: scoreGradient(normalized) }}
@@ -625,8 +625,8 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {reviews.length > 1 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-[#9B9594]" />
-            <h2 className="text-lg font-semibold text-[#EAEAE8]">
+            <Zap className="h-5 w-5 text-[color:var(--text-secondary)]" />
+            <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">
               {locale === "zh" ? "共识与分歧" : "Consensus vs. Divergence"}
             </h2>
           </div>
@@ -646,10 +646,10 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.04 * i }}
-                  className="flex items-center gap-3 rounded-lg bg-[#141414] border border-[#2A2A2A] px-4 py-2.5"
+                  className="flex items-center gap-3 rounded-lg bg-[color:var(--bg-secondary)] border border-[color:var(--border-default)] px-4 py-2.5"
                 >
-                  <span className="w-24 text-xs text-[#9B9594] truncate shrink-0">{dimLabel(stat.dim)}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#1C1C1C] overflow-hidden">
+                  <span className="w-24 text-xs text-[color:var(--text-secondary)] truncate shrink-0">{dimLabel(stat.dim)}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-[color:var(--bg-tertiary)] overflow-hidden">
                     <motion.div
                       className="h-full rounded-full"
                       style={{
@@ -696,13 +696,13 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {!isTopicMode && report && safeArray(report.goal_assessment).length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-[#9B9594]" />
-            <h2 className="text-lg font-semibold text-[#EAEAE8]">{t("goalAssessment")}</h2>
+            <Target className="h-5 w-5 text-[color:var(--text-secondary)]" />
+            <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">{t("goalAssessment")}</h2>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#0C0C0C]">
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)]">
             <table className="w-full min-w-[500px]">
               <thead>
-                <tr className="border-b border-[#2A2A2A]">
+                <tr className="border-b border-[color:var(--border-default)]">
                   <th className="px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-[#555]">
                     {locale === "zh" ? "目标" : "Goal"}
                   </th>
@@ -716,14 +716,14 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               </thead>
               <tbody>
                 {safeArray<ReportData["goal_assessment"][number]>(report.goal_assessment).map((goal, i) => (
-                  <tr key={i} className={i < safeArray(report.goal_assessment).length - 1 ? "border-b border-[#1A1A1A]" : ""}>
-                    <td className="px-4 py-3 text-sm text-[#EAEAE8]">{goal.goal}</td>
+                  <tr key={i} className={i < safeArray(report.goal_assessment).length - 1 ? "border-b border-[color:var(--bg-hover)]" : ""}>
+                    <td className="px-4 py-3 text-sm text-[color:var(--text-primary)]">{goal.goal}</td>
                     <td className="px-3 py-3 text-center">
                       <Badge className={`text-[10px] ${goal.achievable ? "bg-[#4ADE80]/10 text-[#4ADE80]" : "bg-[#F87171]/10 text-[#F87171]"}`}>
                         {goal.achievable ? t("achievable") : t("notAchievable")}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#9B9594]">{goal.current_status}</td>
+                    <td className="px-4 py-3 text-xs text-[color:var(--text-secondary)]">{goal.current_status}</td>
                   </tr>
                 ))}
               </tbody>
@@ -736,13 +736,13 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
       {!isTopicMode && report && safeArray(report.action_items).length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-[#9B9594]" />
-            <h2 className="text-lg font-semibold text-[#EAEAE8]">{t("actionItems")}</h2>
+            <Zap className="h-5 w-5 text-[color:var(--text-secondary)]" />
+            <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">{t("actionItems")}</h2>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#0C0C0C]">
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)]">
             <table className="w-full min-w-[600px]">
               <thead>
-                <tr className="border-b border-[#2A2A2A]">
+                <tr className="border-b border-[color:var(--border-default)]">
                   <th className="px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-[#555]">
                     {locale === "zh" ? "行动项" : "Action"}
                   </th>
@@ -759,16 +759,16 @@ export function ReportScoresView({ report, reviews, personas, locale, onBack, to
               </thead>
               <tbody>
                 {safeArray<ReportData["action_items"][number]>(report.action_items).map((item, i) => (
-                  <tr key={i} className={i < safeArray(report.action_items).length - 1 ? "border-b border-[#1A1A1A]" : ""}>
-                    <td className="px-4 py-3 text-sm text-[#EAEAE8] max-w-[300px]">{item.description}</td>
+                  <tr key={i} className={i < safeArray(report.action_items).length - 1 ? "border-b border-[color:var(--bg-hover)]" : ""}>
+                    <td className="px-4 py-3 text-sm text-[color:var(--text-primary)] max-w-[300px]">{item.description}</td>
                     <td className="px-3 py-3 text-center">
                       <Badge className={`text-[10px] border ${priorityColors[item.priority] || priorityColors.medium}`}>
                         {safeTr(t, item.priority, item.priority || "medium")}
                       </Badge>
                     </td>
-                    <td className="px-3 py-3 text-center text-xs text-[#9B9594]">{item.expected_impact}</td>
+                    <td className="px-3 py-3 text-center text-xs text-[color:var(--text-secondary)]">{item.expected_impact}</td>
                     <td className="px-3 py-3 text-center">
-                      <span className="text-xs text-[#666462]">{safeTr(t, item.difficulty, item.difficulty || "medium")}</span>
+                      <span className="text-xs text-[color:var(--text-tertiary)]">{safeTr(t, item.difficulty, item.difficulty || "medium")}</span>
                     </td>
                   </tr>
                 ))}

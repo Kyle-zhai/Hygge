@@ -66,7 +66,7 @@ export default async function MarketplaceDetailPage({
     <div className="mx-auto max-w-3xl px-4 py-8">
       <Link
         href={`/${locale}/marketplace`}
-        className="inline-flex items-center gap-1.5 text-xs text-[#9B9594] hover:text-[#EAEAE8] transition-colors mb-6"
+        className="inline-flex items-center gap-1.5 text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors mb-6"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {locale === "zh" ? "返回市场" : "Back to marketplace"}

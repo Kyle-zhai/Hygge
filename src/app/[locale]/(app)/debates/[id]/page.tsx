@@ -144,7 +144,7 @@ export default function DebateChatPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[#C4A882]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[color:var(--accent-warm)]" />
       </div>
     );
   }
@@ -152,10 +152,10 @@ export default function DebateChatPage() {
   return (
     <div className="flex h-[calc(100vh-56px)] flex-col">
       {/* Header */}
-      <div className="shrink-0 border-b border-[#1C1C1C] px-4 py-3 flex items-center gap-3">
+      <div className="shrink-0 border-b border-[color:var(--bg-tertiary)] px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="h-8 w-8 flex items-center justify-center rounded-lg text-[#666462] hover:bg-[#1C1C1C] hover:text-[#EAEAE8] transition-colors"
+          className="h-8 w-8 flex items-center justify-center rounded-lg text-[color:var(--text-tertiary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -163,8 +163,8 @@ export default function DebateChatPage() {
           <>
             <PersonaAvatar avatar={persona.identity.avatar} size={28} />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-[#EAEAE8] truncate">{personaName}</p>
-              <p className="text-[10px] text-[#666462]">{persona.demographics.occupation}</p>
+              <p className="text-sm font-medium text-[color:var(--text-primary)] truncate">{personaName}</p>
+              <p className="text-[10px] text-[color:var(--text-tertiary)]">{persona.demographics.occupation}</p>
             </div>
           </>
         )}
@@ -174,7 +174,7 @@ export default function DebateChatPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-sm text-[#666462]">
+            <p className="text-sm text-[color:var(--text-tertiary)]">
               {locale === "zh"
                 ? `开始与 ${personaName} 辩论，试着说服对方改变立场`
                 : `Start debating with ${personaName} — try to change their mind`}
@@ -195,8 +195,8 @@ export default function DebateChatPage() {
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-[#C4A882]/15 text-[#EAEAE8] rounded-br-md"
-                    : "bg-[#1C1C1C] text-[#9B9594] rounded-bl-md"
+                    ? "bg-[rgb(var(--accent-warm-rgb)/0.15)] text-[color:var(--text-primary)] rounded-br-md"
+                    : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)] rounded-bl-md"
                 }`}
               >
                 {msg.content}
@@ -213,10 +213,10 @@ export default function DebateChatPage() {
             className="flex gap-3 items-center"
           >
             {persona && <span className="text-lg">{persona.identity.avatar}</span>}
-            <div className="flex gap-1 bg-[#1C1C1C] rounded-2xl px-4 py-3 rounded-bl-md">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#666462] animate-bounce [animation-delay:0ms]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-[#666462] animate-bounce [animation-delay:150ms]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-[#666462] animate-bounce [animation-delay:300ms]" />
+            <div className="flex gap-1 bg-[color:var(--bg-tertiary)] rounded-2xl px-4 py-3 rounded-bl-md">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--text-tertiary)] animate-bounce [animation-delay:0ms]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--text-tertiary)] animate-bounce [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--text-tertiary)] animate-bounce [animation-delay:300ms]" />
             </div>
           </motion.div>
         )}
@@ -224,9 +224,9 @@ export default function DebateChatPage() {
       </div>
 
       {/* Input — Gemini style auto-expanding */}
-      <div className="shrink-0 border-t border-[#1C1C1C] p-4">
+      <div className="shrink-0 border-t border-[color:var(--bg-tertiary)] p-4">
         <div className="mx-auto max-w-3xl flex items-end gap-2">
-          <div className="flex-1 rounded-2xl border border-[#2A2A2A] bg-[#0C0C0C] px-4 py-2.5 focus-within:border-[#C4A882]/40 transition-colors">
+          <div className="flex-1 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-2.5 focus-within:border-[rgb(var(--accent-warm-rgb)/0.40)] transition-colors">
             <textarea
               ref={inputRef}
               value={input}
@@ -241,14 +241,14 @@ export default function DebateChatPage() {
               onCompositionEnd={() => { composingRef.current = false; }}
               placeholder={locale === "zh" ? "输入你的论点..." : "Make your argument..."}
               rows={1}
-              className="w-full resize-none bg-transparent text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none"
+              className="w-full resize-none bg-transparent text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] outline-none"
               style={{ lineHeight: "1.5", maxHeight: "160px" }}
             />
           </div>
           <button
             onClick={handleSend}
             disabled={!input.trim() || sending}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C4A882] text-[#0C0C0C] transition-all hover:bg-[#D4B892] disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--accent-warm)] text-[color:var(--bg-primary)] transition-all hover:bg-[color:var(--accent-warm-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
           </button>

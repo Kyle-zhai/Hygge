@@ -51,8 +51,8 @@ export function ReviewFeedback({
   const downLabel = locale === "zh" ? "不准确" : "Off-base";
 
   return (
-    <div className="no-print flex items-center gap-2 pt-3 mt-1 border-t border-[#2A2A2A]/40">
-      <span className="text-[11px] text-[#666462] mr-1">{prompt}</span>
+    <div className="no-print flex items-center gap-2 pt-3 mt-1 border-t border-[rgb(var(--border-default-rgb)/0.40)]">
+      <span className="text-[11px] text-[color:var(--text-tertiary)] mr-1">{prompt}</span>
       <button
         type="button"
         disabled={pending}
@@ -62,7 +62,7 @@ export function ReviewFeedback({
         className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors disabled:opacity-60 ${
           value === 1
             ? "border-[#4ADE80]/50 bg-[#4ADE80]/10 text-[#4ADE80]"
-            : "border-[#2A2A2A] text-[#666462] hover:border-[#4ADE80]/30 hover:text-[#9B9594]"
+            : "border-[color:var(--border-default)] text-[color:var(--text-tertiary)] hover:border-[#4ADE80]/30 hover:text-[color:var(--text-secondary)]"
         }`}
       >
         <ThumbsUp className="h-3 w-3" />
@@ -77,7 +77,7 @@ export function ReviewFeedback({
         className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors disabled:opacity-60 ${
           value === -1
             ? "border-[#F87171]/50 bg-[#F87171]/10 text-[#F87171]"
-            : "border-[#2A2A2A] text-[#666462] hover:border-[#F87171]/30 hover:text-[#9B9594]"
+            : "border-[color:var(--border-default)] text-[color:var(--text-tertiary)] hover:border-[#F87171]/30 hover:text-[color:var(--text-secondary)]"
         }`}
       >
         <ThumbsDown className="h-3 w-3" />

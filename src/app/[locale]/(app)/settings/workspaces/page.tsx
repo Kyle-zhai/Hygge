@@ -111,7 +111,7 @@ export default function WorkspacesSettingsPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[#666462]" />
+        <Loader2 className="h-5 w-5 animate-spin text-[color:var(--text-tertiary)]" />
       </div>
     );
   }
@@ -119,10 +119,10 @@ export default function WorkspacesSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[#EAEAE8] tracking-[-0.02em]">
+        <h1 className="text-2xl font-semibold text-[color:var(--text-primary)] tracking-[-0.02em]">
           {zh ? "团队工作区" : "Team Workspaces"}
         </h1>
-        <p className="mt-1 text-sm text-[#9B9594]">
+        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {zh
             ? "与队友共享项目与评估 — 邀请成员，所有人就能看到该工作区下的报告。"
             : "Share projects and evaluations with teammates — invited members see every report scoped to the workspace."}
@@ -130,9 +130,9 @@ export default function WorkspacesSettingsPage() {
       </div>
 
       {workspaces.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#2A2A2A] bg-[#0F0F0F] p-8 text-center">
-          <Users className="mx-auto mb-3 h-7 w-7 text-[#666462]" />
-          <p className="text-sm text-[#9B9594]">
+        <div className="rounded-xl border border-dashed border-[color:var(--border-default)] bg-[#0F0F0F] p-8 text-center">
+          <Users className="mx-auto mb-3 h-7 w-7 text-[color:var(--text-tertiary)]" />
+          <p className="text-sm text-[color:var(--text-secondary)]">
             {zh ? "你还没有加入任何工作区。" : "You're not in any workspace yet."}
           </p>
         </div>
@@ -142,21 +142,21 @@ export default function WorkspacesSettingsPage() {
             const isOpen = expanded === w.id;
             const detail = details[w.id];
             return (
-              <div key={w.id} className="rounded-xl border border-[#2A2A2A] bg-[#141414] overflow-hidden">
+              <div key={w.id} className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleExpand(w.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#1A1A1A] transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[color:var(--bg-hover)] transition-colors"
                 >
-                  <Users className="h-4 w-4 text-[#C4A882]" />
+                  <Users className="h-4 w-4 text-[color:var(--accent-warm)]" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#EAEAE8] truncate">{w.name}</p>
-                    <p className="text-[11px] text-[#666462]">
+                    <p className="text-sm font-medium text-[color:var(--text-primary)] truncate">{w.name}</p>
+                    <p className="text-[11px] text-[color:var(--text-tertiary)]">
                       {w.is_owner ? (zh ? "所有者" : "Owner") : (zh ? "成员" : "Member")}
                       {detail && ` · ${detail.members.length} ${zh ? "人" : "member" + (detail.members.length === 1 ? "" : "s")}`}
                     </p>
                   </div>
-                  {w.is_owner && <Crown className="h-3.5 w-3.5 text-[#C4A882]" />}
+                  {w.is_owner && <Crown className="h-3.5 w-3.5 text-[color:var(--accent-warm)]" />}
                 </button>
                 {isOpen && (
                   <WorkspacePanel
@@ -173,8 +173,8 @@ export default function WorkspacesSettingsPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#666462]">
+      <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
           {zh ? "新建工作区" : "Create a workspace"}
         </p>
         <div className="flex gap-2">
@@ -183,13 +183,13 @@ export default function WorkspacesSettingsPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder={zh ? "例如：设计团队" : "e.g. Design team"}
-            className="flex-1 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none transition-colors focus:border-[#C4A882]/50"
+            className="flex-1 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)]"
           />
           <button
             type="button"
             onClick={createWorkspace}
             disabled={creating || !newName.trim()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#E2DDD5] px-4 py-2 text-sm font-semibold text-[#0C0C0C] transition-colors hover:bg-[#D4CFC7] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[color:var(--bg-primary)] transition-colors hover:bg-[color:var(--accent-primary-hover)] disabled:opacity-50"
           >
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {zh ? "创建" : "Create"}
@@ -226,8 +226,8 @@ function WorkspacePanel({
 
   if (!detail) {
     return (
-      <div className="px-4 py-4 border-t border-[#2A2A2A] flex justify-center">
-        <Loader2 className="h-4 w-4 animate-spin text-[#666462]" />
+      <div className="px-4 py-4 border-t border-[color:var(--border-default)] flex justify-center">
+        <Loader2 className="h-4 w-4 animate-spin text-[color:var(--text-tertiary)]" />
       </div>
     );
   }
@@ -262,19 +262,19 @@ function WorkspacePanel({
   }
 
   return (
-    <div className="border-t border-[#2A2A2A] px-4 py-4 space-y-4">
+    <div className="border-t border-[color:var(--border-default)] px-4 py-4 space-y-4">
       <div>
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#666462]">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-tertiary)]">
           {zh ? "成员" : "Members"}
         </p>
         <ul className="space-y-1.5">
           {members.map((m) => (
             <li key={m.user_id} className="flex items-center gap-2 text-sm">
-              <span className="flex-1 truncate text-[#EAEAE8]">
+              <span className="flex-1 truncate text-[color:var(--text-primary)]">
                 {m.email ?? m.user_id.slice(0, 8)}
               </span>
               {m.role === "owner" && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-[#C4A882]/30 bg-[#C4A882]/5 px-1.5 py-0.5 text-[10px] text-[#C4A882]">
+                <span className="inline-flex items-center gap-1 rounded-md border border-[rgb(var(--accent-warm-rgb)/0.30)] bg-[rgb(var(--accent-warm-rgb)/0.05)] px-1.5 py-0.5 text-[10px] text-[color:var(--accent-warm)]">
                   <Crown className="h-2.5 w-2.5" />
                   {zh ? "所有者" : "Owner"}
                 </span>
@@ -283,7 +283,7 @@ function WorkspacePanel({
                 <button
                   type="button"
                   onClick={() => removeMember(m.user_id)}
-                  className="text-[#666462] hover:text-[#F87171] transition-colors"
+                  className="text-[color:var(--text-tertiary)] hover:text-[#F87171] transition-colors"
                   aria-label={zh ? "移除成员" : "Remove member"}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -296,7 +296,7 @@ function WorkspacePanel({
 
       {workspace.is_owner && (
         <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#666462]">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-tertiary)]">
             {zh ? "邀请成员" : "Invite member"}
           </p>
           <div className="flex gap-2">
@@ -305,19 +305,19 @@ function WorkspacePanel({
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="teammate@example.com"
-              className="flex-1 rounded-lg border border-[#2A2A2A] bg-[#0C0C0C] px-3 py-2 text-sm text-[#EAEAE8] placeholder:text-[#666462] outline-none transition-colors focus:border-[#C4A882]/50"
+              className="flex-1 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] outline-none transition-colors focus:border-[rgb(var(--accent-warm-rgb)/0.50)]"
             />
             <button
               type="button"
               onClick={invite}
               disabled={inviting || !inviteEmail.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-3 py-2 text-xs text-[#9B9594] transition-colors hover:border-[#C4A882]/30 hover:text-[#EAEAE8] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] px-3 py-2 text-xs text-[color:var(--text-secondary)] transition-colors hover:border-[rgb(var(--accent-warm-rgb)/0.30)] hover:text-[color:var(--text-primary)] disabled:opacity-50"
             >
               {inviting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
               {zh ? "邀请" : "Invite"}
             </button>
           </div>
-          <p className="mt-1.5 text-[10px] text-[#666462]">
+          <p className="mt-1.5 text-[10px] text-[color:var(--text-tertiary)]">
             {zh ? "对方必须已用该邮箱注册。" : "The invitee must already have signed up with that email."}
           </p>
           {inviteError && (
@@ -340,7 +340,7 @@ function WorkspacePanel({
           <button
             type="button"
             onClick={onDelete}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#2A2A2A] px-3 py-1.5 text-xs text-[#9B9594] transition-colors hover:border-[#F87171]/50 hover:text-[#F87171]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:border-[#F87171]/50 hover:text-[#F87171]"
           >
             <Trash2 className="h-3.5 w-3.5" />
             {zh ? "删除工作区" : "Delete workspace"}
@@ -349,7 +349,7 @@ function WorkspacePanel({
           <button
             type="button"
             onClick={onLeave}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#2A2A2A] px-3 py-1.5 text-xs text-[#9B9594] transition-colors hover:border-[#F87171]/50 hover:text-[#F87171]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:border-[#F87171]/50 hover:text-[#F87171]"
           >
             <LogOut className="h-3.5 w-3.5" />
             {zh ? "离开工作区" : "Leave workspace"}

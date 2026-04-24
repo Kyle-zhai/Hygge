@@ -57,7 +57,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-[#2A2A2A] bg-[#141414] transition-all duration-300 focus-within:border-[#E2DDD5]/50 focus-within:ring-2 focus-within:ring-[#E2DDD5]/10">
+    <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] transition-all duration-300 focus-within:border-[rgb(var(--accent-primary-rgb)/0.50)] focus-within:ring-2 focus-within:ring-[rgb(var(--accent-primary-rgb)/0.10)]">
       <div className="px-3 pt-3 pb-3">
         <Textarea
           value={text}
@@ -66,26 +66,26 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
           onCompositionStart={() => { composingRef.current = true; }}
           onCompositionEnd={() => { composingRef.current = false; }}
           placeholder={t("inputPlaceholder")}
-          className="min-h-[140px] resize-none border-0 bg-transparent px-3 py-2 text-base text-[#EAEAE8] placeholder:text-[#666462] shadow-none focus-visible:ring-0"
+          className="min-h-[140px] resize-none border-0 bg-transparent px-3 py-2 text-base text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] shadow-none focus-visible:ring-0"
           disabled={disabled}
         />
 
         {files.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-[#2A2A2A] pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-[color:var(--border-default)] pt-3">
             {files.map((file, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] px-3 py-1.5 text-xs"
+                className="flex items-center gap-2 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] px-3 py-1.5 text-xs"
               >
                 {file.type.startsWith("image/") ? (
-                  <Image className="h-3.5 w-3.5 text-[#666462]" />
+                  <Image className="h-3.5 w-3.5 text-[color:var(--text-tertiary)]" />
                 ) : file.type.startsWith("video/") ? (
-                  <Film className="h-3.5 w-3.5 text-[#666462]" />
+                  <Film className="h-3.5 w-3.5 text-[color:var(--text-tertiary)]" />
                 ) : (
-                  <FileText className="h-3.5 w-3.5 text-[#666462]" />
+                  <FileText className="h-3.5 w-3.5 text-[color:var(--text-tertiary)]" />
                 )}
-                <span className="max-w-[120px] truncate text-[#9B9594]">{file.name}</span>
-                <button onClick={() => removeFile(i)} className="text-[#666462] hover:text-[#EAEAE8] transition-colors">
+                <span className="max-w-[120px] truncate text-[color:var(--text-secondary)]">{file.name}</span>
+                <button onClick={() => removeFile(i)} className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -94,7 +94,7 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[#2A2A2A] px-5 py-3">
+      <div className="flex items-center justify-between border-t border-[color:var(--border-default)] px-5 py-3">
         <div className="flex gap-1">
           <input
             id={inputId}
@@ -108,14 +108,14 @@ export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
             type="button"
             disabled={disabled}
             onClick={triggerFileInput}
-            className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#666462] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}
+            className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] transition-colors ${disabled ? "pointer-events-none opacity-50" : ""}`}
           >
             <Paperclip className="h-4 w-4" />
           </button>
         </div>
         <Button
           size="icon"
-          className="h-8 w-8 rounded-lg bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C]"
+          className="h-8 w-8 rounded-lg bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--bg-primary)]"
           onClick={handleSubmit}
           disabled={disabled || (!text.trim() && files.length === 0)}
         >

@@ -77,7 +77,7 @@ export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode 
           return (
             <div key={dim}>
               <div className="flex items-center justify-between mb-1">
-                <span className={`${compact ? "text-[11px]" : "text-xs"} text-[#666462]`}>
+                <span className={`${compact ? "text-[11px]" : "text-xs"} text-[color:var(--text-tertiary)]`}>
                   {dimLabelMap ? dimLabelMap.get(dim) ?? dim : safeTr(t, dim, dim)}
                 </span>
                 <span className="text-[10px] font-medium" style={{ color: config.color }}>
@@ -86,7 +86,7 @@ export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode 
               </div>
               <div className="relative h-1.5 rounded-full bg-gradient-to-r from-[#F87171]/20 via-[#FBBF24]/20 to-[#4ADE80]/20">
                 <motion.div
-                  className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full border-2 border-[#0C0C0C]"
+                  className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full border-2 border-[color:var(--bg-primary)]"
                   style={{ backgroundColor: config.color }}
                   initial={{ left: "50%" }}
                   animate={{ left: `${config.position}%` }}
@@ -107,10 +107,10 @@ export function ScoreBar({ scores, compact, topicDimensions, locale, stanceMode 
         const score = Number(safeScores[dim]) || 0;
         return (
           <div key={dim} className="flex items-center gap-2">
-            <span className={`${compact ? "w-16 text-[11px]" : "w-24 text-xs"} text-[#666462] truncate`}>
+            <span className={`${compact ? "w-16 text-[11px]" : "w-24 text-xs"} text-[color:var(--text-tertiary)] truncate`}>
               {dimLabelMap ? dimLabelMap.get(dim) ?? dim : safeTr(t, dim, dim)}
             </span>
-            <div className="h-1.5 flex-1 rounded-full bg-[#1C1C1C]">
+            <div className="h-1.5 flex-1 rounded-full bg-[color:var(--bg-tertiary)]">
               <motion.div
                 className="h-full rounded-full"
                 style={{ background: scoreGradient(score) }}

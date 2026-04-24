@@ -312,7 +312,7 @@ function PersonaQuoteMini({
       ? "#4ADE80"
       : stance === "oppose"
         ? "#F87171"
-        : "#C4A882";
+        : "var(--accent-warm)";
   return (
     <div className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]/60 p-2.5">
       <div className="flex items-center gap-2">
@@ -503,6 +503,6 @@ function stanceDotColor(label: string) {
     lower.includes("反对")
   )
     return "#F87171";
-  return "#C4A882";
+  return "var(--accent-warm)";
 }
 

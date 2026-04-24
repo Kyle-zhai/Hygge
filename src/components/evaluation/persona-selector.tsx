@@ -352,8 +352,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <Sparkles className="mb-3 h-6 w-6 animate-pulse text-[#E2DDD5]" />
-        <p className="text-sm text-[#9B9594]">{t("aiRecommending")}</p>
+        <Sparkles className="mb-3 h-6 w-6 animate-pulse text-[color:var(--accent-primary)]" />
+        <p className="text-sm text-[color:var(--text-secondary)]">{t("aiRecommending")}</p>
       </div>
     );
   }
@@ -362,13 +362,13 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
     <div className="space-y-4">
       {/* Top bar: count + confirm */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[#9B9594]">
+        <p className="text-sm text-[color:var(--text-secondary)]">
           {t("personaLimit", { max: maxPersonas, count: selectedIds.size })}
         </p>
         <Button
           onClick={() => onConfirm(Array.from(selectedIds))}
           disabled={disabled || selectedIds.size === 0}
-          className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] font-semibold"
+          className="bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--bg-primary)] font-semibold"
         >
           {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : t("startEvaluation")}
         </Button>
@@ -376,7 +376,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
       {/* Squads row */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#666462] uppercase tracking-wide">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[color:var(--text-tertiary)] uppercase tracking-wide">
           <Bookmark className="h-3 w-3" />
           {t("squads")}
         </span>
@@ -385,20 +385,20 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             key={squad.id}
             className={`group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors cursor-pointer ${
               activeSquadId === squad.id
-                ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
-                : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                ? "border-[color:var(--accent-primary)] bg-[rgb(var(--accent-primary-rgb)/0.10)] text-[color:var(--text-primary)]"
+                : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
             }`}
             onClick={() => applySquad(squad)}
           >
             <span className="max-w-[140px] truncate">{squad.name}</span>
-            <span className="text-[#666462]">·{squad.persona_ids.length}</span>
+            <span className="text-[color:var(--text-tertiary)]">·{squad.persona_ids.length}</span>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 deleteSquad(squad.id);
               }}
-              className="ml-0.5 text-[#666462] hover:text-[#F87171] opacity-0 group-hover:opacity-100 transition-opacity"
+              className="ml-0.5 text-[color:var(--text-tertiary)] hover:text-[#F87171] opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label={t("squadDelete")}
             >
               <X className="h-3 w-3" />
@@ -409,14 +409,14 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           type="button"
           disabled={selectedIds.size === 0}
           onClick={() => setShowSaveSquad(true)}
-          className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#3A3A3A] px-2.5 py-1 text-xs text-[#9B9594] hover:border-[#E2DDD5] hover:text-[#EAEAE8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-[color:var(--border-hover)] px-2.5 py-1 text-xs text-[color:var(--text-secondary)] hover:border-[color:var(--accent-primary)] hover:text-[color:var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           + {t("saveSquad")}
         </button>
       </div>
 
       {showSaveSquad && (
-        <div className="rounded-lg border border-[#2A2A2A] bg-[#141414] p-3 flex items-center gap-2">
+        <div className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-3 flex items-center gap-2">
           <input
             autoFocus
             type="text"
@@ -431,13 +431,13 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
               }
             }}
             placeholder={t("squadNamePlaceholder")}
-            className="flex-1 bg-[#0C0C0C] border border-[#2A2A2A] rounded px-3 py-1.5 text-sm text-[#EAEAE8] placeholder:text-[#666462] focus:outline-none focus:border-[#3A3A3A]"
+            className="flex-1 bg-[color:var(--bg-primary)] border border-[color:var(--border-default)] rounded px-3 py-1.5 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] focus:outline-none focus:border-[color:var(--border-hover)]"
           />
           <Button
             size="sm"
             onClick={saveCurrentAsSquad}
             disabled={!squadNameDraft.trim() || savingSquad}
-            className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C]"
+            className="bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--bg-primary)]"
           >
             {savingSquad ? <Loader2 className="h-3 w-3 animate-spin" /> : tCommon("save")}
           </Button>
@@ -448,7 +448,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
               setShowSaveSquad(false);
               setSquadNameDraft("");
             }}
-            className="text-[#9B9594]"
+            className="text-[color:var(--text-secondary)]"
           >
             {tCommon("cancel")}
           </Button>
@@ -458,15 +458,15 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       {/* Shortcuts + demographic filter toggle — always visible at top */}
       <div className="flex flex-wrap items-center gap-2">
         {(hasSaved || hasCustom) && (
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-[#141414] border border-[#2A2A2A] p-1">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--bg-secondary)] border border-[color:var(--border-default)] p-1">
             {hasSaved && (
               <button
                 type="button"
                 onClick={() => setActiveCategory(activeCategory === "my_saved" ? null : "my_saved")}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
                   activeCategory === "my_saved"
-                    ? "bg-[#C4A882] text-[#0C0C0C] shadow-sm"
-                    : "text-[#C4A882] hover:bg-[#C4A882]/10"
+                    ? "bg-[color:var(--accent-warm)] text-[color:var(--bg-primary)] shadow-sm"
+                    : "text-[color:var(--accent-warm)] hover:bg-[rgb(var(--accent-warm-rgb)/0.10)]"
                 }`}
                 aria-pressed={activeCategory === "my_saved"}
               >
@@ -480,8 +480,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                 onClick={() => setActiveCategory(activeCategory === "my_custom" ? null : "my_custom")}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
                   activeCategory === "my_custom"
-                    ? "bg-[#C4A882] text-[#0C0C0C] shadow-sm"
-                    : "text-[#C4A882] hover:bg-[#C4A882]/10"
+                    ? "bg-[color:var(--accent-warm)] text-[color:var(--bg-primary)] shadow-sm"
+                    : "text-[color:var(--accent-warm)] hover:bg-[rgb(var(--accent-warm-rgb)/0.10)]"
                 }`}
                 aria-pressed={activeCategory === "my_custom"}
               >
@@ -495,7 +495,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           <button
             type="button"
             onClick={clearAllFilters}
-            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C] transition-colors"
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)] transition-colors"
           >
             <X className="h-3.5 w-3.5" />
             {locale === "zh" ? "清除筛选" : "Clear filters"}
@@ -506,15 +506,15 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           onClick={() => setShowFilters(!showFilters)}
           className={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
             showFilters
-              ? "border-[#E2DDD5]/40 bg-[#E2DDD5]/5 text-[#EAEAE8]"
-              : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+              ? "border-[rgb(var(--accent-primary-rgb)/0.40)] bg-[rgb(var(--accent-primary-rgb)/0.05)] text-[color:var(--text-primary)]"
+              : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
           }`}
           aria-expanded={showFilters}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           {locale === "zh" ? "人口特征" : "Demographics"}
           {demographicFilterCount > 0 && (
-            <span className="ml-0.5 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full bg-[#C4A882] text-[10px] font-semibold text-[#0C0C0C] px-1">
+            <span className="ml-0.5 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full bg-[color:var(--accent-warm)] text-[10px] font-semibold text-[color:var(--bg-primary)] px-1">
               {demographicFilterCount}
             </span>
           )}
@@ -548,11 +548,11 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
       {/* Expandable filters — demographic overlay (age / gender / income) */}
       {showFilters && (
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 space-y-4">
+        <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 space-y-4">
           {/* Age */}
           <div>
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#9B9594] uppercase tracking-wide">
-              <CalendarRange className="h-3 w-3 text-[#666462]" />
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] uppercase tracking-wide">
+              <CalendarRange className="h-3 w-3 text-[color:var(--text-tertiary)]" />
               {locale === "zh" ? "年龄段" : t("ageRange")}
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -565,8 +565,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                     onClick={() => toggleFilter(ageFilters, range.label, setAgeFilters)}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                       active
-                        ? "border-[#E2DDD5] bg-[#E2DDD5] text-[#0C0C0C]"
-                        : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                        ? "border-[color:var(--accent-primary)] bg-[color:var(--accent-primary)] text-[color:var(--bg-primary)]"
+                        : "border-[color:var(--border-default)] bg-[color:var(--bg-primary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                     }`}
                   >
                     {range.label}
@@ -577,8 +577,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           </div>
           {/* Gender */}
           <div>
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#9B9594] uppercase tracking-wide">
-              <UserRound className="h-3 w-3 text-[#666462]" />
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] uppercase tracking-wide">
+              <UserRound className="h-3 w-3 text-[color:var(--text-tertiary)]" />
               {locale === "zh" ? "性别" : "Gender"}
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -591,8 +591,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                     onClick={() => toggleFilter(genderFilters, g, setGenderFilters)}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                       active
-                        ? "border-[#E2DDD5] bg-[#E2DDD5] text-[#0C0C0C]"
-                        : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                        ? "border-[color:var(--accent-primary)] bg-[color:var(--accent-primary)] text-[color:var(--bg-primary)]"
+                        : "border-[color:var(--border-default)] bg-[color:var(--bg-primary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                     }`}
                   >
                     {genderLabels[g]?.[locale] || g}
@@ -603,8 +603,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           </div>
           {/* Income */}
           <div>
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#9B9594] uppercase tracking-wide">
-              <Wallet className="h-3 w-3 text-[#666462]" />
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] uppercase tracking-wide">
+              <Wallet className="h-3 w-3 text-[color:var(--text-tertiary)]" />
               {locale === "zh" ? "收入水平" : "Income"}
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -617,8 +617,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                     onClick={() => toggleFilter(incomeFilters, inc, setIncomeFilters)}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                       active
-                        ? "border-[#E2DDD5] bg-[#E2DDD5] text-[#0C0C0C]"
-                        : "border-[#2A2A2A] bg-[#0C0C0C] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                        ? "border-[color:var(--accent-primary)] bg-[color:var(--accent-primary)] text-[color:var(--bg-primary)]"
+                        : "border-[color:var(--border-default)] bg-[color:var(--bg-primary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                     }`}
                   >
                     {incomeLabels[inc]?.[locale] || inc}
@@ -628,7 +628,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             </div>
           </div>
           {demographicFilterCount > 0 && (
-            <div className="flex justify-end pt-1 border-t border-[#2A2A2A]">
+            <div className="flex justify-end pt-1 border-t border-[color:var(--border-default)]">
               <button
                 type="button"
                 onClick={() => {
@@ -636,7 +636,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
                   setGenderFilters(new Set());
                   setIncomeFilters(new Set());
                 }}
-                className="inline-flex items-center gap-1 text-[11px] text-[#9B9594] hover:text-[#EAEAE8] transition-colors"
+                className="inline-flex items-center gap-1 text-[11px] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors"
               >
                 <X className="h-3 w-3" />
                 {locale === "zh" ? "清除人口特征" : "Clear demographics"}
@@ -647,7 +647,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       )}
 
       {/* Persona count + grid — always visible, filtered in real time */}
-      <p className="text-xs text-[#666462]">
+      <p className="text-xs text-[color:var(--text-tertiary)]">
         {t("personasFound", { count: filtered.length })}
       </p>
 
@@ -664,30 +664,30 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
           return (
             <div key={persona.id} className="relative group">
               <Card
-                className={`cursor-pointer transition-all border-[#2A2A2A] bg-[#141414] ${
-                  isSelected ? "border-[#E2DDD5] ring-2 ring-[#E2DDD5]/20" : "hover:border-[#3A3A3A]"
+                className={`cursor-pointer transition-all border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] ${
+                  isSelected ? "border-[color:var(--accent-primary)] ring-2 ring-[rgb(var(--accent-primary-rgb)/0.20)]" : "hover:border-[color:var(--border-hover)]"
                 }`}
                 onClick={() => togglePersona(persona.id)}
               >
                 <CardContent className="flex items-center gap-3 p-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1C1C1C] text-lg">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-tertiary)] text-lg">
                     {persona.identity.avatar}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-sm text-[#EAEAE8] truncate">{localized.name}</span>
-                      {isCustom && <User className="h-3 w-3 shrink-0 text-[#C4A882]" />}
+                      <span className="font-medium text-sm text-[color:var(--text-primary)] truncate">{localized.name}</span>
+                      {isCustom && <User className="h-3 w-3 shrink-0 text-[color:var(--accent-warm)]" />}
                       {isPreferred && (
                         <Star
-                          className="h-3 w-3 shrink-0 fill-[#C4A882] text-[#C4A882]"
+                          className="h-3 w-3 shrink-0 fill-[color:var(--accent-warm)] text-[color:var(--accent-warm)]"
                           aria-label={locale === "zh" ? "你偏好的视角" : "You preferred"}
                         />
                       )}
-                      {isSaved && <Heart className="h-3 w-3 shrink-0 text-[#C4A882]" />}
-                      {isRecommended && <Sparkles className="h-3 w-3 shrink-0 text-[#E2DDD5]" />}
-                      {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[#E2DDD5]" />}
+                      {isSaved && <Heart className="h-3 w-3 shrink-0 text-[color:var(--accent-warm)]" />}
+                      {isRecommended && <Sparkles className="h-3 w-3 shrink-0 text-[color:var(--accent-primary)]" />}
+                      {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-[color:var(--accent-primary)]" />}
                     </div>
-                    <p className="mt-0.5 text-xs text-[#666462] truncate">
+                    <p className="mt-0.5 text-xs text-[color:var(--text-tertiary)] truncate">
                       {persona.demographics.occupation && localized.tagline
                         ? `${persona.demographics.occupation} · ${localized.tagline}`
                         : persona.demographics.occupation || localized.tagline || (tags && tags.length > 0 ? tags.slice(0, 2).join(" · ") : "")}
@@ -698,22 +698,22 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
 
               {/* Hover profile card */}
               <div className="pointer-events-none absolute left-0 right-0 bottom-full mb-2 z-50 opacity-0 scale-95 translate-y-1 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0">
-                <div className="rounded-lg border border-[#2A2A2A] bg-[#1C1C1C] p-4 shadow-xl shadow-black/40">
+                <div className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-tertiary)] p-4 shadow-xl shadow-black/40">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#141414] text-lg">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-secondary)] text-lg">
                       {persona.identity.avatar}
                     </div>
                     <div>
-                      <p className="font-medium text-sm text-[#EAEAE8]">{localized.name}</p>
-                      <p className="text-[11px] text-[#666462]">{persona.demographics.occupation}</p>
+                      <p className="font-medium text-sm text-[color:var(--text-primary)]">{localized.name}</p>
+                      <p className="text-[11px] text-[color:var(--text-tertiary)]">{persona.demographics.occupation}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-[#9B9594] italic mb-2">&ldquo;{localized.tagline}&rdquo;</p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#666462]">
+                  <p className="text-xs text-[color:var(--text-secondary)] italic mb-2">&ldquo;{localized.tagline}&rdquo;</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[color:var(--text-tertiary)]">
                     <span>{persona.demographics.age}{locale === "zh" ? "岁" : "y/o"} · {genderLabels[persona.demographics.gender]?.[locale] || persona.demographics.gender}</span>
                     <span>{persona.demographics.occupation}</span>
                   </div>
-                  <p className="mt-2 text-[11px] text-[#9B9594] leading-relaxed line-clamp-2">
+                  <p className="mt-2 text-[11px] text-[color:var(--text-secondary)] leading-relaxed line-clamp-2">
                     {persona.evaluation_lens.primary_question}
                   </p>
                 </div>
@@ -729,7 +729,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
             variant="outline"
             size="sm"
             onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
-            className="border-[#2A2A2A] text-[#9B9594] hover:bg-[#1C1C1C] hover:text-[#EAEAE8]"
+            className="border-[color:var(--border-default)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
           >
             <ChevronDown className="mr-1 h-3.5 w-3.5" />
             {locale === "zh"
@@ -740,8 +740,8 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       )}
 
       {/* Introduction section */}
-      <div className="rounded-lg border border-[#2A2A2A] bg-[#141414]/60 px-4 py-3">
-        <p className="text-xs text-[#9B9594] leading-relaxed">
+      <div className="rounded-lg border border-[color:var(--border-default)] bg-[rgb(var(--bg-secondary-rgb)/0.60)] px-4 py-3">
+        <p className="text-xs text-[color:var(--text-secondary)] leading-relaxed">
           {mode === "product" ? t("personaIntroProduct") : t("personaIntroTopic")}
         </p>
       </div>
@@ -786,8 +786,8 @@ function TopicFilterRows({
               onClick={() => onPickDomain(d.key)}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                 active
-                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8] shadow-sm"
-                  : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                  ? "border-[color:var(--accent-primary)] bg-[rgb(var(--accent-primary-rgb)/0.10)] text-[color:var(--text-primary)] shadow-sm"
+                  : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
               }`}
             >
               {active ? <Check className="h-3 w-3" /> : <Icon className="h-3.5 w-3.5" />}
@@ -799,7 +799,7 @@ function TopicFilterRows({
 
       {/* Level 2: Sub-domains — visible once a domain is picked */}
       {selectedDomain && subDomains.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pl-3 border-l-2 border-[#2A2A2A]">
+        <div className="flex flex-wrap gap-1.5 pl-3 border-l-2 border-[color:var(--border-default)]">
           {subDomains.map((s) => {
             const active = selectedSubDomain === s.key;
             return (
@@ -809,8 +809,8 @@ function TopicFilterRows({
                 onClick={() => onPickSubDomain(s.key)}
                 className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                   active
-                    ? "border-[#C4A882] bg-[#C4A882]/10 text-[#EAEAE8]"
-                    : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    ? "border-[color:var(--accent-warm)] bg-[rgb(var(--accent-warm-rgb)/0.10)] text-[color:var(--text-primary)]"
+                    : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                 }`}
               >
                 {active && <Check className="h-3 w-3" />}
@@ -823,8 +823,8 @@ function TopicFilterRows({
 
       {/* Level 3: Dimensions (multi-select) — visible once a sub-domain is picked */}
       {subDomainObj && subDomainObj.dimensions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 pl-3 border-l-2 border-[#2A2A2A]">
-          <span className="text-[10px] uppercase tracking-wide text-[#666462]">
+        <div className="flex flex-wrap items-center gap-1.5 pl-3 border-l-2 border-[color:var(--border-default)]">
+          <span className="text-[10px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
             {zh ? "维度（可多选）" : "Dimensions (multi)"}
           </span>
           {subDomainObj.dimensions.map((d) => {
@@ -836,8 +836,8 @@ function TopicFilterRows({
                 onClick={() => onToggleDimension(d.key)}
                 className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                   active
-                    ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8]"
-                    : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    ? "border-[color:var(--accent-primary)] bg-[rgb(var(--accent-primary-rgb)/0.10)] text-[color:var(--text-primary)]"
+                    : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                 }`}
               >
                 {active && <Check className="h-3 w-3" />}
@@ -884,8 +884,8 @@ function ProductFilterRows({
               title={zh ? c.description_zh : c.description_en}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                 active
-                  ? "border-[#E2DDD5] bg-[#E2DDD5]/10 text-[#EAEAE8] shadow-sm"
-                  : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                  ? "border-[color:var(--accent-primary)] bg-[rgb(var(--accent-primary-rgb)/0.10)] text-[color:var(--text-primary)] shadow-sm"
+                  : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
               }`}
             >
               {active ? <Check className="h-3 w-3" /> : <Icon className="h-3.5 w-3.5" />}
@@ -897,8 +897,8 @@ function ProductFilterRows({
 
       {/* Level 2: Traits (multi-select) — visible once a category is picked */}
       {categoryObj && (
-        <div className="flex flex-wrap items-center gap-1.5 pl-3 border-l-2 border-[#2A2A2A]">
-          <span className="text-[10px] uppercase tracking-wide text-[#666462]">
+        <div className="flex flex-wrap items-center gap-1.5 pl-3 border-l-2 border-[color:var(--border-default)]">
+          <span className="text-[10px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
             {zh ? "细化标签（可多选）" : "Traits (multi)"}
           </span>
           {categoryObj.traits.map((tr) => {
@@ -910,8 +910,8 @@ function ProductFilterRows({
                 onClick={() => onToggleTrait(tr.key)}
                 className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
                   active
-                    ? "border-[#C4A882] bg-[#C4A882]/10 text-[#EAEAE8]"
-                    : "border-[#2A2A2A] bg-[#141414] text-[#9B9594] hover:border-[#3A3A3A] hover:text-[#EAEAE8]"
+                    ? "border-[color:var(--accent-warm)] bg-[rgb(var(--accent-warm-rgb)/0.10)] text-[color:var(--text-primary)]"
+                    : "border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                 }`}
               >
                 {active && <Check className="h-3 w-3" />}
