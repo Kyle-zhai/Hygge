@@ -13,6 +13,9 @@ interface HeroSectionProps {
   subtitle: string;
   ctaText: string;
   ctaHref: string;
+  secondaryText?: string;
+  secondaryHref?: string;
+  trustRow?: { label: string; items: string[] };
 }
 
 export function HeroSection({
@@ -21,6 +24,9 @@ export function HeroSection({
   subtitle,
   ctaText,
   ctaHref,
+  secondaryText,
+  secondaryHref,
+  trustRow,
 }: HeroSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -36,61 +42,52 @@ export function HeroSection({
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-screen flex-col items-center justify-center gap-8 px-4 text-center overflow-hidden"
+      className="relative flex min-h-[88vh] flex-col items-center justify-center gap-8 overflow-hidden px-4 pb-24 pt-32 text-center sm:pt-40"
     >
-      {/* Layered atmosphere: aurora + ambient gold rim + grain */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 55% at 50% 28%, rgba(var(--atmosphere-cream-rgb),0.09), transparent 62%)",
+            "radial-gradient(ellipse 85% 60% at 50% 30%, rgba(var(--atmosphere-cream-rgb),0.07), transparent 65%)",
         }}
       />
       <motion.div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        animate={{ opacity: [0.35, 0.6, 0.35] }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ opacity: [0.3, 0.55, 0.3] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
         style={{
           background:
-            "radial-gradient(ellipse 55% 35% at 30% 70%, rgba(var(--atmosphere-warm-rgb),0.08), transparent 70%), radial-gradient(ellipse 45% 30% at 75% 65%, rgba(var(--atmosphere-cool-rgb),0.06), transparent 70%)",
+            "radial-gradient(ellipse 50% 30% at 28% 72%, rgba(var(--atmosphere-warm-rgb),0.07), transparent 70%), radial-gradient(ellipse 42% 28% at 76% 68%, rgba(var(--atmosphere-cool-rgb),0.05), transparent 70%)",
         }}
       />
-      {/* Top hairline highlight */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.25) 50%, transparent)",
-        }}
-      />
-      {/* Grain overlay */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.035] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+            "linear-gradient(90deg, transparent, rgba(var(--hairline-rgb),0.18) 50%, transparent)",
         }}
       />
 
       <motion.div
         style={{ opacity, y }}
-        className="relative z-10 flex flex-col items-center gap-8"
+        className="relative z-10 flex flex-col items-center gap-7"
       >
-        {/* Overline */}
         <motion.span
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
-          className="text-xs font-medium uppercase tracking-[0.08em] text-[color:var(--text-secondary)]"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--text-secondary)] backdrop-blur"
         >
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[color:var(--accent-warm)] opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--accent-warm)]" />
+          </span>
           {overline}
         </motion.span>
 
-        {/* Word-by-word headline reveal */}
-        <h1 className="max-w-4xl text-[clamp(2.5rem,6vw,4rem)] font-bold leading-[1.05] tracking-[-0.02em] text-[color:var(--text-primary)]">
-          <span className="flex flex-wrap justify-center gap-x-[0.3em]">
+        <h1 className="max-w-4xl text-[clamp(2.4rem,5.6vw,4.2rem)] font-semibold leading-[1.04] tracking-[-0.025em] text-[color:var(--text-primary)]">
+          <span className="flex flex-wrap justify-center gap-x-[0.28em] gap-y-[0.1em]">
             {words.map((word, i) => (
               <motion.span
                 key={i}
@@ -105,7 +102,6 @@ export function HeroSection({
           </span>
         </h1>
 
-        {/* Subtitle with delay */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -114,12 +110,11 @@ export function HeroSection({
             duration: 0.7,
             ease: EASE_OUT_EXPO,
           }}
-          className="max-w-xl text-lg leading-relaxed text-[color:var(--text-secondary)]"
+          className="max-w-xl text-base leading-relaxed text-[color:var(--text-secondary)] sm:text-lg"
         >
           {subtitle}
         </motion.p>
 
-        {/* CTA Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,18 +123,55 @@ export function HeroSection({
             duration: 0.7,
             ease: EASE_OUT_EXPO,
           }}
+          className="flex flex-col items-center gap-3 sm:flex-row"
         >
           <Button
             size="lg"
             asChild
-            className="btn-glow relative bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--accent-ink)] rounded-xl px-8 h-12 text-base font-semibold transition-all duration-500 shadow-[0_20px_60px_-15px_rgba(var(--atmosphere-cream-rgb),0.35),0_0_0_1px_rgba(255,255,255,0.1)_inset] hover:shadow-[0_25px_70px_-15px_rgba(var(--atmosphere-cream-rgb),0.5),0_0_0_1px_rgba(255,255,255,0.2)_inset] hover:-translate-y-0.5"
+            className="btn-glow relative h-11 rounded-lg bg-[color:var(--accent-primary)] px-6 text-[15px] font-semibold text-[color:var(--accent-ink)] transition-all duration-500 hover:-translate-y-0.5 hover:bg-[color:var(--accent-primary-hover)]"
           >
             <Link href={ctaHref}>
               {ctaText}
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
+              <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
             </Link>
           </Button>
+          {secondaryText && secondaryHref && (
+            <Link
+              href={secondaryHref}
+              className="group inline-flex h-11 items-center gap-1.5 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]/60 px-5 text-[15px] font-medium text-[color:var(--text-primary)] backdrop-blur transition-all duration-300 hover:border-[color:var(--border-hover)] hover:bg-[color:var(--bg-hover)]"
+            >
+              {secondaryText}
+              <ArrowRight className="h-3.5 w-3.5 opacity-60 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:opacity-100" />
+            </Link>
+          )}
         </motion.div>
+
+        {trustRow && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: words.length * 0.06 + 0.65,
+              duration: 0.7,
+              ease: EASE_OUT_EXPO,
+            }}
+            className="mt-3 flex flex-col items-center gap-3 text-[13px] text-[color:var(--text-tertiary)]"
+          >
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em]">
+              {trustRow.label}
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:gap-x-7">
+              {trustRow.items.map((item) => (
+                <span
+                  key={item}
+                  className="text-[color:var(--text-secondary)]"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </section>
   );

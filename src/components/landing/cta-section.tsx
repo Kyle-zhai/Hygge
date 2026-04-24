@@ -6,80 +6,113 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 
-
 interface CtaSectionProps {
+  overline?: string;
   headline: string;
   subtitle: string;
   ctaText: string;
   ctaHref: string;
+  secondaryText?: string;
+  secondaryHref?: string;
+  footnote?: string;
 }
 
 export function CtaSection({
+  overline,
   headline,
   subtitle,
   ctaText,
   ctaHref,
+  secondaryText,
+  secondaryHref,
+  footnote,
 }: CtaSectionProps) {
   return (
-    <section className="relative px-4 py-32 overflow-hidden">
-      {/* Multi-layer atmospheric gradient */}
+    <section className="relative overflow-hidden px-4 py-28 sm:py-36">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 55% at 50% 50%, rgba(var(--atmosphere-cream-rgb),0.1), transparent 65%)",
+            "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(var(--atmosphere-cream-rgb),0.06), transparent 65%)",
         }}
       />
       <motion.div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        animate={{ opacity: [0.5, 0.85, 0.5] }}
-        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ opacity: [0.4, 0.75, 0.4] }}
+        transition={{ duration: 13, repeat: Infinity, ease: "easeInOut" }}
         style={{
           background:
-            "radial-gradient(ellipse 40% 30% at 25% 60%, rgba(var(--atmosphere-warm-rgb),0.07), transparent 70%), radial-gradient(ellipse 40% 30% at 75% 60%, rgba(var(--atmosphere-cool-rgb),0.05), transparent 70%)",
+            "radial-gradient(ellipse 38% 28% at 28% 58%, rgba(var(--atmosphere-warm-rgb),0.06), transparent 70%), radial-gradient(ellipse 38% 28% at 72% 58%, rgba(var(--atmosphere-cool-rgb),0.04), transparent 70%)",
         }}
       />
-      {/* Hairline separators */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.12) 50%, transparent)",
+            "linear-gradient(90deg, transparent, rgba(var(--hairline-rgb),0.12) 50%, transparent)",
         }}
       />
 
       <motion.div
-        variants={staggerContainer(0.1)}
+        variants={staggerContainer(0.08)}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
-        className="relative z-10 mx-auto max-w-2xl text-center"
+        className="relative z-10 mx-auto flex max-w-3xl flex-col items-center text-center"
       >
+        {overline && (
+          <motion.span
+            variants={fadeInUp}
+            className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--accent-warm)]"
+          >
+            {overline}
+          </motion.span>
+        )}
         <motion.h2
           variants={fadeInUp}
-          className="mb-5 text-3xl font-semibold text-[color:var(--text-primary)] sm:text-4xl tracking-[-0.02em]"
+          className="mt-4 text-3xl font-semibold tracking-[-0.025em] text-[color:var(--text-primary)] sm:text-[2.8rem] sm:leading-[1.06]"
         >
           {headline}
         </motion.h2>
         <motion.p
           variants={fadeInUp}
-          className="mb-8 text-base leading-relaxed text-[color:var(--text-secondary)]"
+          className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-[color:var(--text-secondary)]"
         >
           {subtitle}
         </motion.p>
-        <motion.div variants={fadeInUp}>
+        <motion.div
+          variants={fadeInUp}
+          className="mt-9 flex flex-col items-center gap-3 sm:flex-row"
+        >
           <Button
             size="lg"
             asChild
-            className="btn-glow relative bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--accent-ink)] rounded-xl px-8 h-12 text-base font-semibold transition-all duration-500 shadow-[0_20px_60px_-15px_rgba(var(--atmosphere-cream-rgb),0.4),0_0_0_1px_rgba(255,255,255,0.12)_inset] hover:shadow-[0_30px_80px_-15px_rgba(var(--atmosphere-cream-rgb),0.55),0_0_0_1px_rgba(255,255,255,0.22)_inset] hover:-translate-y-0.5"
+            className="btn-glow group relative h-11 rounded-lg bg-[color:var(--accent-primary)] px-6 text-[15px] font-semibold text-[color:var(--accent-ink)] transition-all duration-500 hover:-translate-y-0.5 hover:bg-[color:var(--accent-primary-hover)]"
           >
             <Link href={ctaHref}>
               {ctaText}
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
+              <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
             </Link>
           </Button>
+          {secondaryText && secondaryHref && (
+            <Link
+              href={secondaryHref}
+              className="group inline-flex h-11 items-center gap-1.5 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]/60 px-5 text-[15px] font-medium text-[color:var(--text-primary)] backdrop-blur transition-all duration-300 hover:border-[color:var(--border-hover)] hover:bg-[color:var(--bg-hover)]"
+            >
+              {secondaryText}
+              <ArrowRight className="h-3.5 w-3.5 opacity-60 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:opacity-100" />
+            </Link>
+          )}
         </motion.div>
+        {footnote && (
+          <motion.p
+            variants={fadeInUp}
+            className="mt-5 text-[12px] text-[color:var(--text-tertiary)]"
+          >
+            {footnote}
+          </motion.p>
+        )}
       </motion.div>
     </section>
   );
