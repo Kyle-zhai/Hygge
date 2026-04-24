@@ -71,14 +71,6 @@ export default async function LandingPage() {
       description: locale === "zh" ? "好奇、活泼、学习能力强。对新事物接受度高，代表年轻用户群体。" : "Curious, lively, and quick to learn. Highly receptive to new things, representing young users." },
   ];
 
-  const categories = [
-    { key: "technical", label: locale === "zh" ? "技术" : "Technical" },
-    { key: "design", label: locale === "zh" ? "设计" : "Design" },
-    { key: "product", label: locale === "zh" ? "产品" : "Product" },
-    { key: "business", label: locale === "zh" ? "商业" : "Business" },
-    { key: "end_user", label: locale === "zh" ? "用户" : "End User" },
-  ];
-
   // Features grid data
   const features = [
     {
@@ -259,8 +251,7 @@ export default async function LandingPage() {
           viewAllText={locale === "zh" ? "查看全部角色" : "View all personas"}
           viewAllHref={`/${locale}/auth/register`}
           personas={samplePersonas}
-          categories={categories}
-          allLabel={locale === "zh" ? "全部" : "All"}
+          hint={locale === "zh" ? "拖动旋转 · 悬停暂停 · 点击查看" : "Drag to spin · hover to pause · click to open"}
         />
 
         <HowItWorks
