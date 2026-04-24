@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "./user-menu";
 import { ScrollHeader } from "./scroll-header";
+import { ThemeToggle } from "./theme-toggle";
 
 export async function Header() {
   const t = await getTranslations("common");
@@ -23,19 +24,20 @@ export async function Header() {
             <circle cx="14" cy="10" r="7" stroke="#E2DDD5" strokeWidth="1.5" opacity="0.7" />
             <circle cx="12" cy="14" r="7" stroke="#E2DDD5" strokeWidth="1.5" opacity="0.9" />
           </svg>
-          <span className="text-xl font-semibold italic text-[#EAEAE8]">
+          <span className="text-xl font-semibold italic text-[color:var(--text-primary)]">
             Hygge
           </span>
         </Link>
 
         <nav className="flex items-center gap-2">
+          <ThemeToggle />
           {user ? (
             <>
               <Button
                 variant="ghost"
                 size="sm"
                 asChild
-                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+                className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)]"
               >
                 <Link href={`/${locale}/evaluate/new`}>{t("dashboard")}</Link>
               </Button>
@@ -43,7 +45,7 @@ export async function Header() {
                 variant="ghost"
                 size="sm"
                 asChild
-                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+                className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)]"
               >
                 <Link href={`/${locale}/pricing`}>{t("pricing")}</Link>
               </Button>
@@ -55,7 +57,7 @@ export async function Header() {
                 variant="ghost"
                 size="sm"
                 asChild
-                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+                className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)]"
               >
                 <Link href={`/${locale}/pricing`}>{t("pricing")}</Link>
               </Button>
@@ -63,14 +65,14 @@ export async function Header() {
                 variant="ghost"
                 size="sm"
                 asChild
-                className="text-[#9B9594] hover:text-[#EAEAE8] hover:bg-[#1C1C1C]"
+                className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-tertiary)]"
               >
                 <Link href={`/${locale}/auth/login`}>{t("login")}</Link>
               </Button>
               <Button
                 size="sm"
                 asChild
-                className="bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] rounded-lg font-semibold"
+                className="bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--accent-ink)] rounded-lg font-semibold"
               >
                 <Link href={`/${locale}/auth/register`}>{t("register")}</Link>
               </Button>

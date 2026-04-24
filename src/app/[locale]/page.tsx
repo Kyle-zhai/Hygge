@@ -93,8 +93,8 @@ export default async function LandingPage() {
     },
     {
       iconName: "BarChart3" as const,
-      title: locale === "zh" ? "量化评分" : "Quantified Scoring",
-      desc: locale === "zh" ? "六维度评分体系，直观了解产品各方面表现" : "Six-dimension scoring system for intuitive understanding of product performance.",
+      title: locale === "zh" ? "文件与链接输入" : "Files & Links as Input",
+      desc: locale === "zh" ? "上传 PDF、文档、图片或粘贴网址，角色会读完再发言" : "Upload PDFs, docs, images, or paste a URL — every voice reads the source before they weigh in.",
     },
     {
       iconName: "Shield" as const,
@@ -103,13 +103,13 @@ export default async function LandingPage() {
     },
     {
       iconName: "Zap" as const,
-      title: locale === "zh" ? "实时圆桌" : "Live Round Table",
-      desc: locale === "zh" ? "围观讨论现场展开：每个角色依次发言，即时看到观点碰撞" : "Watch the discussion unfold live: each voice speaks in turn, and you see opinions collide in real time.",
+      title: locale === "zh" ? "实时圆桌 · 1v1 辩论" : "Live Round Table · 1v1 Debate",
+      desc: locale === "zh" ? "围观讨论现场展开，或让两位立场对立的角色正面交锋" : "Watch the full panel unfold live, or pit two opposing voices against each other in a 1v1 debate.",
     },
     {
       iconName: "Layers" as const,
-      title: locale === "zh" ? "可执行建议" : "Actionable Insights",
-      desc: locale === "zh" ? "按优先级排列的具体行动项，附带影响评估和难度评级" : "Priority-ranked action items with impact assessment and difficulty ratings.",
+      title: locale === "zh" ? "讨论对比 · 意见漂移" : "Compare · Opinion Drift",
+      desc: locale === "zh" ? "对比两次讨论，看每个角色在新信息下的立场如何变化" : "Stack two discussions side-by-side and see how each voice shifts stance after new information lands.",
     },
   ];
 
@@ -241,7 +241,7 @@ export default async function LandingPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0C0C0C]">
+    <div className="flex min-h-screen flex-col bg-[color:var(--bg-primary)]">
       <Header />
       <main className="flex-1">
         <HeroSection
