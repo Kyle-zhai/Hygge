@@ -9,6 +9,7 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: gate initial render until client hydration so the theme icon doesn't flip on first paint
     setMounted(true);
   }, []);
 
