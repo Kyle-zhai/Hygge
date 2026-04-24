@@ -13,7 +13,7 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
+  const isDark = mounted ? resolvedTheme === "dark" : false;
 
   return (
     <button
