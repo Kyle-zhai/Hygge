@@ -66,7 +66,7 @@ export function PersonaShowcase({
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 0%, rgba(226,221,213,0.04), transparent 50%)",
+            "radial-gradient(ellipse at 50% 0%, rgba(var(--atmosphere-cream-rgb),0.04), transparent 50%)",
         }}
       />
 
@@ -81,7 +81,7 @@ export function PersonaShowcase({
           {/* Section heading */}
           <motion.h2
             variants={fadeInUp}
-            className="text-center text-3xl font-semibold tracking-[-0.02em] text-[#EAEAE8] sm:text-4xl"
+            className="text-center text-3xl font-semibold tracking-[-0.02em] text-[color:var(--text-primary)] sm:text-4xl"
           >
             {heading}
           </motion.h2>
@@ -95,8 +95,8 @@ export function PersonaShowcase({
               onClick={() => setActiveCategory(null)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
                 activeCategory === null
-                  ? "bg-[#E2DDD5] text-[#0C0C0C]"
-                  : "bg-[#1C1C1C] text-[#9B9594] hover:bg-[#222222] hover:text-[#EAEAE8]"
+                  ? "bg-[color:var(--accent-primary)] text-[color:var(--accent-ink)]"
+                  : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-hover)] hover:text-[color:var(--text-primary)]"
               }`}
               style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
             >
@@ -110,8 +110,8 @@ export function PersonaShowcase({
                 }
                 className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
                   activeCategory === cat.key
-                    ? "bg-[#E2DDD5] text-[#0C0C0C]"
-                    : "bg-[#1C1C1C] text-[#9B9594] hover:bg-[#222222] hover:text-[#EAEAE8]"
+                    ? "bg-[color:var(--accent-primary)] text-[color:var(--accent-ink)]"
+                    : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-hover)] hover:text-[color:var(--text-primary)]"
                 }`}
                 style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
               >
@@ -122,10 +122,10 @@ export function PersonaShowcase({
 
           {/* Persona card grid */}
           <motion.div
-            variants={staggerContainer(0.06)}
+            key={activeCategory ?? "all"}
+            variants={staggerContainer(0.05)}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
+            animate="visible"
             className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:gap-5"
           >
             {filtered.slice(0, 16).map((persona, i) => {
@@ -135,11 +135,18 @@ export function PersonaShowcase({
                   key={persona.name + persona.category}
                   variants={cardReveal(i)}
                   onClick={() => setSelected(persona)}
-                  className="group cursor-pointer rounded-2xl border border-[#2A2A2A] bg-[#141414] p-4 transition-all duration-300 hover:border-[#3A3A3A] hover:-translate-y-1"
+                  className="group relative cursor-pointer overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-gradient-to-b from-[color:var(--panel-grad-top)] to-[color:var(--panel-grad-bottom)] p-4 transition-all duration-500 hover:border-[color:var(--border-hover)] hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8),0_0_0_1px_rgba(var(--atmosphere-cream-rgb),0.06)_inset]"
                   style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
                 >
+                  {/* Hover glow */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    style={{
+                      background: `radial-gradient(circle at 50% 0%, ${catColor}14, transparent 60%)`,
+                    }}
+                  />
                   {/* Avatar — contain full image, no cropping */}
-                  <div className="mb-3 aspect-square w-full overflow-hidden rounded-xl bg-[#1C1C1C]">
+                  <div className="mb-3 aspect-square w-full overflow-hidden rounded-xl bg-[color:var(--bg-tertiary)]">
                     <Image
                       src={persona.avatar}
                       alt={persona.name}
@@ -149,11 +156,11 @@ export function PersonaShowcase({
                     />
                   </div>
                   {/* Name */}
-                  <p className="text-sm font-semibold text-[#EAEAE8] truncate">
+                  <p className="text-sm font-semibold text-[color:var(--text-primary)] truncate">
                     {persona.name}
                   </p>
                   {/* Tagline */}
-                  <p className="mt-0.5 text-xs text-[#666462] truncate">
+                  <p className="mt-0.5 text-xs text-[color:var(--text-tertiary)] truncate">
                     {persona.tagline}
                   </p>
                   {/* Category badge */}
@@ -175,7 +182,7 @@ export function PersonaShowcase({
           <motion.div variants={fadeInUp} className="flex justify-center">
             <Link
               href={viewAllHref}
-              className="group inline-flex items-center gap-1.5 text-sm font-medium text-[#9B9594] transition-colors hover:text-[#E2DDD5]"
+              className="group inline-flex items-center gap-1.5 text-sm font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--accent-primary)]"
             >
               {viewAllText}
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
@@ -205,12 +212,12 @@ export function PersonaShowcase({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-[#2A2A2A] bg-[#141414] shadow-2xl"
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] shadow-2xl"
             >
               {/* Close button */}
               <button
                 onClick={() => setSelected(null)}
-                className="absolute right-4 top-4 z-10 rounded-full bg-[#0C0C0C]/60 p-1.5 text-[#9B9594] backdrop-blur-sm transition-colors hover:text-[#EAEAE8]"
+                className="absolute right-4 top-4 z-10 rounded-full bg-[color:var(--bg-primary)]/60 p-1.5 text-[color:var(--text-secondary)] backdrop-blur-sm transition-colors hover:text-[color:var(--text-primary)]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -222,7 +229,7 @@ export function PersonaShowcase({
               />
 
               {/* Full image */}
-              <div className="relative aspect-square w-full bg-[#0C0C0C]">
+              <div className="relative aspect-square w-full bg-[color:var(--bg-primary)]">
                 <Image
                   src={selected.avatar}
                   alt={selected.name}
@@ -235,7 +242,7 @@ export function PersonaShowcase({
               {/* Info */}
               <div className="p-6">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-bold text-[#EAEAE8]">
+                  <h3 className="text-xl font-bold text-[color:var(--text-primary)]">
                     {selected.name}
                   </h3>
                   {selected.mbti && (
@@ -250,11 +257,11 @@ export function PersonaShowcase({
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-sm font-medium text-[#9B9594]">
+                <p className="mt-1 text-sm font-medium text-[color:var(--text-secondary)]">
                   {selected.tagline}
                 </p>
                 {selected.description && (
-                  <p className="mt-4 text-sm leading-relaxed text-[#9B9594]">
+                  <p className="mt-4 text-sm leading-relaxed text-[color:var(--text-secondary)]">
                     {selected.description}
                   </p>
                 )}

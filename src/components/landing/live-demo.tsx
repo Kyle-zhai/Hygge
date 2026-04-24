@@ -44,7 +44,7 @@ function WaveDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block h-[4px] w-[4px] rounded-full bg-[#C4A882]"
+          className="inline-block h-[4px] w-[4px] rounded-full bg-[color:var(--accent-warm)]"
           style={{
             animation: "wave-bounce 1.4s ease-in-out infinite",
             animationDelay: `${i * 0.16}s`,
@@ -57,7 +57,7 @@ function WaveDots() {
 
 function PersonaAvatar({ persona }: { persona: DemoPersona }) {
   return (
-    <div className="relative flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#1C1C1C]">
+    <div className="relative flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[color:var(--bg-tertiary)]">
       <Image
         src={persona.avatar}
         alt=""
@@ -70,7 +70,7 @@ function PersonaAvatar({ persona }: { persona: DemoPersona }) {
 }
 
 function SkeletonBody({ muted }: { muted?: boolean }) {
-  const base = muted ? "bg-[#222222]" : "bg-[#2A2A2A]";
+  const base = muted ? "bg-[color:var(--bg-hover)]" : "bg-[color:var(--border-default)]";
   return (
     <div className="mt-3 space-y-2 pl-12">
       <div className={`h-3 w-[95%] rounded ${base}`} />
@@ -93,14 +93,14 @@ function ThinkingCard({ persona, thinkingLabel }: { persona: DemoPersona; thinki
         animation: "border-rotate 2s linear infinite",
       }}
     >
-      <div className="rounded-[11px] bg-[#141414] p-4">
+      <div className="rounded-[11px] bg-[color:var(--bg-secondary)] p-4">
         <div className="flex items-center gap-3">
           <PersonaAvatar persona={persona} />
           <div className="flex-1">
-            <div className="text-sm font-medium text-[#EAEAE8]">{persona.name}</div>
-            <div className="text-xs text-[#666462]">{persona.role}</div>
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">{persona.name}</div>
+            <div className="text-xs text-[color:var(--text-tertiary)]">{persona.role}</div>
           </div>
-          <span className="flex items-center text-xs text-[#C4A882]">
+          <span className="flex items-center text-xs text-[color:var(--accent-warm)]">
             {thinkingLabel}
             <WaveDots />
           </span>
@@ -113,14 +113,14 @@ function ThinkingCard({ persona, thinkingLabel }: { persona: DemoPersona; thinki
 
 function WaitingCard({ persona, waitingLabel }: { persona: DemoPersona; waitingLabel: string }) {
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 opacity-60">
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 opacity-60">
       <div className="flex items-center gap-3">
         <PersonaAvatar persona={persona} />
         <div className="flex-1">
-          <div className="text-sm font-medium text-[#EAEAE8]">{persona.name}</div>
-          <div className="text-xs text-[#666462]">{persona.role}</div>
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">{persona.name}</div>
+          <div className="text-xs text-[color:var(--text-tertiary)]">{persona.role}</div>
         </div>
-        <span className="text-xs text-[#9B9594]">{waitingLabel}</span>
+        <span className="text-xs text-[color:var(--text-secondary)]">{waitingLabel}</span>
       </div>
       <SkeletonBody muted />
     </div>
@@ -134,8 +134,8 @@ function CompletedCard({ persona }: { persona: DemoPersona }) {
       <div className="flex items-center gap-3">
         <PersonaAvatar persona={persona} />
         <div className="flex-1">
-          <div className="text-sm font-medium text-[#EAEAE8]">{persona.name}</div>
-          <div className="text-xs text-[#666462]">{persona.role}</div>
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">{persona.name}</div>
+          <div className="text-xs text-[color:var(--text-tertiary)]">{persona.role}</div>
         </div>
         <span
           className="rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -145,7 +145,7 @@ function CompletedCard({ persona }: { persona: DemoPersona }) {
         </span>
       </div>
       <div className="mt-3 pl-12">
-        <p className="text-sm leading-relaxed text-[#9B9594]">&ldquo;{persona.quote}&rdquo;</p>
+        <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">&ldquo;{persona.quote}&rdquo;</p>
         {persona.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {persona.tags.map((tag, i) => (
@@ -218,7 +218,7 @@ export function LiveDemo({ script }: LiveDemoProps) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 40%, rgba(196,168,130,0.05), transparent 55%)",
+            "radial-gradient(ellipse at 50% 40%, rgba(var(--atmosphere-warm-rgb),0.05), transparent 55%)",
         }}
       />
       <div
@@ -226,38 +226,36 @@ export function LiveDemo({ script }: LiveDemoProps) {
         className="relative mx-auto flex max-w-3xl flex-col gap-6"
       >
         <div className="text-center">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#C4A882]">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[color:var(--accent-warm)]">
             {script.topicOverline}
           </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[#EAEAE8] sm:text-3xl">
+          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[color:var(--text-primary)] sm:text-3xl">
             {script.topicTitle}
           </h2>
-          <p className="mt-1 text-sm text-[#9B9594]">
+          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
             {script.perspectivesLabel}
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {script.personas.map((persona, index) => {
             const isCompleted = index < revealedCount;
             const isThinking = index === revealedCount;
             return (
-              <div key={persona.id} className="min-h-[156px]">
-                <motion.div
-                  key={`${cycleKey}-${persona.id}-${isCompleted ? "c" : isThinking ? "t" : "w"}`}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, ease: EASE_OUT_EXPO }}
-                >
-                  {isCompleted ? (
-                    <CompletedCard persona={persona} />
-                  ) : isThinking ? (
-                    <ThinkingCard persona={persona} thinkingLabel={script.thinkingLabel} />
-                  ) : (
-                    <WaitingCard persona={persona} waitingLabel={script.waitingLabel} />
-                  )}
-                </motion.div>
-              </div>
+              <motion.div
+                key={`${cycleKey}-${persona.id}-${isCompleted ? "c" : isThinking ? "t" : "w"}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: EASE_OUT_EXPO }}
+              >
+                {isCompleted ? (
+                  <CompletedCard persona={persona} />
+                ) : isThinking ? (
+                  <ThinkingCard persona={persona} thinkingLabel={script.thinkingLabel} />
+                ) : (
+                  <WaitingCard persona={persona} waitingLabel={script.waitingLabel} />
+                )}
+              </motion.div>
             );
           })}
         </div>
@@ -267,18 +265,18 @@ export function LiveDemo({ script }: LiveDemoProps) {
           initial={false}
           animate={{ opacity: showSummary ? 1 : 0, y: showSummary ? 0 : 8 }}
           transition={{ duration: 0.6, ease: EASE_OUT_EXPO }}
-          className="rounded-xl border border-[#E2DDD5]/20 bg-[#E2DDD5]/[0.03] p-5"
+          className="rounded-xl border border-[color:var(--accent-primary)]/20 bg-[color:var(--accent-primary)]/[0.03] p-5"
         >
           <div className="mb-3 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-[#E2DDD5]" />
-            <span className="text-sm font-semibold text-[#EAEAE8]">
+            <FileText className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <span className="text-sm font-semibold text-[color:var(--text-primary)]">
               {script.summaryLabel}
             </span>
-            <span className="ml-auto rounded-full bg-[#E2DDD5]/15 px-2.5 py-0.5 text-xs font-medium text-[#E2DDD5]">
+            <span className="ml-auto rounded-full bg-[color:var(--accent-primary)]/15 px-2.5 py-0.5 text-xs font-medium text-[color:var(--accent-primary)]">
               {script.consensusLabel}
             </span>
           </div>
-          <p className="text-sm leading-relaxed text-[#9B9594]">
+          <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">
             {script.summaryText}
           </p>
         </motion.div>

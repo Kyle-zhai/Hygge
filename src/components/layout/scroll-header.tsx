@@ -22,13 +22,13 @@ export function ScrollHeader({ children }: ScrollHeaderProps) {
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         scrolled
-          ? "border-b border-[rgba(255,255,255,0.06)] py-0"
+          ? "border-b border-[color:var(--border-default)] py-0"
           : "bg-transparent py-1"
       }`}
       style={
         scrolled
           ? {
-              backgroundColor: "rgba(12,12,12,0.85)",
+              backgroundColor: "color-mix(in oklab, var(--bg-primary) 85%, transparent)",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
             }

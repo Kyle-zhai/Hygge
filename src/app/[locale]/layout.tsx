@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { SmoothScrollProvider } from "@/app/providers/smooth-scroll";
 import { AnalyticsProvider } from "@/app/providers/analytics";
+import { ThemeProvider } from "@/app/providers/theme";
 import "@/app/globals.css";
 
 export async function generateMetadata({
@@ -40,12 +41,14 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className="min-h-screen bg-[#0C0C0C] font-sans text-[#EAEAE8] antialiased">
-        <NextIntlClientProvider messages={messages}>
-          <AnalyticsProvider>
-            <SmoothScrollProvider>{children}</SmoothScrollProvider>
-          </AnalyticsProvider>
-        </NextIntlClientProvider>
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            <AnalyticsProvider>
+              <SmoothScrollProvider>{children}</SmoothScrollProvider>
+            </AnalyticsProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

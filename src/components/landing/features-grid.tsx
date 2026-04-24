@@ -39,12 +39,19 @@ export function FeaturesGrid({
 }: FeaturesGridProps) {
   return (
     <section className="relative px-4 py-32 overflow-hidden">
-      {/* Subtle glow */}
+      {/* Atmospheric layers */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 100%, rgba(226,221,213,0.04), transparent 50%)",
+            "radial-gradient(ellipse 70% 50% at 30% 0%, rgba(var(--atmosphere-warm-rgb),0.05), transparent 60%), radial-gradient(ellipse 60% 50% at 75% 100%, rgba(var(--atmosphere-cream-rgb),0.05), transparent 60%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.15) 50%, transparent)",
         }}
       />
 
@@ -60,13 +67,13 @@ export function FeaturesGrid({
           <div className="text-center">
             <motion.h2
               variants={fadeInUp}
-              className="text-3xl font-semibold tracking-[-0.02em] text-[#EAEAE8] sm:text-4xl"
+              className="text-3xl font-semibold tracking-[-0.02em] text-[color:var(--text-primary)] sm:text-4xl"
             >
               {heading}
             </motion.h2>
             <motion.p
               variants={fadeInUp}
-              className="mx-auto mt-4 max-w-xl text-base text-[#9B9594]"
+              className="mx-auto mt-4 max-w-xl text-base text-[color:var(--text-secondary)]"
             >
               {subtitle}
             </motion.p>
@@ -86,16 +93,32 @@ export function FeaturesGrid({
                 <motion.div
                   key={feature.title}
                   variants={cardReveal(i)}
-                  className="group rounded-2xl border border-[#2A2A2A] bg-[#141414] p-6 transition-all duration-300 hover:border-[#3A3A3A] hover:-translate-y-1"
+                  className="group relative overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-gradient-to-b from-[color:var(--panel-grad-top)] to-[color:var(--panel-grad-bottom)] p-6 transition-all duration-500 hover:border-[color:var(--border-hover)] hover:-translate-y-1 hover:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9),0_0_0_1px_rgba(var(--atmosphere-cream-rgb),0.05)_inset]"
                   style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
                 >
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#1C1C1C] transition-colors group-hover:bg-[#222222]">
-                    <Icon className="h-5 w-5 text-[#E2DDD5]" />
+                  {/* Hover spotlight */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    style={{
+                      background:
+                        "radial-gradient(circle at 50% 0%, rgba(var(--atmosphere-cream-rgb),0.08), transparent 70%)",
+                    }}
+                  />
+                  {/* Top hairline that brightens on hover */}
+                  <div
+                    className="pointer-events-none absolute inset-x-6 top-0 h-px opacity-40 transition-opacity duration-500 group-hover:opacity-100"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.5), transparent)",
+                    }}
+                  />
+                  <div className="relative mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[color:var(--bg-tertiary)] to-[color:var(--bg-secondary)] ring-1 ring-[color:var(--border-default)] transition-all duration-500 group-hover:ring-[color:var(--border-hover)] group-hover:shadow-[0_0_20px_-5px_rgba(var(--atmosphere-cream-rgb),0.15)]">
+                    <Icon className="h-5 w-5 text-[color:var(--accent-primary)]" />
                   </div>
-                  <h3 className="mb-2 text-base font-semibold text-[#EAEAE8]">
+                  <h3 className="relative mb-2 text-base font-semibold text-[color:var(--text-primary)]">
                     {feature.title}
                   </h3>
-                  <p className="text-sm leading-relaxed text-[#9B9594]">
+                  <p className="relative text-sm leading-relaxed text-[color:var(--text-secondary)]">
                     {feature.desc}
                   </p>
                 </motion.div>

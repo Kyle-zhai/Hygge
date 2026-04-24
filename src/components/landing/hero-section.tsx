@@ -38,12 +38,39 @@ export function HeroSection({
       ref={sectionRef}
       className="relative flex min-h-screen flex-col items-center justify-center gap-8 px-4 text-center overflow-hidden"
     >
-      {/* Radial glow background */}
+      {/* Layered atmosphere: aurora + ambient gold rim + grain */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 30%, rgba(226,221,213,0.06), transparent 60%)",
+            "radial-gradient(ellipse 80% 55% at 50% 28%, rgba(var(--atmosphere-cream-rgb),0.09), transparent 62%)",
+        }}
+      />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        animate={{ opacity: [0.35, 0.6, 0.35] }}
+        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 55% 35% at 30% 70%, rgba(var(--atmosphere-warm-rgb),0.08), transparent 70%), radial-gradient(ellipse 45% 30% at 75% 65%, rgba(var(--atmosphere-cool-rgb),0.06), transparent 70%)",
+        }}
+      />
+      {/* Top hairline highlight */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(var(--atmosphere-cream-rgb),0.25) 50%, transparent)",
+        }}
+      />
+      {/* Grain overlay */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.035] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
         }}
       />
 
@@ -56,13 +83,13 @@ export function HeroSection({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
-          className="text-xs font-medium uppercase tracking-[0.08em] text-[#9B9594]"
+          className="text-xs font-medium uppercase tracking-[0.08em] text-[color:var(--text-secondary)]"
         >
           {overline}
         </motion.span>
 
         {/* Word-by-word headline reveal */}
-        <h1 className="max-w-4xl text-[clamp(2.5rem,6vw,4rem)] font-bold leading-[1.05] tracking-[-0.02em] text-[#EAEAE8]">
+        <h1 className="max-w-4xl text-[clamp(2.5rem,6vw,4rem)] font-bold leading-[1.05] tracking-[-0.02em] text-[color:var(--text-primary)]">
           <span className="flex flex-wrap justify-center gap-x-[0.3em]">
             {words.map((word, i) => (
               <motion.span
@@ -87,7 +114,7 @@ export function HeroSection({
             duration: 0.7,
             ease: EASE_OUT_EXPO,
           }}
-          className="max-w-xl text-lg leading-relaxed text-[#9B9594]"
+          className="max-w-xl text-lg leading-relaxed text-[color:var(--text-secondary)]"
         >
           {subtitle}
         </motion.p>
@@ -105,11 +132,11 @@ export function HeroSection({
           <Button
             size="lg"
             asChild
-            className="btn-glow bg-[#E2DDD5] hover:bg-[#D4CFC7] text-[#0C0C0C] rounded-xl px-8 h-12 text-base font-semibold transition-all duration-300"
+            className="btn-glow relative bg-[color:var(--accent-primary)] hover:bg-[color:var(--accent-primary-hover)] text-[color:var(--accent-ink)] rounded-xl px-8 h-12 text-base font-semibold transition-all duration-500 shadow-[0_20px_60px_-15px_rgba(var(--atmosphere-cream-rgb),0.35),0_0_0_1px_rgba(255,255,255,0.1)_inset] hover:shadow-[0_25px_70px_-15px_rgba(var(--atmosphere-cream-rgb),0.5),0_0_0_1px_rgba(255,255,255,0.2)_inset] hover:-translate-y-0.5"
           >
             <Link href={ctaHref}>
               {ctaText}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" />
             </Link>
           </Button>
         </motion.div>
