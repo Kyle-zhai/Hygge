@@ -36,6 +36,7 @@ import {
 } from "./rhetorical-moves.js";
 import type { RhetoricalMove } from "../types/rhetorical-moves.js";
 import { rankReflectionLines } from "./reflection-ranker.js";
+import { scoreToMReads, buildToMCalibrationReflections } from "./tom-calibration.js";
 
 const ROUND_MAX_TOKENS = 3072;
 
@@ -182,6 +183,11 @@ export async function runRoundTableDebate(
   // missing concede/data/steelman across the debate).
   const moveRoundsHistory: RoundForMoves[] = [];
 
+  // Per-round ToM snapshots so we can score calibration: an observer's ToM
+  // read at end of round N is checked against targets' position changes
+  // during round N+1. Only fires from round 3 onward.
+  const tomHistory = new Map<number, Map<string, ToMState>>();
+
   for (let i = 0; i < 3; i++) {
     const upcomingRound = i + 1;
     const stanceLines = beliefHistory
@@ -198,12 +204,30 @@ export async function runRoundTableDebate(
       upcomingRound,
       personaNameOf,
     );
+
+    const calibrationLines: string[] = [];
+    const priorToM = tomHistory.get(upcomingRound - 2);
+    if (priorToM && beliefHistory) {
+      const positionDeltas = new Map<string, number>();
+      const prevIdx = upcomingRound - 2;
+      const currIdx = upcomingRound - 1;
+      for (const [personaId, history] of beliefHistory) {
+        const before = history[prevIdx];
+        const after = history[currIdx];
+        if (before === undefined || after === undefined) continue;
+        positionDeltas.set(personaId, Math.abs(after.position - before.position));
+      }
+      const scores = scoreToMReads(priorToM, positionDeltas);
+      calibrationLines.push(...buildToMCalibrationReflections(scores, personaNameOf));
+    }
+
     const reflectionLines = rankReflectionLines(
       [
         ...stanceLines,
         ...argReflections.unrespondedLines,
         ...argReflections.cycleLines,
         ...moveLines,
+        ...calibrationLines,
       ],
       selectedPersonas.map((p) => p.identity?.name ?? p.id),
     );
@@ -309,6 +333,14 @@ export async function runRoundTableDebate(
         }
         await persistBeliefState(passiveNext);
       }
+    }
+
+    if (tomStates && tomStates.size > 0) {
+      const snapshot = new Map<string, ToMState>();
+      for (const [observerId, state] of tomStates) {
+        snapshot.set(observerId, { ...state, entries: state.entries.map((e) => ({ ...e })) });
+      }
+      tomHistory.set(upcomingRound, snapshot);
     }
   }
 
