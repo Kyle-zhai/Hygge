@@ -29,6 +29,17 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Data flywheel — debate feedback
+
+Every persona utterance in both round-table and 1v1 debates can receive a 👍/👎 + optional 1-line comment from the user who owns the evaluation. Votes are stored in `public.persona_utterance_feedback` keyed by either:
+
+- Round-table: `(user_id, evaluation_id, round_number, message_index)`
+- 1v1: `(user_id, debate_message_id)`
+
+This data feeds Phase 3 of the debate-realism roadmap (`docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md`) — persona-specific DPO fine-tunes once we have ~5k labels per archetype.
+
+Monitor with `docs/superpowers/queries/feedback-flywheel-stats.sql`.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
