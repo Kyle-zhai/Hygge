@@ -4,6 +4,7 @@ import type { BeliefState } from "../types/belief-state.js";
 import type { ToMState } from "../types/theory-of-mind.js";
 import { formatProceduralExamples, type ProceduralMemoryByPersona } from "../processors/procedural-memory.js";
 import { buildPriorToMBlock, buildToMSchemaField } from "../processors/theory-of-mind.js";
+import { buildMoveSchemaField } from "../processors/rhetorical-moves.js";
 
 export interface ReviewForDebate {
   persona_id: string;
@@ -193,7 +194,7 @@ Respond with JSON:
       "persona_id": "<id>",
       "content": "<their argument, 2-4 sentences, referencing a specific element of the topic and (from round 2 onward) quoting another persona's phrase>",
       "responding_to": "<persona_id they're primarily responding to, or null for round 1>",
-      "stance_shift": "<null if unchanged, or brief description of how their view shifted and which argument caused it>"${beliefSchemaFields}${tomSchemaSample}
+      "stance_shift": "<null if unchanged, or brief description of how their view shifted and which argument caused it>"${beliefSchemaFields}${tomSchemaSample}${buildMoveSchemaField()}
     }
   ]
 }`;
