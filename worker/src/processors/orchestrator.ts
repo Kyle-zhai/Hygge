@@ -4,7 +4,7 @@ import AdmZip from "adm-zip";
 import { OfficeParser } from "officeparser";
 import { pdfToPng } from "pdf-to-png-converter";
 import { supabase } from "../supabase.js";
-import { buildLLM, buildVisionLLM, type LLMOverrides } from "../llm/factory.js";
+import { buildLLM, buildVisionLLM, buildAuxLLM, type LLMOverrides } from "../llm/factory.js";
 import type { MediaItem } from "../llm/adapter.js";
 import { config } from "../config.js";
 import { parseProject } from "./parse-project.js";
@@ -65,6 +65,7 @@ function pushDedupedImage(
 export async function processEvaluation(job: Job<EvaluationJobData>) {
   const { evaluationId, projectId, rawInput, url, attachments, selectedPersonaIds, planTier, mode, comparisonBaseId, llmOverrides } = job.data;
   const llm = buildLLM(llmOverrides);
+  const auxLlm = buildAuxLLM(llmOverrides);
   const startedAt = Date.now();
   const ctx = { evaluationId, projectId, mode, planTier, personaCount: selectedPersonaIds.length };
 
@@ -224,7 +225,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     } else {
       const [pd, cl] = await Promise.all([
         withTiming("orchestrator.parse_project", ctx, () => parseTask),
-        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(llm, rawInput, mode)),
+        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(auxLlm, rawInput, mode)),
       ]);
       parsedData = pd;
       classification = cl;
@@ -342,7 +343,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     const debateTask = maxLike
       ? withTiming("orchestrator.round_table", ctx, () =>
-          runRoundTableDebate(llm, personaList, reviews, parsedData, rawInput),
+          runRoundTableDebate(llm, personaList, reviews, parsedData, rawInput, evaluationId),
         ).catch((debateError) => {
           log.warn("orchestrator.round_table.skipped", {
             ...ctx,
