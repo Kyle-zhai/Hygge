@@ -1,5 +1,6 @@
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
+import type { BeliefState } from "../types/belief-state.js";
 
 export interface ReviewForDebate {
   persona_id: string;
@@ -9,6 +10,27 @@ export interface ReviewForDebate {
   strengths: string[];
   weaknesses: string[];
   overall_stance?: string | null;
+}
+
+function formatPosition(position: number): string {
+  if (position >= 0.6) return "strongly support";
+  if (position >= 0.2) return "lean support";
+  if (position > -0.2) return "neutral / undecided";
+  if (position > -0.6) return "lean against";
+  return "strongly against";
+}
+
+function buildBeliefStateLine(state: BeliefState | undefined): string {
+  if (!state) return "";
+  const positionLabel = formatPosition(state.position);
+  const confPct = Math.round(state.confidence * 100);
+  let line = `Current belief: ${positionLabel} (position ${state.position.toFixed(2)}, confidence ${confPct}%).`;
+  if (state.shifts_this_round.length > 0) {
+    const lastShift = state.shifts_this_round[0];
+    const direction = lastShift.delta_position > 0 ? "moved you toward support" : lastShift.delta_position < 0 ? "moved you toward opposition" : "shook your confidence";
+    line += ` Last round: ${lastShift.caused_by} ${direction} (Δposition ${lastShift.delta_position.toFixed(2)}).`;
+  }
+  return line;
 }
 
 const SYSTEM = `You are orchestrating a round-table debate between AI personas. Each persona has distinct values, biases, and communication styles defined by their profiles. Generate authentic responses that reflect each persona's psychology, not generic arguments.
@@ -68,18 +90,20 @@ export function buildDebateRoundPrompt(
   previousRounds: Array<{ round: number; messages: Array<{ persona_id: string; content: string }> }>,
   project: ProjectParsedData,
   rawInput: string,
+  beliefStates?: Map<string, BeliefState>,
 ): { system: string; prompt: string } {
   const personaProfiles = selectedPersonas.map((p) => {
     const review = reviews.find((r) => r.persona_id === p.id);
     const strengths = review?.strengths?.length ? review.strengths.slice(0, 3).join("; ") : "(none noted)";
     const weaknesses = review?.weaknesses?.length ? review.weaknesses.slice(0, 3).join("; ") : "(none noted)";
+    const beliefLine = buildBeliefStateLine(beliefStates?.get(p.id));
     return `[${p.id}] ${p.identity.name} — ${p.demographics.occupation}
 Psychology: ${p.psychology?.personality_type ?? "analytical"}, decision style: ${p.psychology?.decision_making?.style ?? "balanced"}
 Stance: ${review?.overall_stance || "N/A"}
 Their review (initial position):
 ${review?.review_text.slice(0, 600) || "N/A"}
 Strengths they noted: ${strengths}
-Weaknesses they noted: ${weaknesses}`;
+Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}`;
   }).join("\n\n");
 
   let context = "";
@@ -94,6 +118,23 @@ Weaknesses they noted: ${weaknesses}`;
 
   const rawInputExcerpt = rawInput.length > 1200 ? rawInput.slice(0, 1200) + "..." : rawInput;
 
+  const beliefBlock = beliefStates && beliefStates.size > 0
+    ? `\nIMPORTANT: Each persona's "Current belief" line above is their structured state going INTO this round. Their next utterance must be coherent with it: if confidence is high they push back harder; if last round shifted them, they acknowledge it explicitly ("@X — your point about Y did move me"). Do NOT make a persona suddenly flip without explaining what shifted them.\n`
+    : "";
+
+  const beliefSchemaFields = beliefStates
+    ? `,
+      "active_listening": {
+        "claims_heard_this_round": [{ "speaker": "<persona_id>", "claim_summary": "<≤30 chars>", "threatens_my_position": <true|false> }],
+        "must_address": ["<claim_summary you will engage with>"]
+      },
+      "belief_update": {
+        "new_position": <number -1..+1, where -1 = strongly against the topic_focus, +1 = strongly for>,
+        "new_confidence": <number 0..1>,
+        "shifted_because": "<null if unchanged, or 1-line: which speaker + which specific claim moved you>"
+      }`
+    : "";
+
   const prompt = `Round ${roundNumber}/3 — Theme: "${theme}"
 
 The topic being debated (this is what every argument must reference):
@@ -105,7 +146,7 @@ ${rawInputExcerpt}
 Personas in this debate:
 ${personaProfiles}
 ${context}
-
+${beliefBlock}
 Generate each selected persona's response for this round. Each persona MUST:
 - Stay in character (reflect their psychology, biases, communication style).
 - Directly respond to other personas' arguments from previous rounds — when doing so, quote the phrase they are reacting to.
@@ -120,7 +161,7 @@ Respond with JSON:
       "persona_id": "<id>",
       "content": "<their argument, 2-4 sentences, referencing a specific element of the topic and (from round 2 onward) quoting another persona's phrase>",
       "responding_to": "<persona_id they're primarily responding to, or null for round 1>",
-      "stance_shift": "<null if unchanged, or brief description of how their view shifted and which argument caused it>"
+      "stance_shift": "<null if unchanged, or brief description of how their view shifted and which argument caused it>"${beliefSchemaFields}
     }
   ]
 }`;
