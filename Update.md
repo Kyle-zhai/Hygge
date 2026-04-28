@@ -101,6 +101,53 @@ These features landed in this commit-set but are inert until something else turn
 
 - [x] Tech doc (Phase 2 + architecture)
 - [x] Update.md (this file)
-- [ ] Re-run `pnpm test` + `pnpm typecheck` in root and worker
-- [ ] Commit in logical chunks (migration → types → prompt → processor → orchestrator → drainDelay → aux LLM → docs)
-- [ ] Push `feedback-flywheel` to origin if all green
+- [x] Re-run `pnpm test` + `pnpm typecheck` in root and worker
+- [x] Commit in logical chunks (migration → types → prompt → processor → orchestrator → drainDelay → aux LLM → docs)
+- [x] Push `feedback-flywheel` to origin if all green
+
+---
+
+## Afternoon session — provider migration + deploy config
+
+After the Phase 2 push, switched LLM provider stack and wired up the Vercel ↔ Railway proxy that had been silently absent from production.
+
+### LLM provider switch: Qwen / DashScope → MiMo / Xiaomi Token-Plan
+
+Primary model is now `MiMo-V2.5-Pro` served from `https://token-plan-sgp.xiaomimimo.com/v1` (OpenAI-compatible). Fallback `MiMo-V2.5`. Vision `MiMo-V2-Omni`. API keys use `tp-` prefix.
+
+**Files modified**
+
+- `worker/.env`, `.env.local` — local chain rewritten as `LLM_1` (MiMo Pro) / `LLM_2` (MiMo V2.5) / `LLM_3` (Gemini 2.5-flash content-filter fallback). Legacy single-model `LLM_API_KEY` etc. deleted.
+- `worker/.env.example`, `.env.example` — example chains updated; `worker/.env.example` documents *why* `LLM_3=Gemini` exists (MiMo and other Chinese providers refuse on sensitive topics; `fallback.ts` treats `data_inspection_failed` / `inappropriate_content` as fallbackable, so the chain hops to a non-CN entry).
+- `src/app/[locale]/(app)/settings/llm/page.tsx` — MiMo added as the first BYOK preset (was Qwen). Qwen kept as a secondary preset for users with their own DashScope key.
+
+**Why three entries, not two:** `LLM_1` and `LLM_2` are both MiMo, sharing the same Chinese content filter. Without a non-CN `LLM_3`, sensitive topics dead-end the chain. Gemini at `LLM_3` is the safety net.
+
+### Migration 041 — `persona_id` type fix
+
+Migration 041 was originally written with `persona_id UUID NOT NULL REFERENCES public.personas(id)`. Supabase rejected it with `ERROR: 42804: foreign key constraint cannot be implemented — incompatible types: uuid and text`.
+
+**Root cause:** `personas.id` is `TEXT` in production, not `UUID`. The original `001_initial_schema.sql` declared it as `UUID`, but it was changed (see `018_fix_debates_persona_id.sql` comment "personas.id is text in production"). Persona seed data uses human-readable string IDs (`founder-pmf-coach`, `vc-skeptic`, etc.), which is why TEXT.
+
+**Fix:** Changed line 22 of `041_persona_belief_states.sql` from `persona_id UUID` to `persona_id TEXT`. Pattern matches `040_persona_utterance_feedback.sql:16`.
+
+### Production env configuration
+
+The persona-recommend route (`src/app/api/personas/recommend/route.ts:46-54`) had been silently returning `"Default recommendation (worker not configured)"` because `WORKER_URL` and `WORKER_SHARED_SECRET` weren't set on Vercel. Fixed via CLI:
+
+- **Railway** — set `WORKER_SHARED_SECRET=9C6C7MlXm2uv37Vf6e8OYcOXqGIzmfaAo0AquNhWYgY=`. Removed legacy `LLM_*` single-model vars (chain-only on Railway now).
+- **Vercel** — set `WORKER_URL=https://hygge-production-233e.up.railway.app` + matching `WORKER_SHARED_SECRET` across Production / Preview / Development. Vercel does **not** read `LLM_*` chain vars directly (only the worker does); the `LLM_1/2/3` set on Vercel is harmless duplication kept for symmetry.
+
+**Architecture clarification** (saved to memory for future sessions): Vercel never calls LLM providers directly. Two reasons — (1) MiMo / DashScope endpoints are CN-only and unreachable from Vercel's overseas regions, (2) long-running evaluation jobs run on BullMQ + Redis on the worker. Vercel routes either enqueue or proxy through `${WORKER_URL}/recommend`.
+
+### Commit & verification
+
+- Commit `43782ca` on `feedback-flywheel`: 041 FK type fix + MiMo migration (`.env.example` × 2 + `settings/llm/page.tsx` + migration 041).
+- All tests re-run: Next.js 28/28 ✅, Worker 46/46 ✅ (including the 14 belief-state tests), typecheck clean.
+- Pushed to `origin/feedback-flywheel` with upstream tracking.
+
+### Pending (operator action, not code)
+
+- Vercel `--prod` redeploy to pick up new `WORKER_URL` / `WORKER_SHARED_SECRET` (user said this was completed manually).
+- Rotate exposed Gemini key `AIzaSy...CYBg` (was visible in a screenshot during config).
+- Apply migration 041 to remote Supabase (the original blocker that triggered the FK-type fix — should now succeed on retry).
