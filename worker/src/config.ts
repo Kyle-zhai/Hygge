@@ -23,16 +23,16 @@ function normalizeProvider(raw: string | undefined): ProviderType {
   return (PROVIDER_TYPES.has(v) ? v : "openai_compatible") as ProviderType;
 }
 
-function readChainFromEnv(): ChainEntry[] {
+function readChainFromEnv(prefix = "LLM"): ChainEntry[] {
   const entries: ChainEntry[] = [];
   for (let i = 1; i <= MAX_CHAIN_LEN; i++) {
-    const apiKey = process.env[`LLM_${i}_API_KEY`]?.trim();
-    const model = process.env[`LLM_${i}_MODEL`]?.trim();
+    const apiKey = process.env[`${prefix}_${i}_API_KEY`]?.trim();
+    const model = process.env[`${prefix}_${i}_MODEL`]?.trim();
     if (!apiKey || !model) continue;
-    const providerType = normalizeProvider(process.env[`LLM_${i}_PROVIDER`]);
-    const baseURL = process.env[`LLM_${i}_BASE_URL`]?.trim() || undefined;
-    const visionModel = process.env[`LLM_${i}_VISION_MODEL`]?.trim() || undefined;
-    const label = process.env[`LLM_${i}_LABEL`]?.trim() || undefined;
+    const providerType = normalizeProvider(process.env[`${prefix}_${i}_PROVIDER`]);
+    const baseURL = process.env[`${prefix}_${i}_BASE_URL`]?.trim() || undefined;
+    const visionModel = process.env[`${prefix}_${i}_VISION_MODEL`]?.trim() || undefined;
+    const label = process.env[`${prefix}_${i}_LABEL`]?.trim() || undefined;
     if (providerType === "openai_compatible" && !baseURL) {
       // openai_compatible requires a baseURL; skip malformed entries rather than crash
       continue;
@@ -41,6 +41,7 @@ function readChainFromEnv(): ChainEntry[] {
   }
 
   if (entries.length > 0) return entries;
+  if (prefix !== "LLM") return entries;
 
   // Backwards-compat fallback: fold legacy LLM_MODEL / LLM_BASE_URL / LLM_API_KEY /
   // LLM_FALLBACK_MODELS into a single openai_compatible chain. This path stays alive
@@ -68,6 +69,10 @@ function readChainFromEnv(): ChainEntry[] {
 }
 
 const chain = readChainFromEnv();
+// Optional cheaper model chain for low-stakes structured tasks (topic
+// classification, etc). Falls back to the primary chain when not configured.
+// Set via LLM_AUX_1_PROVIDER / LLM_AUX_1_API_KEY / LLM_AUX_1_MODEL / LLM_AUX_1_BASE_URL.
+const auxChain = readChainFromEnv("LLM_AUX");
 
 export const config = {
   redis: {
@@ -75,6 +80,7 @@ export const config = {
   },
   llm: {
     chain,
+    auxChain,
     // Hard cap on a single LLM HTTP call. Node fetch has no default timeout,
     // so without this a slow/hung provider leaves the worker stuck on "thinking"
     // until BullMQ's lockDuration rolls over (long after the user gave up).
