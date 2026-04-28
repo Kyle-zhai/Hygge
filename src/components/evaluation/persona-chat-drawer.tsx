@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowUp, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PersonaAvatar } from "@/components/persona-avatar";
+import { UtteranceFeedbackButtons } from "./utterance-feedback-buttons";
+import type { FeedbackRating } from "@/lib/feedback/types";
 
 interface Message {
   id: string;
@@ -34,6 +36,7 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
   const [sending, setSending] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [feedbackByMessageId, setFeedbackByMessageId] = useState<Record<string, { rating: FeedbackRating | null; comment: string | null }>>({});
   const waitingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -65,6 +68,23 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
     }
     init();
   }, [evaluationId, persona.id]);
+
+  useEffect(() => {
+    if (!debateId) return;
+    let cancelled = false;
+    fetch(`/api/feedback/utterance?debateId=${encodeURIComponent(debateId)}`)
+      .then((r) => r.json())
+      .then((j: { feedback?: Array<{ debate_message_id: string; rating: FeedbackRating; comment: string | null }> }) => {
+        if (cancelled) return;
+        const map: Record<string, { rating: FeedbackRating | null; comment: string | null }> = {};
+        for (const row of j.feedback ?? []) {
+          map[row.debate_message_id] = { rating: row.rating, comment: row.comment };
+        }
+        setFeedbackByMessageId(map);
+      })
+      .catch(() => { /* silent — empty initial state, new votes still work */ });
+    return () => { cancelled = true; };
+  }, [debateId]);
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
@@ -214,19 +234,28 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
                   key={msg.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex gap-2.5 group ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "persona" && (
                     <span className="shrink-0 text-base mt-1">{persona.identity.avatar}</span>
                   )}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                    className={`relative max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                       msg.role === "user"
                         ? "bg-[rgb(var(--accent-warm-rgb)/0.15)] text-[color:var(--text-primary)] rounded-br-md"
                         : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)] rounded-bl-md"
                     }`}
                   >
                     {msg.content}
+                    {msg.role === "persona" && (
+                      <div className="absolute -bottom-6 right-0">
+                        <UtteranceFeedbackButtons
+                          address={{ kind: "one_v_one", debateMessageId: msg.id }}
+                          personaId={persona.id}
+                          initial={feedbackByMessageId[msg.id] ?? null}
+                        />
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}
