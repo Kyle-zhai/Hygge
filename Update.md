@@ -6,15 +6,131 @@ Daily activity log for Hygge platform work. This entry documents the core produc
 
 ## TL;DR
 
-Shipped **Phase 2 of the debate-realism moat**: personas now carry an explicit, structured belief across debate rounds (`position`, `confidence`, `evidence`, `shifts`), and each round's LLM call is forced to acknowledge what was heard from others (active listening) before emitting a structured belief update. Designed as a **folded** call — same LLM call count as Phase 1, only ~30% more output tokens — so realism improves without increasing latency. Plus two architecture changes uncovered during a worker audit: a Redis idle-traffic fix and a second LLM chain for low-stakes tasks.
+Shipped two phases of the **debate-realism moat strategy** end-to-end in one day:
+
+- **Phase 1 — Feedback flywheel.** Per-utterance 👍👎 + optional comment in both round-table and 1v1 surfaces. Sinks into a structured, dedup-keyed training-data table. Pure additive instrumentation; no model behavior changes. Starts the labeled-data flywheel that Phase 3 (DPO fine-tune) will eat.
+- **Phase 2 — Belief State + Active Listening.** Personas now carry an explicit structured belief (`position`, `confidence`, `evidence`, `shifts`) across debate rounds; each round's LLM call is forced to acknowledge what was heard from others before emitting a structured belief update. Designed as a *folded* call — same LLM call count as before, only ~30% more output tokens — so realism improves without latency cost.
+
+Plus two architecture optimizations uncovered during a worker audit: a Redis idle-traffic fix and a second LLM chain for low-stakes tasks.
 
 Branch `feedback-flywheel`. Worker tests 46/46 ✅, root 28/28 ✅, typecheck clean.
 
 ---
 
-## 1. Phase 2 — Belief State + Active Listening
+## 1. Phase 1 — Feedback flywheel (training data collection)
 
 ### 1.1 What was built
+
+Every persona utterance in the product now carries 👍 / 👎 buttons and an optional 280-char comment box. Votes from authenticated users sink into `persona_utterance_feedback`, keyed by a stable utterance address that works across both surfaces:
+
+- **Round-table** mode — address is `(evaluation_id, round_number, message_index)`.
+- **1v1 chat** mode — address is `(debate_message_id)`.
+
+A single reusable React component (`<UtteranceFeedbackButtons />`) is rendered next to every persona message in both surfaces.
+
+### 1.2 Why this matters (the goal)
+
+This is the **first phase of the debate-realism moat strategy** documented in `docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md`. The strategic case is:
+
+- Prompt engineering is not defensible — anyone can copy a prompt.
+- A *cognitive architecture* (Phase 2) is partly defensible but still replicable.
+- **Persona-tuned models built from labeled debate data** are the only piece nobody can buy or copy. They compound over time the more debates run.
+
+Phase 3 (DPO fine-tune per-archetype voice models, see strategy doc) needs ~5k labels per persona archetype. Without instrumentation that captures every vote with a stable address, we can't run Phase 3 at all. **Every week without the flywheel is a week of training data permanently lost.** Phase 1 fires now so the data starts compounding immediately, in parallel with Phase 2 / 3 build-out.
+
+Secondary goal: signal where the current system fails. Aggregating thumbs-down by persona archetype tells us which voices are weakest and need Phase 2/3 attention first.
+
+### 1.3 How it's implemented
+
+**(a) Schema (`supabase/migrations/040_persona_utterance_feedback.sql`).** One row per `(user, utterance)`. The trick is supporting two address shapes in the same table without nullable-everywhere pollution. We use a CHECK constraint:
+
+```sql
+CONSTRAINT utterance_address_xor CHECK (
+  (evaluation_id IS NOT NULL AND round_number IS NOT NULL AND message_index IS NOT NULL AND debate_message_id IS NULL)
+  OR
+  (debate_message_id IS NOT NULL AND evaluation_id IS NULL AND round_number IS NULL AND message_index IS NULL)
+)
+```
+
+Exactly one of the two address shapes must be populated. This is enforced at the DB so any future ingestion path can't drift.
+
+Dedup is enforced by *two partial unique indexes*, one per address mode:
+
+```sql
+CREATE UNIQUE INDEX idx_feedback_round_table_unique
+  ON persona_utterance_feedback (user_id, evaluation_id, round_number, message_index)
+  WHERE evaluation_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_feedback_1v1_unique
+  ON persona_utterance_feedback (user_id, debate_message_id)
+  WHERE debate_message_id IS NOT NULL;
+```
+
+A flat `UNIQUE` across all four address columns wouldn't work because nullable columns participate in uniqueness inconsistently across DB engines. Partial indexes per mode keep the dedup precise.
+
+`persona_id` is denormalized into the row (despite being derivable through joins) so analytics queries — "thumbs-down rate per persona archetype" — don't have to traverse two tables. `rating` is `SMALLINT CHECK (rating IN (-1, 1))` (no zero / no abstain). `comment` is capped at 280 chars at the schema level. RLS: four policies, all `auth.uid() = user_id` — users can only see/write their own feedback rows. An `updated_at` trigger fires on every UPDATE to track when a vote was last edited.
+
+**(b) API (`src/app/api/feedback/utterance/route.ts`).** Three verbs: `POST` (vote / upsert), `DELETE` (unvote), `GET` (hydrate existing votes for a debate). Body validated by zod `discriminatedUnion` keyed on `kind: "round_table" | "one_v_one"` so the type system enforces the same XOR as the DB.
+
+Defense-in-depth ownership checks beyond RLS: the API independently verifies the user owns the underlying debate before writing.
+
+- Round-table: `evaluations` → `projects.user_id` chain.
+- 1v1: `debate_messages` → `debates.user_id` chain.
+
+This catches the case where a stale RLS policy silently allowed a write — the API rejects with 403 before the row reaches the DB. Rate limiting via the `feedback` key in `enforceRateLimit(...)` (added in commit `17703b2`).
+
+**(c) Optimistic state machine (`src/lib/feedback/use-utterance-feedback.ts`).** The hook is a `useReducer` with 7 actions: `vote_start / vote_success / vote_error / unvote_start / unvote_success / unvote_error / hydrate`. The pattern:
+
+```
+vote_start  → set rating + pending=true (UI updates immediately)
+vote_success → pending=false (commit)
+vote_error  → restore previous rating + pending=false (rollback)
+```
+
+The subtle bug — and the one we explicitly fixed (`a9522d8`, `00646c9`) — is the `hydrate` action. `GET` responses arrive asynchronously while the user is mid-click. If hydrate naively overwrote local state, the optimistic vote would be clobbered by stale server state mid-flight. Fix:
+
+```ts
+case "hydrate":
+  if (state.pending) return state;  // never clobber an in-flight mutation
+  return { rating: action.rating, comment: action.comment, pending: false };
+```
+
+The reducer also serializes concurrent vote / unvote: `if (state.pending) return` at the top of `vote(...)` and `unvote(...)` rejects double-clicks before they hit the API.
+
+**(d) Component + wiring.** `<UtteranceFeedbackButtons />` is one reusable React component. Two wiring sites:
+
+- `wire UtteranceFeedbackButtons into round-table view + hydration` (`dd468bf`)
+- `wire UtteranceFeedbackButtons into 1v1 chat drawer` (`047309e`)
+
+Each wiring site owns one detail: how to derive the `UtteranceAddress` for a given message in that view. The component itself is address-agnostic.
+
+### 1.4 Failure modes (intentionally fail-soft)
+
+- **GET silent failure fixed** (`138f747`). Originally returned an empty list on error, so a transient DB hiccup looked like "you never voted on this." Now logs and returns 500 so the UI shows a real error state.
+- **Concurrent vote/unvote serialized** at the reducer level — double-clicking 👍 then 👎 within ~50ms previously caused state desync.
+- **Late hydration after late message arrival** (`00646c9`) — when WebSocket delivers a message *after* the initial `GET` resolved, the hook re-hydrates from the new payload. The `pending` guard above prevents clobbering.
+
+### 1.5 What's deliberately *not* done
+
+- **Per-utterance reasoning capture.** We collect rating + comment, not "what went wrong" structured tags. Tags would help Phase 3 dataset quality but force every voter to slow down — we chose volume over structure for the bootstrap.
+- **No public surface.** Aggregated metrics (thumbs-down rate per archetype) live nowhere yet. Future work: an internal `/admin` page surfaces leaderboards once we have meaningful sample size.
+- **No export pipeline.** Training data extraction will be a separate spec when Phase 3 starts. Right now the data is just sitting in Supabase, ready.
+
+### 1.6 What this unlocks
+
+This is the table Phase 3 will train on. Once we have ~5k thumbs-up + thumbs-down rows per persona archetype, we can:
+
+1. Filter to high-rated utterances → DPO "preferred" set
+2. Filter to low-rated utterances → DPO "rejected" set
+3. Fine-tune a small voice model per archetype on top of a shared reasoning base (strategy doc Phase 3)
+
+Phase 3 isn't started, but the foundation it requires is now in production from day 1.
+
+---
+
+## 2. Phase 2 — Belief State + Active Listening
+
+### 2.1 What was built
 
 Every persona that participates in a round-table debate now has a structured belief snapshot at every round, addressed by `(evaluation_id, persona_id, round_number)`:
 
@@ -28,7 +144,7 @@ Every persona that participates in a round-table debate now has a structured bel
 
 `round_number = 0` is the persona's *prior* belief before the debate starts. Rounds 1–3 are the post-round snapshots after each LLM call.
 
-### 1.2 Why this matters (the goal)
+### 2.2 Why this matters (the goal)
 
 In Phase 1, each round's LLM call saw only the raw transcript of the previous round and had to re-derive every persona's stance from scratch. Two failure modes followed:
 
@@ -37,7 +153,7 @@ In Phase 1, each round's LLM call saw only the raw transcript of the previous ro
 
 Phase 2 fixes both: the belief snapshot is the anchor (no drift between rounds), and `shifts_this_round` is the causal trail (we know which speaker + which claim moved each persona). The user-facing effect is that personas now behave like people who remember what they previously thought — they update gradually instead of resetting each round.
 
-### 1.3 How it's implemented
+### 2.3 How it's implemented
 
 Three components, run in this order per debate:
 
@@ -102,7 +218,7 @@ The cost discount is real because the prompt body, persona context, and history 
 
 The new state is upserted into `persona_belief_states` with `onConflict: "evaluation_id,persona_id,round_number"`, then kept in the in-memory `beliefStates` map so the *next* round's prompt sees the most recent value.
 
-### 1.4 Active Listening — what role it plays
+### 2.4 Active Listening — what role it plays
 
 The `active_listening` block is a prompt-level steering mechanism, not a data product. It is currently parsed but not consumed by any downstream code — `must_address` and `claims_heard_this_round` exist purely to force the LLM into a more deliberative response style.
 
@@ -110,7 +226,7 @@ The mechanism: when the LLM has to enumerate what it heard before it speaks, it 
 
 The data is captured in the JSON we receive but discarded after parsing. Future work could persist it for an "Alice was responding to Bob's claim that…" affordance in the UI.
 
-### 1.5 Failure modes (intentionally fail-soft)
+### 2.5 Failure modes (intentionally fail-soft)
 
 Three places where Phase 2 chooses to silently degrade rather than break the debate:
 
@@ -120,13 +236,13 @@ Three places where Phase 2 chooses to silently degrade rather than break the deb
 
 Each was chosen on purpose: a debate must finish even when belief data is partial. Visibility loss is preferable to a hard stop the user can see.
 
-### 1.6 Test coverage
+### 2.6 Test coverage
 
 `worker/tests/processors/belief-state.test.ts` — 14 unit tests covering: stance → position mapping, evidence list construction (2-strength + 2-weakness cap, empty-string filtering, 200-char content trim), default confidence, position clamping, confidence clamping, NaN/Infinity rejection, noise-floor shift suppression, malformed-input parsing, derivation with no overall_stance, evidence weight assignment.
 
 No end-to-end test yet exercises a real LLM call to confirm the model produces well-formed `belief_update` JSON in the wild — we rely on JSON-mode + `robustJsonParse`'s tolerance.
 
-### 1.7 What is deliberately *not* done
+### 2.7 What is deliberately *not* done
 
 Phase 2 ships the foundation only. Out of scope for this iteration:
 
@@ -138,9 +254,9 @@ Phase 2 ships the foundation only. Out of scope for this iteration:
 
 ---
 
-## 2. Architecture — Redis idle traffic
+## 3. Architecture — Redis idle traffic
 
-### 2.1 The bug
+### 3.1 The bug
 
 User observed "Redis 一直有 commands" (Redis always has commands flowing) while the system was idle. Root cause is BullMQ's job-pickup mechanism: each worker runs a `BLPOP` loop with `drainDelay` controlling how often it re-issues the call when the queue is empty. We had three workers (evaluation, debate, recommend) at `300ms / 300ms / 60ms`. Idle BLPOP rate:
 
@@ -150,7 +266,7 @@ User observed "Redis 一直有 commands" (Redis always has commands flowing) whi
 
 BLPOP itself is cheap server-side (it blocks until a job arrives or the timeout fires), but the command *count* dominates Upstash's per-command pricing and makes the dashboard look busy when nothing is happening.
 
-### 2.2 The fix
+### 3.2 The fix
 
 `worker/src/index.ts` and `worker/src/queue.ts`: bumped `drainDelay` to `1000ms / 5000ms / 1000ms`:
 
@@ -167,16 +283,16 @@ Comment in `worker/src/index.ts` documents the BLPOP-traffic math so the next pe
 
 ---
 
-## 3. Auxiliary LLM chain (`LLM_AUX_*`)
+## 4. Auxiliary LLM chain (`LLM_AUX_*`)
 
-### 3.1 What was built
+### 4.1 What was built
 
 A second, parallel LLM chain configured via `LLM_AUX_*` env vars, alongside the existing primary chain. Two pieces:
 
 - `worker/src/config.ts` — `readChainFromEnv()` was generalized to take an optional `prefix` parameter. `LLM_*` and `LLM_AUX_*` chains are read with the same code.
 - `worker/src/llm/factory.ts` — new `buildAuxLLM()` returns the aux chain if configured, else falls back to the primary chain.
 
-### 3.2 Why
+### 4.2 Why
 
 LLM calls split into two cost/quality tiers:
 
@@ -185,29 +301,32 @@ LLM calls split into two cost/quality tiers:
 
 Without the split, every call ran on the strongest model, paying voice-fidelity prices for utility tasks. With the split, an operator can configure a cheap model in `LLM_AUX_*` and route low-stakes calls there independently.
 
-### 3.3 Current routing
+### 4.3 Current routing
 
 Only `classifyTopic(...)` in `worker/src/processors/orchestrator.ts` currently uses `buildAuxLLM(...)`. Persona review generation and debate generation stay on the primary chain. More routes will move over as we measure each call's voice-fidelity sensitivity.
 
-### 3.4 Status
+### 4.4 Status
 
 Built but inert by default. If `LLM_AUX_*` env vars are unset, `buildAuxLLM()` returns the primary chain and nothing changes. The cost optimization activates only when an operator configures a cheap model in `LLM_AUX_PRIMARY_MODEL` etc.
 
 ---
 
-## 4. Specs written
+## 5. Specs written
 
-- `docs/superpowers/specs/2026-04-28-debate-realism-strategy.md` — master strategy: 3-phase moat plan, 6 Phase-2 algorithm sketches with pseudo-code, 3 candidate Phase-3 training paths.
+- `docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md` — architecture spec: 3-phase moat (Phase 1 feedback flywheel → Phase 2 BeliefState → Phase 3 argument graph + DPO fine-tune) with defensibility table, sequencing rationale, and out-of-scope cuts.
+- `docs/superpowers/specs/2026-04-28-debate-realism-strategy.md` — master strategy doc: 6 Phase-2 algorithm sketches with pseudo-code, 3 candidate Phase-3 training paths.
 - `docs/superpowers/specs/2026-04-28-phase2-belief-state-implementation.md` — Phase-2 tech doc: design core (call-count tradeoff), data model, round-by-round flow, failure modes, prompt deltas, architecture optimizations, test coverage, expected realism gain.
 
 ---
 
 ## Numbers
 
-- **Files touched:** 7 modified + 4 created (excluding docs) + 2 spec docs
-- **Tests:** worker 46/46 ✅, root 28/28 ✅
+- **Commits today:** 19 (11 Phase 1 + 5 Phase 2 / arch + 3 docs/infra)
+- **Tests:** worker 46/46 ✅ (incl. 14 new belief-state tests), root 28/28 ✅
 - **Typecheck:** worker ✅, root ✅
-- **LLM call count per debate:** unchanged at 4 (selection + 3 rounds + outcome)
-- **Output token delta:** ~+30% per debate round (extra `active_listening` + `belief_update` blocks)
+- **Phase 1 surface coverage:** 100% of persona utterances in both round-table and 1v1 surfaces have feedback buttons
+- **Phase 2 LLM call count per debate:** unchanged at 4 (selection + 3 rounds + outcome)
+- **Phase 2 output token delta:** ~+30% per debate round (extra `active_listening` + `belief_update` blocks)
 - **Idle Redis traffic:** ~−90% (BLPOP rate ~23/sec → ~2/sec)
-- **Expected realism gain:** 35–45% over the Phase-1 baseline (subjective; will be measured against a labelled eval set once the feedback flywheel collects enough utterance ratings)
+- **Expected realism gain (Phase 2):** 35–45% over the Phase-1 baseline behavior (subjective; will be measured against a labelled eval set built from the Phase-1 flywheel)
+- **Training-data target for Phase 3:** ~5k labels per persona archetype before DPO fine-tune is viable — flywheel starts collecting now
