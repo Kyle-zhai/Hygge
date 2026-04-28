@@ -17,6 +17,15 @@ import {
   buildOutcomePrompt,
   type ReviewForDebate,
 } from "../prompts/round-table-debate.js";
+import { analyzeStanceDynamics } from "./stance-dynamics.js";
+import { applyPassiveObservations, type SpeakerObservation } from "./passive-observation.js";
+import {
+  buildArgumentGraph,
+  buildArgumentReflections,
+  type DebateRoundForGraph,
+} from "./argument-graph.js";
+import type { ArgumentNode } from "../types/argument-graph.js";
+import { loadProceduralMemoryByPersona } from "./procedural-memory.js";
 
 const ROUND_MAX_TOKENS = 3072;
 
@@ -32,6 +41,29 @@ export function parseBeliefUpdate(raw: unknown): BeliefUpdate | null {
     new_confidence: newConf,
     shifted_because: shifted,
   };
+}
+
+async function persistArgumentNodes(nodes: ArgumentNode[]): Promise<void> {
+  if (nodes.length === 0) return;
+  const rows = nodes.map((n) => ({
+    id: n.id,
+    evaluation_id: n.evaluation_id,
+    round: n.round,
+    speaker: n.speaker,
+    claim: n.claim,
+    attacks: n.attacks,
+    supports: n.supports,
+  }));
+  const { error } = await supabase.from("argument_nodes").upsert(rows, {
+    onConflict: "id",
+  });
+  if (error) {
+    log.warn("argument_nodes.persist_failed", {
+      evaluationId: nodes[0].evaluation_id,
+      count: nodes.length,
+      error: error.message,
+    });
+  }
 }
 
 async function persistBeliefState(state: BeliefState): Promise<void> {
@@ -97,8 +129,11 @@ export async function runRoundTableDebate(
   const beliefStates: Map<string, BeliefState> | undefined = evaluationId
     ? new Map<string, BeliefState>()
     : undefined;
+  const beliefHistory: Map<string, BeliefState[]> | undefined = evaluationId
+    ? new Map<string, BeliefState[]>()
+    : undefined;
 
-  if (evaluationId && beliefStates) {
+  if (evaluationId && beliefStates && beliefHistory) {
     for (const review of selectedReviews) {
       const initial = deriveInitialBeliefState({
         evaluation_id: evaluationId,
@@ -108,6 +143,7 @@ export async function runRoundTableDebate(
         weaknesses: review.weaknesses,
       });
       beliefStates.set(review.persona_id, initial);
+      beliefHistory.set(review.persona_id, [initial]);
       await persistBeliefState(initial);
     }
   }
@@ -115,9 +151,33 @@ export async function runRoundTableDebate(
   const rounds: DebateRound[] = [];
   const rawRounds: Array<{ round: number; messages: Array<{ persona_id: string; content: string }> }> = [];
 
+  const personaNameOf = (id: string): string => {
+    return selectedPersonas.find((p) => p.id === id)?.identity?.name || id;
+  };
+
+  const proceduralMemory = evaluationId
+    ? await loadProceduralMemoryByPersona(selectedPersonas.map((p) => p.id))
+    : undefined;
+
   for (let i = 0; i < 3; i++) {
+    const upcomingRound = i + 1;
+    const stanceLines = beliefHistory
+      ? analyzeStanceDynamics(beliefHistory, upcomingRound).reflectionLines
+      : [];
+    const graphForReflection = evaluationId
+      ? buildArgumentGraph(evaluationId, rawRounds satisfies DebateRoundForGraph[])
+      : null;
+    const argReflections = graphForReflection
+      ? buildArgumentReflections(graphForReflection, upcomingRound, personaNameOf)
+      : { unrespondedLines: [], cycleLines: [] };
+    const reflectionLines = [
+      ...stanceLines,
+      ...argReflections.unrespondedLines,
+      ...argReflections.cycleLines,
+    ];
+
     const { system, prompt } = buildDebateRoundPrompt(
-      i + 1,
+      upcomingRound,
       roundThemes[i] || topicFocus,
       selectedPersonas,
       selectedReviews,
@@ -125,6 +185,8 @@ export async function runRoundTableDebate(
       project,
       rawInput,
       beliefStates,
+      reflectionLines,
+      proceduralMemory,
     );
     const response = await llm.complete({ system, prompt, maxTokens: ROUND_MAX_TOKENS, jsonMode: true });
     const parsed = robustJsonParse<Record<string, unknown>>(response.text);
@@ -140,10 +202,19 @@ export async function runRoundTableDebate(
       stance_shift: typeof m.stance_shift === "string" ? m.stance_shift : undefined,
     }));
 
-    rounds.push({ round: i + 1, theme: roundThemes[i] || topicFocus, messages: cleanedMessages });
-    rawRounds.push({ round: i + 1, messages: cleanedMessages });
+    rounds.push({ round: upcomingRound, theme: roundThemes[i] || topicFocus, messages: cleanedMessages });
+    rawRounds.push({ round: upcomingRound, messages: cleanedMessages });
 
-    if (evaluationId && beliefStates) {
+    if (evaluationId) {
+      const fullGraph = buildArgumentGraph(evaluationId, rawRounds satisfies DebateRoundForGraph[]);
+      const newNodes = Array.from(fullGraph.nodes.values()).filter((n) => n.round === upcomingRound);
+      await persistArgumentNodes(newNodes);
+    }
+
+    if (evaluationId && beliefStates && beliefHistory) {
+      const speakerObservations: SpeakerObservation[] = [];
+      const activeSpeakerIds = new Set<string>();
+
       for (const m of messages) {
         const personaId = typeof m.persona_id === "string" ? m.persona_id : null;
         if (!personaId) continue;
@@ -151,9 +222,35 @@ export async function runRoundTableDebate(
         if (!prev) continue;
         const update = parseBeliefUpdate(m.belief_update);
         if (!update) continue;
-        const next = applyBeliefUpdate(prev, update, i + 1);
+        const next = applyBeliefUpdate(prev, update, upcomingRound);
+        const deltaPos = next.position - prev.position;
         beliefStates.set(personaId, next);
+        const hist = beliefHistory.get(personaId) ?? [];
+        hist.push(next);
+        beliefHistory.set(personaId, hist);
+        activeSpeakerIds.add(personaId);
+        speakerObservations.push({
+          speakerId: personaId,
+          delta_position: deltaPos,
+          claim: update.shifted_because ?? "",
+        });
         await persistBeliefState(next);
+      }
+
+      for (const [observerId, observerState] of beliefStates) {
+        const passiveNext = applyPassiveObservations(observerState, speakerObservations, upcomingRound);
+        if (passiveNext === observerState) continue;
+        beliefStates.set(observerId, passiveNext);
+        if (!activeSpeakerIds.has(observerId)) {
+          const hist = beliefHistory.get(observerId) ?? [];
+          hist.push(passiveNext);
+          beliefHistory.set(observerId, hist);
+        } else {
+          const hist = beliefHistory.get(observerId) ?? [];
+          if (hist.length > 0) hist[hist.length - 1] = passiveNext;
+          beliefHistory.set(observerId, hist);
+        }
+        await persistBeliefState(passiveNext);
       }
     }
   }

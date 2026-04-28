@@ -1,6 +1,7 @@
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
 import type { BeliefState } from "../types/belief-state.js";
+import { formatProceduralExamples, type ProceduralMemoryByPersona } from "../processors/procedural-memory.js";
 
 export interface ReviewForDebate {
   persona_id: string;
@@ -91,19 +92,23 @@ export function buildDebateRoundPrompt(
   project: ProjectParsedData,
   rawInput: string,
   beliefStates?: Map<string, BeliefState>,
+  reflectionLines?: string[],
+  proceduralMemory?: ProceduralMemoryByPersona,
 ): { system: string; prompt: string } {
   const personaProfiles = selectedPersonas.map((p) => {
     const review = reviews.find((r) => r.persona_id === p.id);
     const strengths = review?.strengths?.length ? review.strengths.slice(0, 3).join("; ") : "(none noted)";
     const weaknesses = review?.weaknesses?.length ? review.weaknesses.slice(0, 3).join("; ") : "(none noted)";
     const beliefLine = buildBeliefStateLine(beliefStates?.get(p.id));
+    const memory = proceduralMemory?.byPersonaId.get(p.id) ?? [];
+    const memoryBlock = memory.length > 0 ? `\n${formatProceduralExamples(memory)}` : "";
     return `[${p.id}] ${p.identity.name} — ${p.demographics.occupation}
 Psychology: ${p.psychology?.personality_type ?? "analytical"}, decision style: ${p.psychology?.decision_making?.style ?? "balanced"}
 Stance: ${review?.overall_stance || "N/A"}
 Their review (initial position):
 ${review?.review_text.slice(0, 600) || "N/A"}
 Strengths they noted: ${strengths}
-Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}`;
+Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}${memoryBlock}`;
   }).join("\n\n");
 
   let context = "";
@@ -120,6 +125,10 @@ Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}`;
 
   const beliefBlock = beliefStates && beliefStates.size > 0
     ? `\nIMPORTANT: Each persona's "Current belief" line above is their structured state going INTO this round. Their next utterance must be coherent with it: if confidence is high they push back harder; if last round shifted them, they acknowledge it explicitly ("@X — your point about Y did move me"). Do NOT make a persona suddenly flip without explaining what shifted them.\n`
+    : "";
+
+  const reflectionBlock = reflectionLines && reflectionLines.length > 0
+    ? `\n${reflectionLines.map((l) => `>> ${l}`).join("\n")}\nThe directives above describe the *current shape of the debate*. The personas should respond to those dynamics in this round — specifically, engage with whichever directive applies to them (un-responded claims, cycles, frozen stances, premature convergence, or no concessions).\n`
     : "";
 
   const beliefSchemaFields = beliefStates
@@ -146,7 +155,7 @@ ${rawInputExcerpt}
 Personas in this debate:
 ${personaProfiles}
 ${context}
-${beliefBlock}
+${beliefBlock}${reflectionBlock}
 Generate each selected persona's response for this round. Each persona MUST:
 - Stay in character (reflect their psychology, biases, communication style).
 - Directly respond to other personas' arguments from previous rounds — when doing so, quote the phrase they are reacting to.
