@@ -40,4 +40,12 @@ describe("feedbackReducer", () => {
     );
     expect(s).toEqual({ rating: null, comment: "", pending: false });
   });
+
+  it("unvote_error rolls back to previous state", () => {
+    const s = feedbackReducer(
+      { rating: null, comment: "", pending: true },
+      { type: "unvote_error", previous: { rating: 1, comment: "x" } },
+    );
+    expect(s).toEqual({ rating: 1, comment: "x", pending: false });
+  });
 });

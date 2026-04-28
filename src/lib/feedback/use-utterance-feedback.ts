@@ -49,6 +49,7 @@ export function useUtteranceFeedback({ address, personaId, initial }: Input) {
 
   const vote = useCallback(
     async (rating: FeedbackRating, comment = "") => {
+      if (state.pending) return;
       const previous = { rating: state.rating, comment: state.comment };
       dispatch({ type: "vote_start", rating, comment });
       try {
@@ -82,10 +83,11 @@ export function useUtteranceFeedback({ address, personaId, initial }: Input) {
         throw e;
       }
     },
-    [address, personaId, state.rating, state.comment],
+    [address, personaId, state.rating, state.comment, state.pending],
   );
 
   const unvote = useCallback(async () => {
+    if (state.pending) return;
     const previous = { rating: state.rating, comment: state.comment };
     dispatch({ type: "unvote_start" });
     try {
@@ -112,7 +114,7 @@ export function useUtteranceFeedback({ address, personaId, initial }: Input) {
       dispatch({ type: "unvote_error", previous });
       throw e;
     }
-  }, [address, state.rating, state.comment]);
+  }, [address, state.rating, state.comment, state.pending]);
 
   return { ...state, vote, unvote };
 }
