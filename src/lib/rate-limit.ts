@@ -2,13 +2,14 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
-type LimiterKey = "evaluations" | "personas" | "debateMessages" | "llmSettings";
+type LimiterKey = "evaluations" | "personas" | "debateMessages" | "llmSettings" | "feedback";
 
 const CONFIGS: Record<LimiterKey, { limit: number; window: `${number} ${"s" | "m" | "h"}` }> = {
   evaluations: { limit: 20, window: "1 h" },
   personas: { limit: 30, window: "1 h" },
   debateMessages: { limit: 120, window: "1 h" },
   llmSettings: { limit: 10, window: "15 m" },
+  feedback: { limit: 60, window: "1 m" },
 };
 
 let cachedRedis: Redis | null | undefined;
