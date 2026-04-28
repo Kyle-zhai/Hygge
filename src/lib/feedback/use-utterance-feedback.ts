@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useCallback } from "react";
+import { useReducer, useCallback, useEffect } from "react";
 import type { UtteranceAddress, FeedbackRating } from "./types";
 
 export interface FeedbackState {
@@ -15,7 +15,8 @@ export type FeedbackAction =
   | { type: "vote_error"; previous: { rating: FeedbackRating | null; comment: string } }
   | { type: "unvote_start" }
   | { type: "unvote_success" }
-  | { type: "unvote_error"; previous: { rating: FeedbackRating | null; comment: string } };
+  | { type: "unvote_error"; previous: { rating: FeedbackRating | null; comment: string } }
+  | { type: "hydrate"; rating: FeedbackRating | null; comment: string };
 
 export function feedbackReducer(state: FeedbackState, action: FeedbackAction): FeedbackState {
   switch (action.type) {
@@ -31,6 +32,11 @@ export function feedbackReducer(state: FeedbackState, action: FeedbackAction): F
       return { ...state, pending: false };
     case "unvote_error":
       return { rating: action.previous.rating, comment: action.previous.comment, pending: false };
+    case "hydrate":
+      // Only adopt server state when no in-flight mutation. Otherwise we'd
+      // clobber the user's optimistic vote with stale server state.
+      if (state.pending) return state;
+      return { rating: action.rating, comment: action.comment, pending: false };
   }
 }
 
@@ -46,6 +52,11 @@ export function useUtteranceFeedback({ address, personaId, initial }: Input) {
     comment: initial?.comment ?? "",
     pending: false,
   });
+
+  useEffect(() => {
+    if (!initial) return;
+    dispatch({ type: "hydrate", rating: initial.rating, comment: initial.comment ?? "" });
+  }, [initial?.rating, initial?.comment]);
 
   const vote = useCallback(
     async (rating: FeedbackRating, comment = "") => {

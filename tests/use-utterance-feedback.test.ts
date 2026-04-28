@@ -48,4 +48,18 @@ describe("feedbackReducer", () => {
     );
     expect(s).toEqual({ rating: 1, comment: "x", pending: false });
   });
+
+  it("hydrate adopts server state when not pending", () => {
+    const s = feedbackReducer(
+      { rating: null, comment: "", pending: false },
+      { type: "hydrate", rating: 1, comment: "loaded" },
+    );
+    expect(s).toEqual({ rating: 1, comment: "loaded", pending: false });
+  });
+
+  it("hydrate is a no-op while pending (don't clobber in-flight vote)", () => {
+    const before: FeedbackState = { rating: -1, comment: "x", pending: true };
+    const after = feedbackReducer(before, { type: "hydrate", rating: 1, comment: "stale" });
+    expect(after).toBe(before);
+  });
 });

@@ -82,7 +82,7 @@ export function PersonaChatDrawer({ evaluationId, persona, onClose }: PersonaCha
         }
         setFeedbackByMessageId(map);
       })
-      .catch(() => { /* silent — empty initial state, new votes still work */ });
+      .catch((err) => { console.error("[feedback hydration]", err); });
     return () => { cancelled = true; };
   }, [debateId]);
 
