@@ -94,3 +94,14 @@ export function buildVisionLLM(overrides?: LLMOverrides | null): LLMAdapter {
   // still get something rather than crashing. Quality may degrade but the job runs.
   return buildFallbackFrom(chain);
 }
+
+// Builds the LLM for low-stakes structured tasks (e.g. topic classification).
+// BYOK users always get their own chain — we don't burn the operator's aux
+// budget on a paying customer's job. Otherwise prefer LLM_AUX_* if set, else
+// fall back to the primary chain.
+export function buildAuxLLM(overrides?: LLMOverrides | null): LLMAdapter {
+  const userEntries = toEntryArray(overrides).filter(isValidEntry).map(toChainEntry);
+  if (userEntries.length > 0) return buildFallbackFrom(userEntries);
+  if (config.llm.auxChain.length > 0) return buildFallbackFrom(config.llm.auxChain);
+  return buildFallbackFrom(config.llm.chain);
+}
