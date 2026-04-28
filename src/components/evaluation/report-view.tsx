@@ -10,6 +10,7 @@ import { RoundTableDebateView } from "@/components/evaluation/round-table-debate
 import { PersonaChatDrawer } from "@/components/evaluation/persona-chat-drawer";
 import { ShareButton } from "@/components/evaluation/share-button";
 import { PrintButton } from "@/components/evaluation/print-button";
+import type { FeedbackRating } from "@/lib/feedback/types";
 
 interface PersonaData {
   id: string;
@@ -68,6 +69,26 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [view]);
+
+  const [feedbackByAddress, setFeedbackByAddress] = useState<Record<string, { rating: FeedbackRating | null; comment: string | null }>>({});
+
+  useEffect(() => {
+    if (!evaluationId) return;
+    let cancelled = false;
+    fetch(`/api/feedback/utterance?evaluationId=${encodeURIComponent(evaluationId)}`)
+      .then((r) => r.json())
+      .then((j: { feedback?: Array<{ round_number: number | null; message_index: number | null; rating: FeedbackRating; comment: string | null }> }) => {
+        if (cancelled) return;
+        const map: Record<string, { rating: FeedbackRating | null; comment: string | null }> = {};
+        for (const row of j.feedback ?? []) {
+          if (row.round_number == null || row.message_index == null) continue;
+          map[`r${row.round_number}:${row.message_index}`] = { rating: row.rating, comment: row.comment };
+        }
+        setFeedbackByAddress(map);
+      })
+      .catch(() => { /* silent — UI shows empty state, buttons still work for new votes */ });
+    return () => { cancelled = true; };
+  }, [evaluationId]);
 
   function handleViewScores() {
     savedScrollY.current = window.scrollY;
@@ -144,6 +165,8 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
             locale={locale}
             onBack={handleBackToReport}
             onStartDebate={evaluationId ? handleStartDebate : undefined}
+            evaluationId={evaluationId}
+            initialFeedback={feedbackByAddress}
           />
         </div>
         {drawer}

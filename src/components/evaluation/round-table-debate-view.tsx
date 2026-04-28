@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Users, Lightbulb, AlertTriangle, MessageSquare, Swords } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UtteranceFeedbackButtons } from "./utterance-feedback-buttons";
+import type { FeedbackRating } from "@/lib/feedback/types";
 
 interface PersonaIdentityLike {
   name?: string;
@@ -51,13 +53,15 @@ interface RoundTableDebateViewProps {
   locale: string;
   onBack: () => void;
   onStartDebate?: (personaId: string) => void;
+  evaluationId?: string;
+  initialFeedback?: Record<string, { rating: FeedbackRating | null; comment: string | null }>;
 }
 
 function safeArray<T>(val: unknown): T[] {
   return Array.isArray(val) ? val : [];
 }
 
-export function RoundTableDebateView({ debate, personas, locale, onBack, onStartDebate }: RoundTableDebateViewProps) {
+export function RoundTableDebateView({ debate, personas, locale, onBack, onStartDebate, evaluationId, initialFeedback }: RoundTableDebateViewProps) {
   const t = useTranslations("evaluation");
   const personaMap = new Map(personas.map((p) => [p.id, p]));
 
@@ -131,7 +135,7 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.15 + ri * 0.1 + mi * 0.04 }}
-                    className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4"
+                    className="group rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 relative"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">{getAvatar(msg.persona_id)}</span>
@@ -150,6 +154,15 @@ export function RoundTableDebateView({ debate, personas, locale, onBack, onStart
                     <p className="text-sm text-[color:var(--text-secondary)] leading-relaxed pl-8">
                       {msg.content}
                     </p>
+                    {evaluationId && (
+                      <div className="absolute top-2 right-2">
+                        <UtteranceFeedbackButtons
+                          address={{ kind: "round_table", evaluationId, roundNumber: round.round, messageIndex: mi }}
+                          personaId={msg.persona_id}
+                          initial={initialFeedback?.[`r${round.round}:${mi}`] ?? null}
+                        />
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}
