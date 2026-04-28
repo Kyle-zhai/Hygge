@@ -26,6 +26,8 @@ import {
 } from "./argument-graph.js";
 import type { ArgumentNode } from "../types/argument-graph.js";
 import { loadProceduralMemoryByPersona } from "./procedural-memory.js";
+import { parseToMEntries, persistToMState } from "./theory-of-mind.js";
+import type { ToMState } from "../types/theory-of-mind.js";
 
 const ROUND_MAX_TOKENS = 3072;
 
@@ -159,6 +161,14 @@ export async function runRoundTableDebate(
     ? await loadProceduralMemoryByPersona(selectedPersonas.map((p) => p.id))
     : undefined;
 
+  // ToM state: per-observer snapshot of what they thought every OTHER persona
+  // believed at the END of the previous round. Carried INTO the next round's
+  // prompt so personas can name explicit gaps when their prior read was wrong.
+  const tomStates: Map<string, ToMState> | undefined = evaluationId
+    ? new Map<string, ToMState>()
+    : undefined;
+  const validPersonaIdSet = new Set(selectedPersonas.map((p) => p.id));
+
   for (let i = 0; i < 3; i++) {
     const upcomingRound = i + 1;
     const stanceLines = beliefHistory
@@ -187,6 +197,7 @@ export async function runRoundTableDebate(
       beliefStates,
       reflectionLines,
       proceduralMemory,
+      tomStates,
     );
     const response = await llm.complete({ system, prompt, maxTokens: ROUND_MAX_TOKENS, jsonMode: true });
     const parsed = robustJsonParse<Record<string, unknown>>(response.text);
@@ -218,6 +229,22 @@ export async function runRoundTableDebate(
       for (const m of messages) {
         const personaId = typeof m.persona_id === "string" ? m.persona_id : null;
         if (!personaId) continue;
+
+        if (tomStates) {
+          const tomEntries = parseToMEntries(m.theory_of_mind, validPersonaIdSet)
+            .filter((entry) => entry.about_persona_id !== personaId);
+          if (tomEntries.length > 0) {
+            const tomState: ToMState = {
+              evaluation_id: evaluationId,
+              observer_persona_id: personaId,
+              round_number: upcomingRound,
+              entries: tomEntries,
+            };
+            tomStates.set(personaId, tomState);
+            await persistToMState(tomState);
+          }
+        }
+
         const prev = beliefStates.get(personaId);
         if (!prev) continue;
         const update = parseBeliefUpdate(m.belief_update);
