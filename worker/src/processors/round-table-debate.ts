@@ -35,6 +35,7 @@ import {
   type RoundForMoves,
 } from "./rhetorical-moves.js";
 import type { RhetoricalMove } from "../types/rhetorical-moves.js";
+import { rankReflectionLines } from "./reflection-ranker.js";
 
 const ROUND_MAX_TOKENS = 3072;
 
@@ -197,12 +198,15 @@ export async function runRoundTableDebate(
       upcomingRound,
       personaNameOf,
     );
-    const reflectionLines = [
-      ...stanceLines,
-      ...argReflections.unrespondedLines,
-      ...argReflections.cycleLines,
-      ...moveLines,
-    ];
+    const reflectionLines = rankReflectionLines(
+      [
+        ...stanceLines,
+        ...argReflections.unrespondedLines,
+        ...argReflections.cycleLines,
+        ...moveLines,
+      ],
+      selectedPersonas.map((p) => p.identity?.name ?? p.id),
+    );
 
     const { system, prompt } = buildDebateRoundPrompt(
       upcomingRound,
