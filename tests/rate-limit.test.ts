@@ -20,7 +20,7 @@ describe("enforceRateLimit", () => {
     expect(result).toBeNull();
   });
 
-  it("allows all four limiter keys", async () => {
+  it("allows all limiter keys", async () => {
     const { enforceRateLimit } = await import("@/lib/rate-limit");
     const keys = ["evaluations", "personas", "debateMessages", "llmSettings", "feedback"] as const;
     for (const k of keys) {
