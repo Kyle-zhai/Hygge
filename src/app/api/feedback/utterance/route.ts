@@ -21,6 +21,52 @@ export async function POST(request: Request) {
   }
   const v = parsed.data;
 
+  // ── Issue A: ownership check for round_table ────────────────────────────
+  if (v.kind === "round_table") {
+    const { data: evaluation } = await supabase
+      .from("evaluations")
+      .select("id, project_id")
+      .eq("id", v.evaluationId)
+      .single();
+
+    if (!evaluation) {
+      return NextResponse.json({ error: "Evaluation not found" }, { status: 404 });
+    }
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("user_id")
+      .eq("id", evaluation.project_id)
+      .single();
+
+    if (project?.user_id !== user.id) {
+      return NextResponse.json({ error: "Not your evaluation" }, { status: 403 });
+    }
+  }
+
+  // ── Issue B: ownership check for one_v_one ──────────────────────────────
+  if (v.kind === "one_v_one") {
+    const { data: dm } = await supabase
+      .from("debate_messages")
+      .select("debate_id")
+      .eq("id", v.debateMessageId)
+      .single();
+
+    if (!dm) {
+      return NextResponse.json({ error: "Debate message not found" }, { status: 404 });
+    }
+
+    const { data: dbt } = await supabase
+      .from("debates")
+      .select("user_id")
+      .eq("id", dm.debate_id)
+      .single();
+
+    if (dbt?.user_id !== user.id) {
+      return NextResponse.json({ error: "Not your debate" }, { status: 403 });
+    }
+  }
+
   const row =
     v.kind === "round_table"
       ? {
@@ -118,11 +164,15 @@ export async function GET(request: Request) {
   }
 
   // debateId path: join through debate_messages
-  const { data: messageIds } = await supabase
+  // Issue C: capture error; Issue D: narrow type instead of non-null assertion
+  const debateId = parsed.data.debateId;
+  if (!debateId) return NextResponse.json({ feedback: [] }); // unreachable per schema refine, but narrows type
+  const { data: messageIds, error: msgError } = await supabase
     .from("debate_messages")
     .select("id")
-    .eq("debate_id", parsed.data.debateId!);
-  const ids = (messageIds ?? []).map((m) => m.id);
+    .eq("debate_id", debateId);
+  if (msgError) return NextResponse.json({ error: msgError.message }, { status: 500 });
+  const ids = (messageIds ?? []).map((m: { id: string }) => m.id);
   if (ids.length === 0) return NextResponse.json({ feedback: [] });
 
   const { data, error } = await supabase
