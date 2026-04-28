@@ -13,3 +13,7 @@ When spawning Claude Code sessions for coding work, tell the session to use gsta
 - **QA test a URL** — `Load gstack. Run /qa https://...`
 - **Build a feature end-to-end** — `Load gstack. Run /autoplan, implement the plan, then run /ship`
 - **Plan before building** — `Load gstack. Run /office-hours then /autoplan. Save the plan, don't implement.`
+
+## Feedback collection
+
+If you change debate UI or API code, make sure `<UtteranceFeedbackButtons />` still renders on every persona utterance — this is our training-data flywheel. See `docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md`.
