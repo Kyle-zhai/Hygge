@@ -28,6 +28,13 @@ import type { ArgumentNode } from "../types/argument-graph.js";
 import { loadProceduralMemoryByPersona } from "./procedural-memory.js";
 import { parseToMEntries, persistToMState } from "./theory-of-mind.js";
 import type { ToMState } from "../types/theory-of-mind.js";
+import {
+  parseMove,
+  buildMoveHistogram,
+  buildMoveReflections,
+  type RoundForMoves,
+} from "./rhetorical-moves.js";
+import type { RhetoricalMove } from "../types/rhetorical-moves.js";
 
 const ROUND_MAX_TOKENS = 3072;
 
@@ -169,6 +176,11 @@ export async function runRoundTableDebate(
     : undefined;
   const validPersonaIdSet = new Set(selectedPersonas.map((p) => p.id));
 
+  // Per-message rhetorical move history. Built up after each round and read by
+  // the next round's reflection pass to flag persona ruts (monotone evasion,
+  // missing concede/data/steelman across the debate).
+  const moveRoundsHistory: RoundForMoves[] = [];
+
   for (let i = 0; i < 3; i++) {
     const upcomingRound = i + 1;
     const stanceLines = beliefHistory
@@ -180,10 +192,16 @@ export async function runRoundTableDebate(
     const argReflections = graphForReflection
       ? buildArgumentReflections(graphForReflection, upcomingRound, personaNameOf)
       : { unrespondedLines: [], cycleLines: [] };
+    const moveLines = buildMoveReflections(
+      buildMoveHistogram(moveRoundsHistory),
+      upcomingRound,
+      personaNameOf,
+    );
     const reflectionLines = [
       ...stanceLines,
       ...argReflections.unrespondedLines,
       ...argReflections.cycleLines,
+      ...moveLines,
     ];
 
     const { system, prompt } = buildDebateRoundPrompt(
@@ -215,6 +233,14 @@ export async function runRoundTableDebate(
 
     rounds.push({ round: upcomingRound, theme: roundThemes[i] || topicFocus, messages: cleanedMessages });
     rawRounds.push({ round: upcomingRound, messages: cleanedMessages });
+
+    const moveMessages = messages
+      .map((m) => ({
+        persona_id: typeof m.persona_id === "string" ? m.persona_id : "",
+        move: parseMove(m.rhetorical_move) as RhetoricalMove,
+      }))
+      .filter((m) => m.persona_id);
+    moveRoundsHistory.push({ round: upcomingRound, messages: moveMessages });
 
     if (evaluationId) {
       const fullGraph = buildArgumentGraph(evaluationId, rawRounds satisfies DebateRoundForGraph[]);
