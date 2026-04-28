@@ -86,7 +86,7 @@ export function ReportView({ report, reviews, personas, locale, evaluationId, to
         }
         setFeedbackByAddress(map);
       })
-      .catch(() => { /* silent — UI shows empty state, buttons still work for new votes */ });
+      .catch((err) => { console.error("[feedback hydration]", err); });
     return () => { cancelled = true; };
   }, [evaluationId]);
 
