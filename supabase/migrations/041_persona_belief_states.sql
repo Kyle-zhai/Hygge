@@ -19,7 +19,7 @@
 CREATE TABLE IF NOT EXISTS public.persona_belief_states (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   evaluation_id UUID NOT NULL REFERENCES public.evaluations(id) ON DELETE CASCADE,
-  persona_id UUID NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
+  persona_id TEXT NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
   round_number SMALLINT NOT NULL CHECK (round_number BETWEEN 0 AND 3),
 
   -- position: -1 (strongly against the topic_focus) ... +1 (strongly for)
