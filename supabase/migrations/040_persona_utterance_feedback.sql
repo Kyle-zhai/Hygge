@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.persona_utterance_feedback (
   debate_message_id UUID REFERENCES public.debate_messages(id) ON DELETE CASCADE,
 
   -- Denormalized for analytics — the persona this utterance belongs to
-  persona_id TEXT NOT NULL,
+  persona_id TEXT NOT NULL REFERENCES public.personas(id) ON DELETE CASCADE,
 
   rating SMALLINT NOT NULL CHECK (rating IN (-1, 1)),
   comment TEXT CHECK (comment IS NULL OR length(comment) <= 280),
@@ -28,16 +28,15 @@ CREATE TABLE IF NOT EXISTS public.persona_utterance_feedback (
   )
 );
 
-CREATE UNIQUE INDEX idx_feedback_round_table_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_round_table_unique
   ON public.persona_utterance_feedback (user_id, evaluation_id, round_number, message_index)
   WHERE evaluation_id IS NOT NULL;
 
-CREATE UNIQUE INDEX idx_feedback_1v1_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_1v1_unique
   ON public.persona_utterance_feedback (user_id, debate_message_id)
   WHERE debate_message_id IS NOT NULL;
 
-CREATE INDEX idx_feedback_persona_rating ON public.persona_utterance_feedback (persona_id, rating);
-CREATE INDEX idx_feedback_user ON public.persona_utterance_feedback (user_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_persona_rating ON public.persona_utterance_feedback (persona_id, rating);
 
 ALTER TABLE public.persona_utterance_feedback ENABLE ROW LEVEL SECURITY;
 
