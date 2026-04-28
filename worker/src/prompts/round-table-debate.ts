@@ -1,7 +1,9 @@
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
 import type { BeliefState } from "../types/belief-state.js";
+import type { ToMState } from "../types/theory-of-mind.js";
 import { formatProceduralExamples, type ProceduralMemoryByPersona } from "../processors/procedural-memory.js";
+import { buildPriorToMBlock, buildToMSchemaField } from "../processors/theory-of-mind.js";
 
 export interface ReviewForDebate {
   persona_id: string;
@@ -94,21 +96,34 @@ export function buildDebateRoundPrompt(
   beliefStates?: Map<string, BeliefState>,
   reflectionLines?: string[],
   proceduralMemory?: ProceduralMemoryByPersona,
+  tomStates?: Map<string, ToMState>,
 ): { system: string; prompt: string } {
+  const personaNameOf = (id: string): string =>
+    selectedPersonas.find((sp) => sp.id === id)?.identity?.name || id;
+  const latestPositionByPersona = beliefStates
+    ? new Map(Array.from(beliefStates.entries()).map(([id, state]) => [id, state.position]))
+    : undefined;
+
   const personaProfiles = selectedPersonas.map((p) => {
     const review = reviews.find((r) => r.persona_id === p.id);
     const strengths = review?.strengths?.length ? review.strengths.slice(0, 3).join("; ") : "(none noted)";
     const weaknesses = review?.weaknesses?.length ? review.weaknesses.slice(0, 3).join("; ") : "(none noted)";
     const beliefLine = buildBeliefStateLine(beliefStates?.get(p.id));
-    const memory = proceduralMemory?.byPersonaId.get(p.id) ?? [];
-    const memoryBlock = memory.length > 0 ? `\n${formatProceduralExamples(memory)}` : "";
+    const memory = proceduralMemory?.byPersonaId.get(p.id);
+    const memoryText = memory ? formatProceduralExamples(memory) : "";
+    const memoryBlock = memoryText ? `\n${memoryText}` : "";
+    const priorToM = tomStates?.get(p.id);
+    const tomBlockText = priorToM
+      ? buildPriorToMBlock(p.id, priorToM, personaNameOf, latestPositionByPersona)
+      : "";
+    const tomBlock = tomBlockText ? `\n${tomBlockText}` : "";
     return `[${p.id}] ${p.identity.name} — ${p.demographics.occupation}
 Psychology: ${p.psychology?.personality_type ?? "analytical"}, decision style: ${p.psychology?.decision_making?.style ?? "balanced"}
 Stance: ${review?.overall_stance || "N/A"}
 Their review (initial position):
 ${review?.review_text.slice(0, 600) || "N/A"}
 Strengths they noted: ${strengths}
-Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}${memoryBlock}`;
+Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}${memoryBlock}${tomBlock}`;
   }).join("\n\n");
 
   let context = "";
@@ -144,6 +159,14 @@ Weaknesses they noted: ${weaknesses}${beliefLine ? `\n${beliefLine}` : ""}${memo
       }`
     : "";
 
+  const tomSchemaSample = selectedPersonas.length > 1
+    ? buildToMSchemaField(selectedPersonas.map((p) => p.id))
+    : "";
+
+  const tomDirective = tomStates && tomStates.size > 0
+    ? `\nIMPORTANT (theory-of-mind): Each "Prior theory-of-mind reads" block above shows what YOU thought each other persona believed. Where the actual position now contradicts your prior read, you MUST name that gap explicitly in your message ("@X — I thought you assumed Y, but your last point shows Z"). Then emit a fresh "theory_of_mind" array for THIS round, one entry per OTHER persona, calibrated to what they actually said.\n`
+    : "";
+
   const prompt = `Round ${roundNumber}/3 — Theme: "${theme}"
 
 The topic being debated (this is what every argument must reference):
@@ -155,7 +178,7 @@ ${rawInputExcerpt}
 Personas in this debate:
 ${personaProfiles}
 ${context}
-${beliefBlock}${reflectionBlock}
+${beliefBlock}${reflectionBlock}${tomDirective}
 Generate each selected persona's response for this round. Each persona MUST:
 - Stay in character (reflect their psychology, biases, communication style).
 - Directly respond to other personas' arguments from previous rounds — when doing so, quote the phrase they are reacting to.
@@ -170,7 +193,7 @@ Respond with JSON:
       "persona_id": "<id>",
       "content": "<their argument, 2-4 sentences, referencing a specific element of the topic and (from round 2 onward) quoting another persona's phrase>",
       "responding_to": "<persona_id they're primarily responding to, or null for round 1>",
-      "stance_shift": "<null if unchanged, or brief description of how their view shifted and which argument caused it>"${beliefSchemaFields}
+      "stance_shift": "<null if unchanged, or brief description of how their view shifted and which argument caused it>"${beliefSchemaFields}${tomSchemaSample}
     }
   ]
 }`;
