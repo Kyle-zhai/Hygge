@@ -28,6 +28,13 @@ interface Preset {
 
 const PRESETS: Preset[] = [
   {
+    label: "MiMo (Xiaomi Token-Plan)",
+    providerType: "openai_compatible",
+    baseUrl: "https://token-plan-sgp.xiaomimimo.com/v1",
+    model: "MiMo-V2.5-Pro",
+    vision: "MiMo-V2-Omni",
+  },
+  {
     label: "Qwen (Aliyun DashScope)",
     providerType: "openai_compatible",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -629,7 +636,7 @@ function EntryCard({
               ? "claude-sonnet-4-6"
               : entry.providerType === "google"
               ? "gemini-2.5-pro"
-              : "qwen3.6-plus"
+              : "MiMo-V2.5-Pro"
           }
           required
         />
@@ -642,7 +649,7 @@ function EntryCard({
               ? "claude-sonnet-4-6"
               : entry.providerType === "google"
               ? "gemini-2.5-pro"
-              : "qwen3.5-omni-plus"
+              : "MiMo-V2-Omni"
           }
         />
       </div>
