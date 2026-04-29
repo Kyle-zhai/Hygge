@@ -104,6 +104,7 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
   const [personas, setPersonas] = useState<PersonaData[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [recommendedIds, setRecommendedIds] = useState<Set<string>>(new Set());
+  const [recommendSource, setRecommendSource] = useState<"ai" | "default" | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [preferredIds, setPreferredIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -147,7 +148,10 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
         fetch("/api/squads"),
       ]);
       const { personas: rawPersonas, savedIds: fetchedSavedIds, preferredIds: fetchedPreferredIds } = await personasRes.json();
-      const { recommended_ids } = await recommendRes.json();
+      const { recommended_ids, reasoning } = await recommendRes.json();
+      // Backend returns "Default recommendation (worker not configured/unavailable)"
+      // when it falls back to slice(0,5); anything else came from the AI worker.
+      setRecommendSource(typeof reasoning === "string" && reasoning.startsWith("Default recommendation") ? "default" : "ai");
       const validCategories = mode === "topic" ? ["general", "custom"] : ["technical", "product", "design", "end_user", "business", "custom"];
       const allPersonas = (rawPersonas || []).filter((p: PersonaData) => validCategories.includes(p.category));
       setPersonas(allPersonas);
@@ -647,9 +651,24 @@ export function PersonaSelector({ projectDescription, maxPersonas, onConfirm, di
       )}
 
       {/* Persona count + grid — always visible, filtered in real time */}
-      <p className="text-xs text-[color:var(--text-tertiary)]">
-        {t("personasFound", { count: filtered.length })}
-      </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <p className="text-xs text-[color:var(--text-tertiary)]">
+          {t("personasFound", { count: filtered.length })}
+        </p>
+        {recommendSource && (
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+              recommendSource === "ai"
+                ? "bg-[rgb(var(--accent-primary-rgb)/0.10)] text-[color:var(--accent-primary)]"
+                : "bg-[color:var(--bg-tertiary)] text-[color:var(--text-tertiary)]"
+            }`}
+            aria-label={t(recommendSource === "ai" ? "recommendedByAi" : "defaultRanking")}
+          >
+            <Sparkles className="h-3 w-3" />
+            {t(recommendSource === "ai" ? "recommendedByAi" : "defaultRanking")}
+          </span>
+        )}
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.slice(0, visibleCount).map((persona) => {

@@ -119,6 +119,8 @@
     "priceSensitivity": "Price Sensitivity",
     "clearFilters": "Clear Filters",
     "personasFound": "{count} personas found",
+    "recommendedByAi": "Recommended by AI",
+    "defaultRanking": "Default ranking (AI unavailable)",
     "reportTab": "Report",
     "scoresTab": "Numerical Scores",
     "executiveSummary": "Executive Summary",
