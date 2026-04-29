@@ -37,6 +37,7 @@ import {
 import type { RhetoricalMove } from "../types/rhetorical-moves.js";
 import { rankReflectionLines } from "./reflection-ranker.js";
 import { scoreToMReads, buildToMCalibrationReflections } from "./tom-calibration.js";
+import { detectReplyLanguageWeighted } from "./language-detect.js";
 
 const ROUND_MAX_TOKENS = 3072;
 
@@ -109,7 +110,17 @@ export async function runRoundTableDebate(
   rawInput: string,
   evaluationId?: string,
 ): Promise<RoundTableDebateResult> {
-  const { system: selSys, prompt: selPrompt } = buildSelectionPrompt(personas, reviews, project);
+  // Detect reply language once from the user's most authoritative inputs:
+  // the raw submission outweighs the parsed project fields because parsing
+  // can drift in tone/phrasing. If the project text is mixed-language, the
+  // raw input (what the user actually typed) wins.
+  const replyLanguage = detectReplyLanguageWeighted([
+    { text: rawInput, weight: 3 },
+    { text: project.description, weight: 1 },
+    { text: project.name, weight: 1 },
+  ]);
+
+  const { system: selSys, prompt: selPrompt } = buildSelectionPrompt(personas, reviews, project, replyLanguage);
   const selResponse = await llm.complete({ system: selSys, prompt: selPrompt, maxTokens: 512, jsonMode: true });
   const selection = robustJsonParse<Record<string, unknown>>(selResponse.text);
 
@@ -244,6 +255,7 @@ export async function runRoundTableDebate(
       reflectionLines,
       proceduralMemory,
       tomStates,
+      replyLanguage,
     );
     const response = await llm.complete({ system, prompt, maxTokens: ROUND_MAX_TOKENS, jsonMode: true });
     const parsed = robustJsonParse<Record<string, unknown>>(response.text);
@@ -344,7 +356,7 @@ export async function runRoundTableDebate(
     }
   }
 
-  const { system: outSys, prompt: outPrompt } = buildOutcomePrompt(selectedPersonas, rawRounds, project);
+  const { system: outSys, prompt: outPrompt } = buildOutcomePrompt(selectedPersonas, rawRounds, project, replyLanguage);
   const outResponse = await llm.complete({ system: outSys, prompt: outPrompt, maxTokens: 1024, jsonMode: true });
   const outcome = robustJsonParse<Record<string, unknown>>(outResponse.text);
 

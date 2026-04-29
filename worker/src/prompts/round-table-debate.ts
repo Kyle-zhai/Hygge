@@ -5,6 +5,7 @@ import type { ToMState } from "../types/theory-of-mind.js";
 import { formatProceduralExamples, type ProceduralMemoryByPersona } from "../processors/procedural-memory.js";
 import { buildPriorToMBlock, buildToMSchemaField } from "../processors/theory-of-mind.js";
 import { buildMoveSchemaField } from "../processors/rhetorical-moves.js";
+import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
 
 export interface ReviewForDebate {
   persona_id: string;
@@ -37,11 +38,14 @@ function buildBeliefStateLine(state: BeliefState | undefined): string {
   return line;
 }
 
-const SYSTEM = `You are orchestrating a round-table debate between AI personas. Each persona has distinct values, biases, and communication styles defined by their profiles. Generate authentic responses that reflect each persona's psychology, not generic arguments.
+function buildSystem(replyLanguage: ReplyLanguage): string {
+  return `You are orchestrating a round-table debate between AI personas. Each persona has distinct values, biases, and communication styles defined by their profiles. Generate authentic responses that reflect each persona's psychology, not generic arguments.
 
 The debate must be anchored in the specific topic submitted by the user — every argument should reference concrete elements of that topic (named features, numbers, claims, phrases, stakeholders) rather than abstract positions.
 
-IMPORTANT: Always respond in English. Output valid JSON only.`;
+${replyLanguageDirective(replyLanguage)}
+Output valid JSON only.`;
+}
 
 function buildTopicBlock(project: ProjectParsedData): string {
   return `**Topic:** ${project.name}
@@ -56,6 +60,7 @@ export function buildSelectionPrompt(
   personas: Persona[],
   reviews: ReviewForDebate[],
   project: ProjectParsedData,
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
   const reviewSummaries = reviews.map((r) => {
     const stanceInfo = r.overall_stance ? ` (stance: ${r.overall_stance})` : "";
@@ -83,7 +88,7 @@ Respond with JSON:
 
 Available persona IDs: ${personas.map((p) => p.id).join(", ")}`;
 
-  return { system: SYSTEM, prompt };
+  return { system: buildSystem(replyLanguage), prompt };
 }
 
 export function buildDebateRoundPrompt(
@@ -98,6 +103,7 @@ export function buildDebateRoundPrompt(
   reflectionLines?: string[],
   proceduralMemory?: ProceduralMemoryByPersona,
   tomStates?: Map<string, ToMState>,
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
   const personaNameOf = (id: string): string =>
     selectedPersonas.find((sp) => sp.id === id)?.identity?.name || id;
@@ -199,13 +205,14 @@ Respond with JSON:
   ]
 }`;
 
-  return { system: SYSTEM, prompt };
+  return { system: buildSystem(replyLanguage), prompt };
 }
 
 export function buildOutcomePrompt(
   selectedPersonas: Persona[],
   allRounds: Array<{ round: number; messages: Array<{ persona_id: string; content: string }> }>,
   project: ProjectParsedData,
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
   const debateLog = allRounds.map((r) =>
     `--- Round ${r.round} ---\n` + r.messages.map((m) => {
@@ -230,5 +237,5 @@ Respond with JSON:
   "remaining_disagreements": ["<unresolved point, naming the personas on each side and the specific claim>", ...]
 }`;
 
-  return { system: SYSTEM, prompt };
+  return { system: buildSystem(replyLanguage), prompt };
 }

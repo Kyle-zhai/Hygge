@@ -1,6 +1,10 @@
 import type { Job } from "bullmq";
 import { supabase } from "../supabase.js";
 import { buildLLM, type LLMOverrides } from "../llm/factory.js";
+import {
+  detectReplyLanguageWeighted,
+  replyLanguageDirective,
+} from "./language-detect.js";
 
 export interface DebateResponseJobData {
   debateId: string;
@@ -52,6 +56,18 @@ export async function processDebateResponse(job: Job<DebateResponseJobData>) {
     content: m.content,
   }));
 
+  // Detect language from the user's chat history. Recent turns are weighted
+  // most heavily so a mid-conversation language switch is respected within
+  // one round. Falls back to the most recent user turn if all are mixed.
+  const userTurns = history.filter((m) => m.role === "user");
+  const recentUserTurns = userTurns.slice(-3);
+  const replyLanguage = detectReplyLanguageWeighted(
+    recentUserTurns.map((m, idx) => ({
+      text: m.content,
+      weight: idx + 1,
+    })),
+  );
+
   const system = `You are ${persona.identity.name}, ${persona.demographics.occupation}.
 ${persona.system_prompt || ""}
 
@@ -63,7 +79,8 @@ ${review?.overall_stance ? `Your stance: ${review.overall_stance}` : ""}
 ${review?.strengths?.length ? `Strengths you identified: ${review.strengths.join("; ")}` : ""}
 ${review?.weaknesses?.length ? `Weaknesses you identified: ${review.weaknesses.join("; ")}` : ""}
 
-Respond naturally in 2-5 sentences. Be specific, not generic. If the user makes a compelling point, acknowledge it while maintaining your character's perspective. Respond in the same language the user writes in.`;
+Respond naturally in 2-5 sentences. Be specific, not generic. If the user makes a compelling point, acknowledge it while maintaining your character's perspective.
+${replyLanguageDirective(replyLanguage)}`;
 
   const conversationPrompt = history.map((m) =>
     `${m.role === "user" ? "User" : persona.identity.name}: ${m.content}`
