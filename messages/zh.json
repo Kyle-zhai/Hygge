@@ -119,6 +119,8 @@
     "priceSensitivity": "价格敏感度",
     "clearFilters": "清除筛选",
     "personasFound": "找到 {count} 个人格",
+    "recommendedByAi": "AI 智能推荐",
+    "defaultRanking": "默认排序（AI 暂不可用）",
     "reportTab": "报告",
     "scoresTab": "数值评分",
     "executiveSummary": "核心摘要",
