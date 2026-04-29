@@ -1,4 +1,7 @@
-export const PARSE_PROJECT_SYSTEM = `You are a topic analysis assistant. Your job is to extract structured information from a user's submission, which may describe any kind of topic — a product, idea, policy, event, design, creative work, business strategy, or anything else they want discussed.
+import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
+
+export function buildParseProjectSystem(replyLanguage: ReplyLanguage = "en"): string {
+  return `You are a topic analysis assistant. Your job is to extract structured information from a user's submission, which may describe any kind of topic — a product, idea, policy, event, design, creative work, business strategy, or anything else they want discussed.
 
 The user may provide:
 - Plain text describing their topic
@@ -23,7 +26,7 @@ The six field names below are fixed, but interpret them broadly so they fit any 
 - "goals": what the user wants the topic to achieve OR what they want to understand through this discussion.
 - "success_metrics": concrete measurable outcomes when available; otherwise qualitative signals the user mentioned.
 
-IMPORTANT: Always respond in English regardless of the input language. If the user's input is in another language, translate and analyze it but produce all output in English. Proper nouns (brand names, personal names, place names) stay in their original script or the user's spelling.
+${replyLanguageDirective(replyLanguage)} If the user's input is in a different language than the reply language, translate and analyze it. Proper nouns (brand names, personal names, place names) stay in their original script or the user's spelling.
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -34,8 +37,10 @@ Respond ONLY with valid JSON in this exact format:
   "goals": "What the user wants to achieve OR what they want to understand from this discussion — in their own framing",
   "success_metrics": "How success or effectiveness would be measured, with specific numbers/thresholds when the user gave them"
 }`;
+}
 
-export const PARSE_PROJECT_SHORT_TOPIC_SYSTEM = `You are a topic analysis assistant. The user has asked a short open-ended question inviting perspectives on a SUBJECT — for example "What do you think of X (Twitter)?", "Is remote work good for software teams?", or "Should founders raise a seed before product-market fit?".
+export function buildParseProjectShortTopicSystem(replyLanguage: ReplyLanguage = "en"): string {
+  return `You are a topic analysis assistant. The user has asked a short open-ended question inviting perspectives on a SUBJECT — for example "What do you think of X (Twitter)?", "Is remote work good for software teams?", or "Should founders raise a seed before product-market fit?".
 
 Your job is NOT to evaluate or critique how the question is worded. Your job is to identify the SUBJECT the question is about and produce a concise briefing so personas can discuss that subject.
 
@@ -47,7 +52,7 @@ CRITICAL RULES:
 - Proper nouns (brand names, personal names, place names) stay in the user's original spelling (e.g., keep "x(twitter)" if that's how they wrote it).
 - If the user's short question genuinely contains specific details (a number, a named sub-topic, a constraint), weave those into the briefing. Otherwise rely on common knowledge about the subject.
 
-IMPORTANT: Always respond in English regardless of the input language.
+${replyLanguageDirective(replyLanguage)}
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -58,6 +63,7 @@ Respond ONLY with valid JSON in this exact format:
   "goals": "What the subject is designed to achieve, or what people typically use it for",
   "success_metrics": "How people generally judge whether the subject is working — qualitative is fine when no firm numbers exist"
 }`;
+}
 
 export function buildParseProjectPrompt(rawInput: string, url?: string, attachmentDescriptions?: string[]): string {
   let prompt = `Here is the user's submission:\n\n${rawInput}`;

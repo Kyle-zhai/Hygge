@@ -6,6 +6,7 @@ import { buildPersonaReviewPrompt } from "../prompts/persona-review.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { validatePersonaReview, hasReviewViolations, buildReviewRetryInstructions } from "../utils/review-validator.js";
 import { isShortTopicQuery } from "../utils/topic-mode.js";
+import type { ReplyLanguage } from "./language-detect.js";
 
 const BASE_MAX_TOKENS = 4096;
 const RETRY_MAX_TOKENS = 6144;
@@ -27,9 +28,10 @@ export async function generatePersonaReview(
   project: ProjectParsedData,
   rawInput: string,
   dimensions?: TopicClassification["dimensions"],
-  mode?: "product" | "topic"
+  mode?: "product" | "topic",
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<PersonaReviewResult> {
-  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions, mode);
+  const { system, prompt } = buildPersonaReviewPrompt(persona, project, rawInput, dimensions, mode, replyLanguage);
   const dumpFailure = (text: string, message: string) => {
     try {
       const dumpPath = `/tmp/persona-review-fail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.txt`;

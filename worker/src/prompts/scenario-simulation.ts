@@ -1,5 +1,6 @@
 import type { Persona } from "../types/persona.js";
 import type { ReviewForSimulation } from "../processors/scenario-simulation.js";
+import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
 
 const STANCE_TO_NUMBER: Record<string, number> = {
   strongly_positive: 10,
@@ -26,7 +27,8 @@ function computeAverageScore(scores: Record<string, number | string>): number {
 
 export function buildScenarioSimulationPrompt(
   personas: Persona[],
-  reviews: ReviewForSimulation[]
+  reviews: ReviewForSimulation[],
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string; computedStances: Record<string, string> } {
   const system = `You are a social dynamics simulator. You will simulate a real-world scenario where all the given personas are in the same physical space (e.g., a meetup, conference, town hall, workshop, or social gathering) and the topic is being discussed.
 
@@ -61,7 +63,7 @@ INFLUENCE EVENT REQUIREMENTS (hard):
 SUMMARY REQUIREMENTS (hard):
 - The 200-300 word summary must reference at least three personas by name, quote or paraphrase at least two specific arguments from their reviews, and describe the ROOM ATMOSPHERE (who's loud, who's quiet, who's on the fence) rather than a neutral recap.
 
-IMPORTANT: Always respond in English regardless of the input language. All text fields (summary, shift descriptions, reasons) must be in English.
+${replyLanguageDirective(replyLanguage)} All text fields (summary, shift descriptions, reasons) must be in the reply language.
 
 Respond ONLY with valid JSON:
 {

@@ -1,23 +1,25 @@
 import type { LLMAdapter } from "../llm/adapter.js";
 import type { TopicClassification } from "../types/evaluation.js";
 import {
-  CLASSIFY_TOPIC_SYSTEM,
-  CLASSIFY_TOPIC_SHORT_SYSTEM,
+  buildClassifyTopicSystem,
+  buildClassifyTopicShortSystem,
   buildClassifyTopicPrompt,
   buildClassifyTopicShortPrompt,
 } from "../prompts/classify-topic.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { findGenericDimensions } from "../utils/review-validator.js";
 import { isShortTopicQuery } from "../utils/topic-mode.js";
+import type { ReplyLanguage } from "./language-detect.js";
 
 /** Classify the topic and generate tailored evaluation dimensions. */
 export async function classifyTopic(
   llm: LLMAdapter,
   rawInput: string,
   mode?: "product" | "topic",
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<TopicClassification> {
   const short = isShortTopicQuery(mode, rawInput);
-  const system = short ? CLASSIFY_TOPIC_SHORT_SYSTEM : CLASSIFY_TOPIC_SYSTEM;
+  const system = short ? buildClassifyTopicShortSystem(replyLanguage) : buildClassifyTopicSystem(replyLanguage);
   const basePrompt = short ? buildClassifyTopicShortPrompt(rawInput) : buildClassifyTopicPrompt(rawInput);
 
   const response = await llm.complete({

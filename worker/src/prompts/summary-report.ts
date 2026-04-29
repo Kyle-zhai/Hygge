@@ -1,5 +1,6 @@
 import type { ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type { ReviewForSummary } from "../processors/summary-report.js";
+import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
 
 function buildNumericDimensionSchema(dimensions: TopicClassification["dimensions"]): string {
   const keys = dimensions.map(d => d.key).join("|");
@@ -48,7 +49,8 @@ export function buildTopicSummaryReportPrompt(
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
   rawInput: string,
-  dimensions: TopicClassification["dimensions"]
+  dimensions: TopicClassification["dimensions"],
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
   const dimensionSchema = buildStanceDimensionSchema(dimensions);
 
@@ -64,11 +66,13 @@ CONTENT QUALITY REQUIREMENTS (apply to EVERY text field and array item)
 
 3. REAL-WORLD GROUNDING — when citing comparable cases, companies, products, studies, industry benchmarks, or historical precedents, name them specifically from your training knowledge (e.g., "Figma's browser-first pivot", "Stripe's iterative launch in 7 countries before global", "the 2023 EU AI Act's risk-tier framework"). Only cite what you are confident is real. If you are not sure a specific reference exists, describe the pattern without fabricating a name. NEVER invent studies, reports, or company initiatives.
 
+3a. USER-ASSERTED ENTITIES are NOT fabrication. If the user (or a persona quoting the user) names a product, model, version, company, or release you don't recognize from training (e.g. "Claude Opus 4.7", "GPT 5.5", a startup or feature you've never heard of), treat it as a real thing being discussed. Do NOT write "this version doesn't exist" or "I'm not aware of this product" — the user is on the ground and you are not. Reason about what the name implies and engage with the comparison they are asking about. You may flag uncertainty about specific capabilities ("I don't have firsthand benchmarks for this exact release") without refusing the discussion.
+
 4. NO PLATITUDES — banned phrases and any variant of them: "improve marketing", "gather more user feedback", "build community", "enhance user experience", "iterate based on data", "refine messaging", "explore partnerships", "leverage synergies", "prioritize quality", "focus on growth". If a sentence could apply to ANY topic, rewrite it with specifics. If you cannot think of something specific, say fewer words — brevity beats fluff.
 
 5. CONSENSUS SCORE — consensus_score (0-100) measures how much the personas agree: 0 = completely divergent views, 100 = total agreement. Base this on their actual positions, not their numeric scores. If there is only ONE persona, consensus_score MUST be 100.
 
-IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.
+${replyLanguageDirective(replyLanguage)} All text fields must be in the reply language. When you reference user-submitted text or quoted phrases, translate them into the reply language in-line — do not preserve the original-language quote verbatim. Proper nouns (brand names, product names, persona names, company names) stay in their original script.
 
 Respond ONLY with valid JSON matching this structure:
 {
@@ -220,7 +224,8 @@ export function buildSummaryReportPrompt(
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
   rawInput: string,
-  dimensions?: TopicClassification["dimensions"]
+  dimensions?: TopicClassification["dimensions"],
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
   const dimensionSchema = dimensions
     ? buildNumericDimensionSchema(dimensions)
@@ -249,13 +254,15 @@ CONTENT QUALITY REQUIREMENTS (apply to EVERY text field and array item)
 
 3. REAL-WORLD GROUNDING — when citing comparable products, successful pivots, market benchmarks, or case studies, name them specifically from your training knowledge (e.g., "Superhuman's waitlist-driven launch", "Basecamp's move away from VC funding", "Linear's opinionated UX over flexibility"). Only cite what you are confident is real. NEVER invent companies, studies, reports, or funding rounds. If you are not sure a specific reference exists, describe the pattern without fabricating a name.
 
+3a. USER-ASSERTED ENTITIES are NOT fabrication. If the user (or a persona quoting the user) names a product, model, version, company, or release you don't recognize from training (e.g. "Claude Opus 4.7", "GPT 5.5", a startup or feature you've never heard of), treat it as a real thing being discussed. Do NOT write "this version doesn't exist" or "I'm not aware of this product" — the user is on the ground and you are not. Reason about what the name implies and engage with the comparison they are asking about. You may flag uncertainty about specific capabilities ("I don't have firsthand benchmarks for this exact release") without refusing the discussion.
+
 4. NO PLATITUDES — banned phrases and any variant: "improve your marketing", "gather more feedback", "build community", "enhance UX", "iterate based on data", "refine messaging", "explore partnerships", "leverage synergies", "prioritize quality", "focus on growth". If a sentence could apply to ANY product, rewrite it with specifics. If you cannot think of something specific, say fewer words — brevity beats fluff.
 
 5. ACTIONABILITY — every action_item and feasibility entry must be something the user could start doing this week. State WHAT to do, WHICH persona's concern it addresses, and WHICH feature/metric it touches.
 
 ${readinessNote}
 
-IMPORTANT: Always respond in English regardless of the input language. All text fields must be in English.
+${replyLanguageDirective(replyLanguage)} All text fields must be in the reply language. When you reference user-submitted text or quoted phrases, translate them into the reply language in-line — do not preserve the original-language quote verbatim. Proper nouns (brand names, product names, persona names, company names) stay in their original script.
 
 Respond ONLY with valid JSON matching this structure:
 {
