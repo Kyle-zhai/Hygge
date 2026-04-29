@@ -1,5 +1,6 @@
 import type { Persona } from "../types/persona.js";
 import type { EvaluationScores } from "../types/evaluation.js";
+import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
 
 interface ReviewInput {
   persona_id: string;
@@ -37,6 +38,7 @@ function computeLeaning(scores: EvaluationScores): string {
 export function buildOpinionDriftPrompt(
   personas: Persona[],
   reviews: ReviewInput[],
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string; initialLeanings: Record<string, string> } {
   const initialLeanings: Record<string, string> = {};
   for (const r of reviews) initialLeanings[r.persona_id] = computeLeaning(r.scores);
@@ -82,7 +84,7 @@ REASONING REQUIREMENTS (hard):
 
 BANNED reasoning patterns: "would likely shift due to social proof", "stays firm due to low persuadability", "is persuaded by the majority", "remains skeptical". If you catch yourself writing these, expand into the specific argument and specific persona instead.
 
-IMPORTANT: Always respond in English. Base your analysis on the actual reviews, not generic assumptions about the persona type.
+${replyLanguageDirective(replyLanguage)} Base your analysis on the actual reviews, not generic assumptions about the persona type.
 
 Respond ONLY with valid JSON:
 {

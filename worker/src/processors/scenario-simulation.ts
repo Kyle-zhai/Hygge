@@ -4,6 +4,7 @@ import type { Persona } from "../types/persona.js";
 import type { ScenarioSimulationResult } from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { buildScenarioSimulationPrompt } from "../prompts/scenario-simulation.js";
+import type { ReplyLanguage } from "./language-detect.js";
 
 export interface ReviewForSimulation {
   persona_id: string;
@@ -19,9 +20,10 @@ export interface ReviewForSimulation {
 export async function runScenarioSimulation(
   llm: LLMAdapter,
   personas: Persona[],
-  reviews: ReviewForSimulation[]
+  reviews: ReviewForSimulation[],
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<ScenarioSimulationResult> {
-  const { system, prompt, computedStances } = buildScenarioSimulationPrompt(personas, reviews);
+  const { system, prompt, computedStances } = buildScenarioSimulationPrompt(personas, reviews, replyLanguage);
   const response = await llm.complete({ system, prompt, maxTokens: 4096, jsonMode: true });
 
   let result: ScenarioSimulationResult;

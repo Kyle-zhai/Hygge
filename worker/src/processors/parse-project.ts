@@ -1,13 +1,14 @@
 import type { LLMAdapter, MediaItem } from "../llm/adapter.js";
 import type { ProjectParsedData } from "../types/evaluation.js";
 import {
-  PARSE_PROJECT_SYSTEM,
-  PARSE_PROJECT_SHORT_TOPIC_SYSTEM,
+  buildParseProjectSystem,
+  buildParseProjectShortTopicSystem,
   buildParseProjectPrompt,
   buildParseProjectShortTopicPrompt,
 } from "../prompts/parse-project.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { isShortTopicQuery } from "../utils/topic-mode.js";
+import type { ReplyLanguage } from "./language-detect.js";
 
 /** Parse the user's submission to extract structured topic data for persona discussion. */
 export async function parseProject(
@@ -17,6 +18,7 @@ export async function parseProject(
   attachmentDescriptions?: string[],
   media?: MediaItem[],
   mode?: "product" | "topic",
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<ProjectParsedData> {
   // Short Topic queries ("what do you think of X?") get a briefing-about-the-subject
   // prompt instead of a critique-the-submission prompt. Attachments / URLs force the
@@ -28,7 +30,9 @@ export async function parseProject(
     (!media || media.length === 0);
 
   const response = await llm.complete({
-    system: useShortTopic ? PARSE_PROJECT_SHORT_TOPIC_SYSTEM : PARSE_PROJECT_SYSTEM,
+    system: useShortTopic
+      ? buildParseProjectShortTopicSystem(replyLanguage)
+      : buildParseProjectSystem(replyLanguage),
     prompt: useShortTopic
       ? buildParseProjectShortTopicPrompt(rawInput)
       : buildParseProjectPrompt(rawInput, url, attachmentDescriptions),

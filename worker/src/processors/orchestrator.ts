@@ -14,6 +14,7 @@ import { generateSummaryReport, generateTopicSummaryReport } from "./summary-rep
 import { runScenarioSimulation } from "./scenario-simulation.js";
 import { generateOpinionDrift } from "./opinion-drift.js";
 import { runRoundTableDebate } from "./round-table-debate.js";
+import { detectReplyLanguageWeighted } from "./language-detect.js";
 import type { Persona } from "../types/persona.js";
 import type { TopicClassification } from "../types/evaluation.js";
 import { log, withTiming } from "../utils/logger.js";
@@ -204,9 +205,18 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       }
     }
 
+    // Detect reply language ONCE from the user's input (raw text + extracted attachment text).
+    // Later steps in the pipeline reuse this to keep summaries, persona reviews, drift narratives,
+    // and scenario summaries in a single consistent language even when input mixes scripts.
+    const replyLanguage = detectReplyLanguageWeighted([
+      { text: rawInput, weight: 3 },
+      ...attachmentDescriptions.map((t) => ({ text: t, weight: 1 })),
+    ]);
+    log.info("orchestrator.reply_language", { ...ctx, replyLanguage });
+
     // Use vision model when media attachments are present, text model otherwise
     const parseLlm = mediaItems.length > 0 ? buildVisionLLM(llmOverrides) : llm;
-    const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems, mode);
+    const parseTask = parseProject(parseLlm, rawInput, url, attachmentDescriptions, mediaItems, mode, replyLanguage);
 
     let classification: TopicClassification;
     let parsedData: import("../types/evaluation.js").ProjectParsedData;
@@ -225,7 +235,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     } else {
       const [pd, cl] = await Promise.all([
         withTiming("orchestrator.parse_project", ctx, () => parseTask),
-        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(auxLlm, rawInput, mode)),
+        withTiming("orchestrator.classify_topic", ctx, () => classifyTopic(auxLlm, rawInput, mode, replyLanguage)),
       ]);
       parsedData = pd;
       classification = cl;
@@ -270,7 +280,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         const review = await withTiming(
           "orchestrator.persona_review",
           { ...ctx, personaId: persona.id, personaName: persona.identity.name },
-          () => generatePersonaReview(llm, persona, parsedData, rawInput, dimensions, mode),
+          () => generatePersonaReview(llm, persona, parsedData, rawInput, dimensions, mode, replyLanguage),
         );
 
         await supabase.from("persona_reviews").insert({
@@ -310,8 +320,8 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       ctx,
       () =>
         mode === "topic" && dimensions
-          ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions)
-          : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions),
+          ? generateTopicSummaryReport(llm, parsedData, reviews, rawInput, dimensions, replyLanguage)
+          : generateSummaryReport(llm, parsedData, reviews, rawInput, dimensions, replyLanguage),
     );
 
     const maxLike = planTier === "max" || planTier === "byok";
@@ -319,7 +329,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     const scenarioTask = maxLike
       ? withTiming("orchestrator.scenario_sim", ctx, () =>
-          runScenarioSimulation(llm, personas as Persona[], reviews),
+          runScenarioSimulation(llm, personas as Persona[], reviews, replyLanguage),
         ).catch((simError) => {
           log.warn("orchestrator.scenario_sim.skipped", {
             ...ctx,
@@ -331,7 +341,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
 
     const driftTask = proLike
       ? withTiming("orchestrator.opinion_drift", ctx, () =>
-          generateOpinionDrift(llm, personas as Persona[], reviews),
+          generateOpinionDrift(llm, personas as Persona[], reviews, replyLanguage),
         ).catch((driftError) => {
           log.warn("orchestrator.opinion_drift.skipped", {
             ...ctx,

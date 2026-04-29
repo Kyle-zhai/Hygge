@@ -1,6 +1,7 @@
 import type { Persona } from "../types/persona.js";
 import type { ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import { isShortTopicQuery } from "../utils/topic-mode.js";
+import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
 
 function buildDynamicNumericInstruction(dimensions: TopicClassification["dimensions"]): string {
   const lines = dimensions.map(d => `  * ${d.key}: ${d.description}`);
@@ -38,7 +39,8 @@ export function buildPersonaReviewPrompt(
   project: ProjectParsedData,
   rawInput: string,
   dimensions?: TopicClassification["dimensions"],
-  mode?: "product" | "topic"
+  mode?: "product" | "topic",
+  replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
   let dimensionsInstruction: string;
   let scoresSchema: string;
@@ -55,9 +57,9 @@ export function buildPersonaReviewPrompt(
   }
 
   if (isShortTopicQuery(mode, rawInput)) {
-    return buildShortTopicPrompt(persona, project, rawInput, dimensionsInstruction, scoresSchema);
+    return buildShortTopicPrompt(persona, project, rawInput, dimensionsInstruction, scoresSchema, replyLanguage);
   }
-  return buildSubmissionPrompt(persona, project, rawInput, dimensionsInstruction, scoresSchema);
+  return buildSubmissionPrompt(persona, project, rawInput, dimensionsInstruction, scoresSchema, replyLanguage);
 }
 
 function buildSubmissionPrompt(
@@ -66,6 +68,7 @@ function buildSubmissionPrompt(
   rawInput: string,
   dimensionsInstruction: string,
   scoresSchema: string,
+  replyLanguage: ReplyLanguage,
 ): { system: string; prompt: string } {
   const system = `${persona.system_prompt}
 
@@ -114,6 +117,7 @@ ${dimensionsInstruction}
     - "common_knowledge" — only for facts a well-informed layperson would know without looking them up (e.g., "most US mortgages are 30-year fixed", "Sundance runs in January"). Do NOT use this to smuggle in specific numbers you cannot verify.
   * "strengths" and "weaknesses" arrays must each contain AT LEAST 3 items, and every item must name a specific element from the submission (a feature, number, phrase, mechanism, constraint). No generic entries like "good concept" or "needs work".
 - HARD BAN on fabricated statistics. You do NOT have web access. Do NOT cite third-party research firms (Gartner, McKinsey, Forrester, Statista, CB Insights, Pew Research, Deloitte, IDC, Localytics, TechCrunch, National Gardening Association, etc.), named reports, or specific outside percentages/dollar figures that are not in the user's submission. If you catch yourself writing "[SomeFirm, 2023]" or "X% of [category] do Y" with a number you invented, delete the sentence. You can still express industry intuition — just make it clearly intuition ("my gut, from shipping in this space, is that churn lands north of 5%") without a fake source.
+- USER-ASSERTED ENTITIES are NOT fabrication. When the user names a product, model, version number, company, or release that you don't recognize from training (e.g. "Claude Opus 4.7", "GPT 5.5", "FooDB v9", a startup you've never heard of), treat it as a real thing the user is asking about. Do NOT respond "this version doesn't exist" or "I'm not aware of this product" — the user is on the ground and you are not. Reason about what the name implies (e.g. "4.7" suggests a successor to 4.x; "5.5" suggests a mid-cycle update of the 5 line) and engage with the comparison or claim the user is making. You may flag uncertainty about specific capabilities ("I don't have firsthand benchmarks for this exact release") without refusing the discussion.
 - BANNED PHRASES (rewrite if they appear in your draft): "has potential", "could be better", "interesting idea", "well thought out", "needs more work", "solid foundation", "great start", "overall good", "many possibilities", "promising direction", "has merit", "generally positive", "compelling vision", "thoughtful approach", "a decent chance", "reasonable idea". If a sentence relies on any of these, delete it and rewrite around a specific quote, number, or lived-experience observation.
 - CONCRETE GROUNDING: every analytical claim should trace back to (a) a quote from the user's submission, (b) an arithmetic or comparative derivation from the user's own numbers, or (c) your persona's lived experience. Instead of "the market is competitive", say "the user lists Canny at $49 and Savio at $99 — that's a 70% price gap they need to justify, and from shipping SaaS myself I'd expect indie founders to try the cheaper one first."
 - If something triggers your known biases or blind spots, let that show naturally through the voice, not through a meta-comment.
@@ -136,7 +140,7 @@ EXAMPLE — good review_text (this is the bar):
 "The $29/mo price the user pitches as a cheaper Canny alternative ($49) and Savio ($99) is a 40–70% discount against incumbents — that's the real wedge, not 'zero-training onboarding'. The '500 paying customers in 6 months' goal penciled against a month-9 revenue target and 18-month runway is tight: 500 × $29 = $14.5k MRR, which barely covers one engineer if the founder pays themselves. I've shipped at three YC startups and the pattern every time is that 'zero-training onboarding' reads great in copy but dies in practice when the email-forwarder step needs explaining. The 'compliance-heavy teams won't buy from a 3-person shop without SOC 2' concern is the right one to flag — SOC 2 Type II takes 6–12 months in my experience, which means that segment is locked out until year 2."
 Why it works: four direct user quotes, six user-grounded numbers, arithmetic on the user's own claims, and two lived-experience calls clearly framed as persona intuition — no invented third-party research.
 
-IMPORTANT: Always respond in English regardless of the input language. Your review_text, strengths, and weaknesses must all be in English. Keep proper nouns in the user's original spelling.
+${replyLanguageDirective(replyLanguage)} Your review_text, strengths, and weaknesses must all be in the reply language — when you reference user-submitted text in prose, translate it into the reply language in-line rather than quoting the original-language text verbatim. Proper nouns (brand names, product names, persona names, company names) stay in their original script. Note: the "extracted_quotes" array is a separate field and MUST stay character-for-character in the user's original submission language (it is a verifiability anchor, not user-facing prose).
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -173,6 +177,7 @@ function buildShortTopicPrompt(
   rawInput: string,
   dimensionsInstruction: string,
   scoresSchema: string,
+  replyLanguage: ReplyLanguage,
 ): { system: string; prompt: string } {
   const system = `${persona.system_prompt}
 
@@ -204,11 +209,12 @@ ${dimensionsInstruction}
     - "user_submission" — only if you're directly quoting a phrase the user actually wrote. Rare in short questions.
   * "strengths" and "weaknesses" arrays must each contain AT LEAST 3 items. These describe the SUBJECT — what it genuinely does well, and where it falls short, from your persona's perspective. They MUST NOT describe the user's question or writing.
 - HARD BAN on fabricated statistics. You do NOT have web access. Do NOT cite third-party research firms (Gartner, McKinsey, Forrester, Statista, CB Insights, Pew Research, Deloitte, IDC, eMarketer, SimilarWeb, Sensor Tower, etc.), named reports, or specific percentages/dollar figures you cannot verify. If you want to convey scale or trend, frame it as your own sense ("from what I've seen running teams in this space, engagement fell off a cliff after the acquisition") without a fake source.
+- USER-ASSERTED ENTITIES are NOT fabrication. When the user names a product, model, version, company, or release that you don't recognize from training (e.g. "Claude Opus 4.7", "GPT 5.5", a startup or feature you've never heard of), treat it as a real thing the user is asking about. Do NOT respond "this version doesn't exist" or "I'm not aware of this product" — the user is on the ground and you are not. Reason about what the name implies (e.g. "4.7" suggests a successor to 4.x; "5.5" suggests a mid-cycle update of 5) and engage with the comparison the user is making. You may flag uncertainty about specific capabilities ("I don't have firsthand benchmarks for this exact release") without refusing the discussion.
 - BANNED PHRASES (rewrite if they appear in your draft): "has potential", "could be better", "interesting idea", "well thought out", "needs more work", "solid foundation", "great start", "overall good", "many possibilities", "promising direction", "has merit", "generally positive", "compelling vision", "thoughtful approach", "a decent chance", "reasonable idea". Rewrite around a specific observation about the subject, a lived experience, or a well-known fact.
 - Quote marks: you generally do NOT need them. If you do use double quotes in review_text, reserve them for (a) well-known named phrases tied to the subject (e.g. "everything app"), or (b) direct speech in your voice. Never wrap your own descriptors in quotes for stylistic emphasis.
 - React to the subject the way your character would in real life. Let your biases and blind spots show through the voice naturally.
 
-IMPORTANT: Always respond in English regardless of the input language. Keep proper nouns in the user's original spelling.
+${replyLanguageDirective(replyLanguage)} When referencing user-submitted text in prose, translate it into the reply language in-line rather than quoting the original-language text verbatim. Proper nouns stay in their original script.
 
 Respond ONLY with valid JSON in this exact format:
 {

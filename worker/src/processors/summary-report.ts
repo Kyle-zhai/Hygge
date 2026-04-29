@@ -14,6 +14,7 @@ import type {
 } from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
+import { replyLanguageDirective, type ReplyLanguage } from "./language-detect.js";
 
 type LooseRecord = Record<string, unknown>;
 
@@ -161,7 +162,8 @@ async function backfillFeasibility(
   llm: LLMAdapter,
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
-  current: { if_feasible: IfFeasible; if_not_feasible: IfNotFeasible }
+  current: { if_feasible: IfFeasible; if_not_feasible: IfNotFeasible },
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<{ if_feasible: IfFeasible; if_not_feasible: IfNotFeasible }> {
   const feasibleSparse = isFeasibleSparse(current.if_feasible);
   const notFeasibleSparse = isNotFeasibleSparse(current.if_not_feasible);
@@ -186,7 +188,7 @@ CONTENT QUALITY REQUIREMENTS (non-negotiable):
 
 "if_feasible" = concrete moves if the topic IS pursued. "if_not_feasible" = what must change OR pivot to if the current form cannot succeed.
 
-Respond in English. Respond ONLY with valid JSON matching:
+${replyLanguageDirective(replyLanguage)} Respond ONLY with valid JSON matching:
 {
   "if_feasible": {
     "next_steps": ["<'{PersonaName} argued X, so do specific action Y tied to named feature Z'>", "<...>", "<...>"],
@@ -287,9 +289,10 @@ export async function generateTopicSummaryReport(
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
   rawInput: string,
-  dimensions: TopicClassification["dimensions"]
+  dimensions: TopicClassification["dimensions"],
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
-  const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions);
+  const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
   const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
   let parsed: LooseRecord;
   try {
@@ -301,7 +304,7 @@ export async function generateTopicSummaryReport(
   const feasibility = await backfillFeasibility(llm, project, reviews, {
     if_feasible: normalizeIfFeasible(parsed.if_feasible),
     if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),
-  });
+  }, replyLanguage);
 
   return {
     overall_score: 0,
@@ -331,9 +334,10 @@ export async function generateSummaryReport(
   project: ProjectParsedData,
   reviews: ReviewForSummary[],
   rawInput: string,
-  dimensions?: TopicClassification["dimensions"]
+  dimensions?: TopicClassification["dimensions"],
+  replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
-  const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions);
+  const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
   const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
   let parsed: LooseRecord;
   try {
@@ -345,7 +349,7 @@ export async function generateSummaryReport(
   const feasibility = await backfillFeasibility(llm, project, reviews, {
     if_feasible: normalizeIfFeasible(parsed.if_feasible),
     if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),
-  });
+  }, replyLanguage);
 
   return {
     overall_score: typeof parsed.overall_score === "number" ? parsed.overall_score : 0,
