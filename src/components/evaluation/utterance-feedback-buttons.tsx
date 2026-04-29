@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { useUtteranceFeedback } from "@/lib/feedback/use-utterance-feedback";
 import type { UtteranceAddress, FeedbackRating } from "@/lib/feedback/types";
@@ -17,14 +17,16 @@ export function UtteranceFeedbackButtons({ address, personaId, initial, alwaysVi
   const { rating, comment, pending, vote, unvote } = useUtteranceFeedback({ address, personaId, initial });
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [draft, setDraft] = useState(comment);
+  const [lastHydrated, setLastHydrated] = useState(comment);
 
-  // Keep textarea draft in sync with hydrated comment from the hook.
-  // Skips when user is actively editing (showCommentBox open) to avoid
-  // overwriting their typing if hydration races with the open animation.
-  useEffect(() => {
-    if (showCommentBox) return;
-    setDraft(comment);
-  }, [comment, showCommentBox]);
+  // When the hook delivers a new comment (late hydration), sync it into the
+  // draft unless the user is actively editing. Adjust state during render
+  // rather than in an effect — React handles same-render setState without
+  // an extra commit, and avoids the cascading-render lint rule.
+  if (comment !== lastHydrated) {
+    setLastHydrated(comment);
+    if (!showCommentBox) setDraft(comment);
+  }
 
   const visibility = alwaysVisible
     ? "opacity-100"
