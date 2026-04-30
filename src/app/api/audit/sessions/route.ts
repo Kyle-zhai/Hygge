@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchEffectivePlan } from "@/lib/billing/effective-plan";
 import { fetchUserLLMOverrides } from "@/lib/llm/user-overrides";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await appendAuditTrail(supabase, {
+    await appendAuditTrail(createAdminClient(), {
       sessionId: session.id,
       action: "session_created",
       actorId: user.id,

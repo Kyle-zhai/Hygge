@@ -123,6 +123,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: vi.fn(),
+}));
+
 import { createClient } from "@/lib/supabase/server";
 import { POST } from "@/app/api/audit/[id]/signoff/route";
 

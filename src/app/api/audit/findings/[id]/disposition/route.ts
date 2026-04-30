@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { appendAuditTrail } from "@/lib/audit/hash-chain";
 
 export const maxDuration = 10;
@@ -69,7 +70,7 @@ export async function POST(request: Request, ctx: Ctx) {
   }
 
   try {
-    await appendAuditTrail(supabase, {
+    await appendAuditTrail(createAdminClient(), {
       sessionId: session.id,
       action: "disposition_set",
       actorId: user.id,
