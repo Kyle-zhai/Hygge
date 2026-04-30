@@ -68,15 +68,15 @@ export default async function AuditIndexPage() {
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <ShieldCheck className="h-4 w-4" />
+          <div className="flex items-center gap-2 mb-2 text-[color:var(--text-tertiary)]">
+            <ShieldCheck className="h-4 w-4 text-[color:var(--accent-warm)]" />
             <span className="text-xs uppercase tracking-wider">{t("navLabel")}</span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("indexTitle")}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-[color:var(--text-primary)]">{t("indexTitle")}</h1>
         </div>
         <Link
           href={`/${locale}/audit/new`}
-          className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-full bg-[color:var(--text-primary)] px-5 py-2 text-sm font-medium text-[color:var(--bg-primary)] transition-transform hover:-translate-y-0.5"
         >
           <Plus className="h-4 w-4" />
           {t("indexNewButton")}
@@ -84,18 +84,18 @@ export default async function AuditIndexPage() {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card/30 p-10 text-center">
-          <p className="text-muted-foreground mb-4">{t("indexEmpty")}</p>
+        <div className="rounded-xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-10 text-center">
+          <p className="text-[color:var(--text-tertiary)] mb-4">{t("indexEmpty")}</p>
           <Link
             href={`/${locale}/audit/new`}
-            className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 text-sm font-medium hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-full bg-[color:var(--text-primary)] px-5 py-2 text-sm font-medium text-[color:var(--bg-primary)] transition-transform hover:-translate-y-0.5"
           >
             {t("newCta")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-card/30">
+        <ul className="divide-y divide-[color:var(--border-default)] rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
           {sessions.map((session) => {
             const Icon = STATUS_ICON[session.status];
             const tpl = templateMap.get(session.template_slug);
@@ -104,20 +104,20 @@ export default async function AuditIndexPage() {
               <li key={session.id}>
                 <Link
                   href={`/${locale}/audit/${session.id}`}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-muted/40 transition-colors"
+                  className="flex items-center gap-4 px-5 py-4 hover:bg-[color:var(--bg-primary)]/40 transition-colors"
                 >
                   <Icon
                     className={`h-5 w-5 shrink-0 ${
                       session.status === "running" ? "animate-spin" : ""
                     } ${
-                      session.status === "failed" ? "text-destructive" :
+                      session.status === "failed" ? "text-[#F87171]" :
                       session.status === "signed_off" ? "text-emerald-600" :
-                      "text-muted-foreground"
+                      "text-[color:var(--text-tertiary)]"
                     }`}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">{decisionPreview(session.decision_text)}</div>
-                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+                    <div className="font-medium truncate text-[color:var(--text-primary)]">{decisionPreview(session.decision_text)}</div>
+                    <div className="text-xs text-[color:var(--text-tertiary)] mt-1 flex items-center gap-3">
                       <span>{tplName}</span>
                       <span>·</span>
                       <span>{t(`sessionStatus${statusKey(session.status)}`)}</span>
@@ -125,7 +125,7 @@ export default async function AuditIndexPage() {
                       <span>{formatRelative(session.created_at, locale)}</span>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <ArrowRight className="h-4 w-4 text-[color:var(--text-tertiary)] shrink-0" />
                 </Link>
               </li>
             );

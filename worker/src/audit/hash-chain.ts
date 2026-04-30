@@ -21,50 +21,19 @@ interface AppendArgs {
 }
 
 export async function appendAuditTrail({ sessionId, action, actorId, payload }: AppendArgs): Promise<void> {
-  const { data: session, error: sessionErr } = await supabase
-    .from("audit_sessions")
-    .select("audit_trail_head_hash")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (sessionErr || !session) {
-    throw new Error(`audit_trail.append: session lookup failed (${sessionErr?.message ?? "not found"})`);
-  }
-
-  const { data: lastRow } = await supabase
-    .from("audit_trail")
-    .select("seq")
-    .eq("session_id", sessionId)
-    .order("seq", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const nextSeq = ((lastRow?.seq as number | undefined) ?? -1) + 1;
-
   const ts = new Date().toISOString();
   const payloadCanonical = canonicalJson(payload);
   const payloadHash = sha256Hex(payloadCanonical);
-  const prevHash = session.audit_trail_head_hash ?? "";
-  const thisHash = sha256Hex(`${prevHash}|${payloadHash}|${ts}`);
 
-  const { error: insertErr } = await supabase.from("audit_trail").insert({
-    session_id: sessionId,
-    seq: nextSeq,
-    action,
-    actor_id: actorId,
-    payload,
-    payload_sha256: payloadHash,
-    prev_hash: prevHash || null,
-    this_hash: thisHash,
-    ts,
+  const { error } = await supabase.rpc("audit_trail_append", {
+    p_session_id: sessionId,
+    p_action: action,
+    p_actor_id: actorId,
+    p_payload: payload as never,
+    p_payload_sha256: payloadHash,
+    p_ts: ts,
   });
-  if (insertErr) {
-    throw new Error(`audit_trail.append: insert failed (${insertErr.message})`);
-  }
-
-  const { error: updateErr } = await supabase
-    .from("audit_sessions")
-    .update({ audit_trail_head_hash: thisHash })
-    .eq("id", sessionId);
-  if (updateErr) {
-    throw new Error(`audit_trail.append: head hash update failed (${updateErr.message})`);
+  if (error) {
+    throw new Error(`audit_trail.append: rpc failed (${error.message})`);
   }
 }
