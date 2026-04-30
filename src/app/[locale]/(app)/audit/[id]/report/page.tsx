@@ -205,10 +205,22 @@ export default async function AuditReportPage({ params }: PageProps) {
 
         <section className="break-inside-avoid">
           <h2 className="text-lg font-semibold mb-2">Audit trail (hash-chained)</h2>
-          <p className="text-xs text-[color:var(--text-tertiary)] mb-3">
+          <p className="text-xs text-[color:var(--text-tertiary)] mb-1">
             {t("auditTrailVerifyHint")} Final head hash:{" "}
             <span className="font-mono">{session.audit_trail_head_hash ?? "—"}</span>
           </p>
+          {session.status === "signed_off" && (
+            <p className="text-xs text-[color:var(--text-tertiary)] mb-3 print:mb-2">
+              {t("verifyPublicLink")}:{" "}
+              <a
+                href={`/${locale}/verify/${session.id}`}
+                className="font-mono text-[color:var(--text-primary)] underline underline-offset-2 hover:text-[color:var(--accent-warm)] print:no-underline"
+              >
+                /{locale}/verify/{session.id}
+              </a>
+              <span className="ml-2 no-print">— {t("verifyPublicLinkHint")}</span>
+            </p>
+          )}
           <table className="w-full text-xs border border-[color:var(--border-default)] font-mono">
             <thead>
               <tr className="bg-[color:var(--bg-secondary)]">
