@@ -124,7 +124,7 @@ export function AuditIntake({ templates, locale }: Props) {
           onChange={(e) => setDecisionText(e.target.value)}
           placeholder={t("intakePlaceholder")}
           rows={10}
-          className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-foreground/20 resize-y"
+          className="w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-3 text-sm font-mono leading-relaxed text-[color:var(--text-primary)] transition-colors focus:outline-none focus:border-[color:var(--accent-warm)] focus:ring-2 focus:ring-[rgb(var(--accent-warm-rgb)/0.10)] resize-y"
         />
       </div>
 
@@ -132,7 +132,7 @@ export function AuditIntake({ templates, locale }: Props) {
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-2 text-sm text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]"
         >
           <ChevronDown
             className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
@@ -140,22 +140,22 @@ export function AuditIntake({ templates, locale }: Props) {
           {t("intakeAdvancedToggle")}
         </button>
         {showAdvanced && (
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-border bg-card/30 p-4">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4">
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">{t("intakeFieldOwner")}</label>
+              <label className="block text-xs text-[color:var(--text-tertiary)] mb-1">{t("intakeFieldOwner")}</label>
               <input
                 type="text"
                 value={owner}
                 onChange={(e) => setOwner(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                className="w-full rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">{t("intakeFieldUrgency")}</label>
+              <label className="block text-xs text-[color:var(--text-tertiary)] mb-1">{t("intakeFieldUrgency")}</label>
               <select
                 value={urgency}
                 onChange={(e) => setUrgency(e.target.value as DecisionUrgency)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                className="w-full rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
               >
                 {URGENCY_OPTIONS.map((u) => (
                   <option key={u} value={u}>
@@ -173,7 +173,7 @@ export function AuditIntake({ templates, locale }: Props) {
 
         {recommended && (
           <div className="mb-4">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-2">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[color:var(--text-tertiary)] mb-2">
               <Sparkles className="h-3.5 w-3.5" />
               {t("templatePickerAutoMatch")}
             </div>
@@ -190,7 +190,7 @@ export function AuditIntake({ templates, locale }: Props) {
 
         <div>
           {recommended && (
-            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+            <div className="text-xs uppercase tracking-wider text-[color:var(--text-tertiary)] mb-2">
               {t("templatePickerAlternates")}
             </div>
           )}
@@ -210,7 +210,7 @@ export function AuditIntake({ templates, locale }: Props) {
       </div>
 
       {error && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-xl border border-[#F87171]/40 bg-[#F87171]/10 px-4 py-3 text-sm text-[#F87171]">
           {error}
         </div>
       )}
@@ -219,7 +219,7 @@ export function AuditIntake({ templates, locale }: Props) {
         type="button"
         onClick={onSubmit}
         disabled={isPending}
-        className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-5 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-full bg-[color:var(--text-primary)] px-6 py-2.5 text-sm font-medium text-[color:var(--bg-primary)] transition-transform hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
       >
         {isPending ? (
           <>
@@ -258,29 +258,29 @@ function TemplateCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`text-left rounded-md border bg-card/40 px-4 py-3 transition-all ${
+      className={`text-left rounded-xl border bg-[color:var(--bg-secondary)] px-4 py-3 transition-all ${
         selected
-          ? "border-foreground ring-2 ring-foreground/20"
+          ? "border-[color:var(--accent-warm)] ring-2 ring-[rgb(var(--accent-warm-rgb)/0.20)]"
           : highlight
-          ? "border-foreground/40 hover:border-foreground"
-          : "border-border hover:border-foreground/50"
+          ? "border-[color:var(--border-hover)] hover:border-[color:var(--accent-warm)]"
+          : "border-[color:var(--border-default)] hover:border-[color:var(--border-hover)]"
       }`}
     >
       <div className="flex items-start justify-between gap-2 mb-1">
-        <div className="font-medium text-sm">{name}</div>
+        <div className="font-medium text-sm text-[color:var(--text-primary)]">{name}</div>
         {selected && (
-          <span className="text-[10px] uppercase tracking-wider text-foreground/70 shrink-0 mt-0.5">
+          <span className="text-[10px] uppercase tracking-wider text-[color:var(--accent-warm)] shrink-0 mt-0.5">
             {t("templatePickerSelected")}
           </span>
         )}
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed mb-2">{desc}</p>
+      <p className="text-xs text-[color:var(--text-tertiary)] leading-relaxed mb-2">{desc}</p>
       {template.regulation_refs.length > 0 && template.regulation_refs[0] !== "(general)" && (
         <div className="flex flex-wrap gap-1 mt-2">
           {template.regulation_refs.slice(0, 3).map((ref) => (
             <span
               key={ref}
-              className="text-[10px] rounded border border-border bg-background/40 px-1.5 py-0.5 text-muted-foreground"
+              className="text-[10px] rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-2 py-0.5 text-[color:var(--text-tertiary)]"
             >
               {ref}
             </span>

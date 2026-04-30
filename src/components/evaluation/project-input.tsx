@@ -9,6 +9,7 @@ import { Paperclip, FileText, Image, Film, ArrowUp, X } from "lucide-react";
 interface ProjectInputProps {
   onSubmit: (data: { rawInput: string; url: string | null; files: File[] }) => void;
   disabled?: boolean;
+  initialText?: string;
 }
 
 function extractUrl(text: string): string | null {
@@ -16,9 +17,9 @@ function extractUrl(text: string): string | null {
   return match ? match[0] : null;
 }
 
-export function ProjectInput({ onSubmit, disabled }: ProjectInputProps) {
+export function ProjectInput({ onSubmit, disabled, initialText = "" }: ProjectInputProps) {
   const t = useTranslations("evaluation");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [files, setFiles] = useState<File[]>([]);
   const inputId = useId() + "-file";
   const composingRef = useRef(false);

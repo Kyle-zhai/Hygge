@@ -45,20 +45,20 @@ export default async function AuditDetailPage({ params }: PageProps) {
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <Link
         href={`/${locale}/audit`}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
+        className="inline-flex items-center gap-1 text-sm text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] mb-6 transition-colors"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {t("indexTitle")}
       </Link>
 
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-          <ShieldCheck className="h-4 w-4" />
+        <div className="flex items-center gap-2 mb-2 text-[color:var(--text-tertiary)]">
+          <ShieldCheck className="h-4 w-4 text-[color:var(--accent-warm)]" />
           <span className="text-xs uppercase tracking-wider">
             {template ? (locale === "zh" ? template.name_zh : template.name_en) : session.template_slug}
           </span>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight mb-3">
+        <h1 className="text-2xl font-semibold tracking-tight mb-3 text-[color:var(--text-primary)]">
           {firstLine(session.decision_text)}
         </h1>
         {template?.regulation_refs && template.regulation_refs[0] !== "(general)" && (
@@ -66,7 +66,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
             {template.regulation_refs.map((ref) => (
               <span
                 key={ref}
-                className="text-[11px] rounded border border-border bg-background/40 px-1.5 py-0.5 text-muted-foreground"
+                className="text-[11px] rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-2 py-0.5 text-[color:var(--text-tertiary)]"
               >
                 {ref}
               </span>

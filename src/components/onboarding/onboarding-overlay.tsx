@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { Sparkles, MessageCircle, Users, Store, ArrowRight, X } from "lucide-react";
+import { Sparkles, MessageCircle, FileSignature, ScrollText, ArrowRight, X } from "lucide-react";
 
 interface Step {
   icon: typeof Sparkles;
@@ -19,36 +19,36 @@ const STEPS: Step[] = [
     titleZh: "欢迎使用 Hygge",
     titleEn: "Welcome to Hygge",
     bodyZh:
-      "Hygge 让你用不同角色的视角评估你的想法、产品或话题 — 像是召集一屋子专家为你诚实反馈。",
+      "把一个高风险决策放到桌上，召集一组立场各异的 AI 顾问真的吵一遍。结果不是一段聊天记录，而是一份能签字、能拿去给法务和董事会的审计报告。",
     bodyEn:
-      "Hygge lets you evaluate your ideas, products, or topics through the eyes of different personas — like a room of experts giving candid feedback.",
+      "Put a high-stakes decision on the table. A group of AI advisors with sharply different stances actually argue it out. You walk away not with a chat log, but with a signed audit report you can hand to legal or your board.",
   },
   {
     icon: MessageCircle,
-    titleZh: "开始一次评估",
-    titleEn: "Start an evaluation",
+    titleZh: "开始一次圆桌讨论",
+    titleEn: "Convene the round table",
     bodyZh:
-      "描述你的想法或话题，选择 3–8 个角色，然后让他们写下详细反馈。你会得到评分、共识、关键分歧和合成报告。",
+      "用一段话描述你要决定什么——招聘、上线、政策变更、AI 功能发布都可以。系统自动选 3–8 位最相关的顾问,他们先单独表态,再当面交锋,最后给你共识、分歧和具体行动项。",
     bodyEn:
-      "Describe your idea or topic, pick 3–8 personas, and let them write detailed feedback. You get scores, consensus, key disagreements, and a synthesized report.",
+      "Describe the decision in one paragraph — a hire, a launch, a policy change, an AI feature ship. The system picks 3–8 relevant advisors. Each speaks alone first, then they confront each other on disagreement. You get consensus, conflict, and concrete action items.",
   },
   {
-    icon: Users,
-    titleZh: "与角色对话",
-    titleEn: "Chat with a persona",
+    icon: ScrollText,
+    titleZh: "选一份审计模板",
+    titleEn: "Pick an audit template",
     bodyZh:
-      "读完报告后，你可以和任意角色开始一对一对话来深入提问 — 他们会保持人设回答。",
+      "针对合规、上线 Pre-Mortem、招聘决策这些场景,Hygge 内置 5 套模板——包含 EU AI Act 第14条、GDPR 第22条、EEOC 这些监管参照。模板带 Compliance Officer + Adversarial Red Team 角色。",
     bodyEn:
-      "After reading the report, open a one-on-one chat with any persona to dig deeper — they stay in character while answering.",
+      "For compliance, launch pre-mortem, or hiring decisions, Hygge ships 5 templates — referencing EU AI Act Art.14, GDPR Art.22, EEOC. Each template includes a Compliance Officer and an Adversarial Red Team persona by default.",
   },
   {
-    icon: Store,
-    titleZh: "探索角色市场",
-    titleEn: "Explore the marketplace",
+    icon: FileSignature,
+    titleZh: "签字、归档、可追溯",
+    titleEn: "Sign, archive, defend",
     bodyZh:
-      "浏览社区发布的角色，收藏喜欢的，或者自己创建并分享。好角色 = 好反馈。",
+      "每个发现都要明确处置——接受缓解、接受残余风险、驳回或延期。决策者和合规官各签一次,IP 哈希留痕。整个过程 SHA-256 哈希链串联,数据库 insert-only:任一行被改,整条链就断。这就是合规可信。",
     bodyEn:
-      "Browse personas published by the community, save the ones you like, or create and share your own. Better personas → better feedback.",
+      "Every finding gets an explicit disposition — accept-mitigation, accept-residual, reject, or defer. The decision owner and compliance signer each attest, with hashed IP. Everything is SHA-256 chained and insert-only at the database level. Tamper one row, the chain breaks. That's how it stays defensible.",
   },
 ];
 

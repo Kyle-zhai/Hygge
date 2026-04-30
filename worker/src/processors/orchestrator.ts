@@ -258,6 +258,16 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       throw new Error("No personas found for selected IDs");
     }
 
+    // Idempotency: a BullMQ retry would otherwise double-insert reviews.
+    // Wipe any partial state from a prior attempt before generating fresh.
+    const { error: clearReviewsErr } = await supabase
+      .from("persona_reviews")
+      .delete()
+      .eq("evaluation_id", evaluationId);
+    if (clearReviewsErr) {
+      throw new Error(`persona_reviews reset failed: ${clearReviewsErr.message}`);
+    }
+
     // 5. Generate individual persona perspectives (parallel with concurrency limit)
     const reviews: Array<{
       persona_id: string;

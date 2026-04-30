@@ -32,7 +32,7 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
   const skipDisposition = finding.finding_kind === "no_risk" || finding.finding_kind === "mitigation";
 
   return (
-    <li className="rounded-md border border-border bg-card/40">
+    <li className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -47,11 +47,11 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
                   backgroundColor: severityColor(finding.severity),
                 }}
               />
-              <span className="text-muted-foreground">S{finding.severity}</span>
+              <span className="text-[color:var(--text-tertiary)]">S{finding.severity}</span>
             </span>
           )}
           {finding.probability != null && (
-            <span className="text-[10px] text-muted-foreground">P{finding.probability}</span>
+            <span className="text-[10px] text-[color:var(--text-tertiary)]">P{finding.probability}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -62,7 +62,7 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
             <Check className="h-4 w-4 text-emerald-600" />
           )}
           <ChevronDown
-            className={`h-4 w-4 text-muted-foreground transition-transform ${
+            className={`h-4 w-4 text-[color:var(--text-tertiary)] transition-transform ${
               expanded ? "rotate-180" : ""
             }`}
           />
@@ -70,10 +70,10 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-4 py-3 space-y-3">
+        <div className="border-t border-[color:var(--border-default)] px-4 py-3 space-y-3">
           {finding.suggested_mitigation && (
             <div>
-              <div className="text-xs font-medium text-muted-foreground mb-1">
+              <div className="text-xs font-medium text-[color:var(--text-tertiary)] mb-1">
                 {t("findingMitigationLabel")}
               </div>
               <p className="text-sm leading-relaxed">{finding.suggested_mitigation}</p>
@@ -82,7 +82,7 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
 
           {!skipDisposition && editable && (
             <div className="space-y-2 pt-1">
-              <div className="text-xs font-medium text-muted-foreground">
+              <div className="text-xs font-medium text-[color:var(--text-tertiary)]">
                 {t("findingDispositionPrompt")}
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -91,10 +91,10 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
                     key={d}
                     type="button"
                     onClick={() => onDispositionChange(d, note || null)}
-                    className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                       finding.user_disposition === d
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border hover:border-foreground/50"
+                        ? "border-[color:var(--text-primary)] bg-[color:var(--text-primary)] text-[color:var(--bg-primary)]"
+                        : "border-[color:var(--border-default)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
                     }`}
                   >
                     {t(`findingDisposition${dispositionKey(d)}` as never)}
@@ -111,13 +111,13 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
                 }}
                 placeholder={t("findingDispositionNote")}
                 rows={2}
-                className="w-full text-xs rounded-md border border-border bg-background px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-foreground/30"
+                className="w-full text-xs rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-2 py-1.5 text-[color:var(--text-primary)] focus:outline-none focus:border-[color:var(--accent-warm)] focus:ring-1 focus:ring-[rgb(var(--accent-warm-rgb)/0.30)]"
               />
             </div>
           )}
 
           {finding.user_disposition && !editable && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-[color:var(--text-tertiary)]">
               {t(`findingDisposition${dispositionKey(finding.user_disposition)}` as never)}
               {finding.user_disposition_note && <> — {finding.user_disposition_note}</>}
             </div>

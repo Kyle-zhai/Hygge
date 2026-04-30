@@ -69,6 +69,18 @@ export async function processAuditJob(job: Job<AuditJobData>): Promise<void> {
     throw new Error(`audit template ${templateSlug} has no default_persona_ids`);
   }
 
+  // Idempotency: BullMQ may retry this job. Wipe any partial findings from a
+  // prior attempt before we start so concurrent attempts don't double-insert.
+  // The audit_trail is append-only by design, so retries simply add another
+  // findings_generated event — verifiers can reason about which run won.
+  const { error: clearErr } = await supabase
+    .from("audit_findings")
+    .delete()
+    .eq("session_id", auditSessionId);
+  if (clearErr) {
+    throw new Error(`audit_findings reset failed: ${clearErr.message}`);
+  }
+
   const { data: personaRows, error: personaErr } = await supabase
     .from("personas")
     .select("*")

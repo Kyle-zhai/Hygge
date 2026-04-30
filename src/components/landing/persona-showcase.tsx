@@ -70,6 +70,43 @@ export function PersonaShowcase({
   const [selected, setSelected] = useState<PersonaPreview | null>(null);
   const [radius, setRadius] = useState(RADIUS_DESKTOP);
   const [cardSize, setCardSize] = useState({ w: CARD_W_DESKTOP, h: CARD_H_DESKTOP });
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelected(null);
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    closeButtonRef.current?.focus();
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      lastFocusedRef.current?.focus?.();
+    };
+  }, [selected]);
 
   const stateRef = useRef({
     rotateY: 0,
@@ -336,7 +373,8 @@ export function PersonaShowcase({
                   <button
                     type="button"
                     onClick={() => handleCardClick(p)}
-                    className="group relative block h-full w-full overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-gradient-to-b from-[color:var(--panel-grad-top)] to-[color:var(--panel-grad-bottom)] p-4 text-left transition-transform duration-300 hover:scale-[1.03] hover:border-[color:var(--border-hover)]"
+                    aria-label={`${p.name} — ${p.tagline}`}
+                    className="group relative block h-full w-full overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-gradient-to-b from-[color:var(--panel-grad-top)] to-[color:var(--panel-grad-bottom)] p-4 text-left transition-transform duration-300 hover:scale-[1.03] hover:border-[color:var(--border-hover)] focus-visible:scale-[1.03] focus-visible:border-[color:var(--accent-warm)] focus-visible:outline-none"
                   >
                     <div
                       className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
@@ -402,9 +440,13 @@ export function PersonaShowcase({
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={() => setSelected(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="persona-modal-title"
           >
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <motion.div
+              ref={dialogRef}
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -413,8 +455,11 @@ export function PersonaShowcase({
               className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] shadow-2xl"
             >
               <button
+                ref={closeButtonRef}
+                type="button"
                 onClick={() => setSelected(null)}
-                className="absolute right-4 top-4 z-10 rounded-full bg-[color:var(--bg-primary)]/60 p-1.5 text-[color:var(--text-secondary)] backdrop-blur-sm transition-colors hover:text-[color:var(--text-primary)]"
+                aria-label="Close"
+                className="absolute right-4 top-4 z-10 rounded-full bg-[color:var(--bg-primary)]/60 p-1.5 text-[color:var(--text-secondary)] backdrop-blur-sm transition-colors hover:text-[color:var(--text-primary)] focus-visible:outline-2 focus-visible:outline-[color:var(--accent-warm)]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -433,7 +478,7 @@ export function PersonaShowcase({
               </div>
               <div className="p-6">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-bold text-[color:var(--text-primary)]">
+                  <h3 id="persona-modal-title" className="text-xl font-bold text-[color:var(--text-primary)]">
                     {selected.name}
                   </h3>
                   {selected.mbti && (

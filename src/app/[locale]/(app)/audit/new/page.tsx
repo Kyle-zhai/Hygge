@@ -24,12 +24,12 @@ export default async function AuditNewPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-          <ShieldCheck className="h-4 w-4" />
+        <div className="flex items-center gap-2 mb-2 text-[color:var(--text-tertiary)]">
+          <ShieldCheck className="h-4 w-4 text-[color:var(--accent-warm)]" />
           <span className="text-xs uppercase tracking-wider">{t("navLabel")}</span>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight mb-2">{t("newTitle")}</h1>
-        <p className="text-muted-foreground">{t("newSubtitle")}</p>
+        <h1 className="text-3xl font-semibold tracking-tight mb-2 text-[color:var(--text-primary)]">{t("newTitle")}</h1>
+        <p className="text-[color:var(--text-tertiary)]">{t("newSubtitle")}</p>
       </div>
 
       <AuditIntake templates={templates} locale={locale} />

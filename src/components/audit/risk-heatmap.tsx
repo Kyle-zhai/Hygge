@@ -30,10 +30,10 @@ export function RiskHeatmap({ findings }: Props) {
   }, [grid]);
 
   return (
-    <div className="rounded-md border border-border bg-card/30 p-4">
-      <div className="text-xs font-medium mb-3">{t("heatmapTitle")}</div>
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4">
+      <div className="text-xs font-medium text-[color:var(--text-primary)] mb-3">{t("heatmapTitle")}</div>
       <div className="flex items-end gap-2">
-        <div className="flex flex-col-reverse text-[10px] text-muted-foreground py-1">
+        <div className="flex flex-col-reverse text-[10px] text-[color:var(--text-tertiary)] py-1">
           {[1, 2, 3, 4, 5].map((n) => (
             <div key={n} className="h-7 w-3 flex items-center justify-end pr-1">
               {n}
@@ -67,14 +67,14 @@ export function RiskHeatmap({ findings }: Props) {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-5 gap-0.5 ml-5 mt-1 text-[10px] text-muted-foreground">
+      <div className="grid grid-cols-5 gap-0.5 ml-5 mt-1 text-[10px] text-[color:var(--text-tertiary)]">
         {[1, 2, 3, 4, 5].map((n) => (
           <div key={n} className="text-center">
             {n}
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between mt-2 text-[10px] text-[color:var(--text-tertiary)]">
         <span>{t("heatmapAxisSeverity")} ↑</span>
         <span>{t("heatmapAxisProbability")} →</span>
       </div>

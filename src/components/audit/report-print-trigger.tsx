@@ -21,7 +21,7 @@ export function ReportPrintTrigger() {
       <button
         type="button"
         onClick={() => window.print()}
-        className="inline-flex items-center gap-2 rounded-md border border-border bg-card/30 px-3 py-1.5 text-sm hover:border-foreground/50"
+        className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
       >
         <Printer className="h-3.5 w-3.5" />
         {t("printReportButton")}

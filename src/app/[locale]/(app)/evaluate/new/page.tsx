@@ -27,6 +27,38 @@ function NewEvaluationContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [starterText, setStarterText] = useState("");
+  const isZh = locale === "zh";
+
+  const starters = isZh
+    ? [
+        {
+          label: "AI 功能上线",
+          text: "我们准备在下周给消费者 App 上线一个基于大模型的内容推荐功能,会用用户最近 30 天的行为数据训练偏好。我担心隐私、滥用、内容安全和监管风险——尤其是欧盟用户。",
+        },
+        {
+          label: "招聘决策",
+          text: "我在两个最终候选人之间犹豫:一个有十年经验但简历有跳槽痕迹,另一个是 5 年但是从顶级团队出来的内推。岗位是高级工程师,直接向 CTO 汇报。我想从公平、绩效预期、长期 fit 多个角度审视。",
+        },
+        {
+          label: "战略转向",
+          text: "我们 SaaS 公司增长放缓,在考虑从 PLG 转向 SLG (sales-led),需要砍掉 30% 自助流程预算转给销售团队。这是个大调整,我想做一次 pre-mortem 把所有失败模式找出来。",
+        },
+      ]
+    : [
+        {
+          label: "AI feature launch",
+          text: "Next week we ship an LLM-powered content recommendation feature in our consumer app. It uses 30 days of user behavior to train preferences. I'm worried about privacy, misuse, content safety, and regulatory exposure — especially for EU users.",
+        },
+        {
+          label: "Hiring decision",
+          text: "I'm choosing between two final candidates for a senior engineer role reporting to the CTO. One has 10 years of experience but a job-hopping pattern. The other has 5 years but came through a referral from a top team. I want a fairness, performance-fit, and long-term-retention review.",
+        },
+        {
+          label: "Strategy pivot",
+          text: "Our SaaS growth is flattening. We're considering pivoting from PLG to sales-led, which means cutting 30% of the self-serve budget and redirecting to a sales team. Big call. I want a pre-mortem to surface every failure mode before we commit.",
+        },
+      ];
 
   // Reset to step 1 when mode changes
   const [prevMode, setPrevMode] = useState(mode);
@@ -158,7 +190,22 @@ function NewEvaluationContent() {
           </div>
 
           <div className="w-full max-w-2xl">
-            <ProjectInput onSubmit={handleProjectSubmit} />
+            <ProjectInput key={starterText} onSubmit={handleProjectSubmit} initialText={starterText} />
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+                {isZh ? "试试这些场景" : "Try a starter"}
+              </span>
+              {starters.map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => setStarterText(s.text)}
+                  className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

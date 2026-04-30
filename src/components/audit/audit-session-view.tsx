@@ -100,15 +100,15 @@ export function AuditSessionView({
         <SessionStatusBar session={session} t={t} />
 
         {findings.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border bg-card/30 px-6 py-10 text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-6 py-10 text-center text-sm text-[color:var(--text-tertiary)]">
             {t("findingsEmpty")}
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t("findingsTitle")}</h2>
+              <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">{t("findingsTitle")}</h2>
               {isRunning && (
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1 text-xs text-[color:var(--text-tertiary)]">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   {t("findingsLiveBadge")}
                 </span>
@@ -118,7 +118,7 @@ export function AuditSessionView({
             {dispositionError && (
               <div
                 role="alert"
-                className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-2 text-sm text-destructive"
+                className="rounded-xl border border-[#F87171]/40 bg-[#F87171]/10 px-4 py-2 text-sm text-[#F87171]"
               >
                 {dispositionError}
               </div>
@@ -129,7 +129,7 @@ export function AuditSessionView({
               if (list.length === 0) return null;
               return (
                 <div key={kind} className="space-y-2">
-                  <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <h3 className="text-xs uppercase tracking-wider text-[color:var(--text-tertiary)]">
                     {t(`findingKind${findingKindKey(kind)}` as never)} · {list.length}
                   </h3>
                   <ul className="space-y-2">
@@ -173,20 +173,20 @@ export function AuditSessionView({
               href={`/${locale}/audit/${session.id}/report?autoprint=1`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/30 px-3 py-1.5 text-sm hover:border-foreground/50"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
             >
               <FileDown className="h-3.5 w-3.5" />
               {t("exportPdfButton")}
             </a>
             <a
               href={`/api/audit/${session.id}/export.json`}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/30 px-3 py-1.5 text-sm hover:border-foreground/50"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
             >
               {t("exportJsonButton")}
             </a>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card/30 px-3 py-1.5 text-sm hover:border-foreground/50"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-hover)] hover:text-[color:var(--text-primary)]"
             >
               <Repeat className="h-3.5 w-3.5" />
               {t("rerunOnDiffButton")}
@@ -198,11 +198,11 @@ export function AuditSessionView({
       <aside className="space-y-4">
         <RiskHeatmap findings={findings} locale={locale} />
 
-        <div className="rounded-md border border-border bg-card/30 p-4 text-xs text-muted-foreground space-y-2">
-          <div className="font-medium text-foreground">{t("auditTrailTitle")}</div>
+        <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-4 text-xs text-[color:var(--text-tertiary)] space-y-2">
+          <div className="font-medium text-[color:var(--text-primary)]">{t("auditTrailTitle")}</div>
           <p>{t("auditTrailVerifyHint")}</p>
           {session.audit_trail_head_hash && (
-            <div className="font-mono text-[10px] break-all rounded bg-background/40 px-2 py-1.5">
+            <div className="font-mono text-[10px] break-all rounded-md bg-[color:var(--bg-primary)] px-2 py-1.5 text-[color:var(--text-secondary)]">
               {session.audit_trail_head_hash}
             </div>
           )}
@@ -268,7 +268,7 @@ function SessionStatusBar({
       : Clock;
 
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-sm text-[color:var(--text-tertiary)]">
       <Icon className={`h-4 w-4 ${status === "running" || status === "pending" ? "animate-spin" : ""}`} />
       <span>{t(`sessionStatus${sessionStatusKey(status)}` as never)}</span>
     </div>
