@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { appendAuditTrail } from "@/lib/audit/hash-chain";
 
 export const maxDuration = 10;
@@ -104,7 +105,7 @@ export async function POST(request: Request, ctx: Ctx) {
   }
 
   try {
-    await appendAuditTrail(supabase, {
+    await appendAuditTrail(createAdminClient(), {
       sessionId: id,
       action: "signed_off",
       actorId: user.id,
