@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Loader2, Sparkles, ShieldCheck } from "lucide-react";
+import { ChevronDown, Loader2, Sparkles, ShieldCheck, Upload, FileText } from "lucide-react";
 import type { AuditTemplate, DecisionUrgency } from "@/lib/audit/types";
 import { matchTemplate } from "@/lib/audit/template-match";
 
@@ -13,6 +13,18 @@ interface Props {
 }
 
 const URGENCY_OPTIONS: DecisionUrgency[] = ["low", "medium", "high"];
+
+const FILE_ACCEPT = ".pdf,.docx,.pptx,.xlsx,.odt,.odp,.ods,.rtf,.txt,.md";
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ALLOWED_UPLOAD_EXT = new Set([
+  "pdf", "docx", "pptx", "xlsx", "odt", "odp", "ods", "rtf", "txt", "md",
+]);
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
 
 const TEMPLATE_I18N_KEY: Record<string, { name: string; desc: string }> = {
   "eu-aia-art14": { name: "templateEuAia14Name", desc: "templateEuAia14Desc" },
@@ -43,6 +55,64 @@ export function AuditIntake({ templates, locale }: Props) {
   const [urgency, setUrgency] = useState<DecisionUrgency>("medium");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [fileStatus, setFileStatus] = useState<{ filename: string; truncated: boolean; size: string } | null>(null);
+
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file) return;
+
+    setError(null);
+    setFileStatus(null);
+
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_UPLOAD_EXT.has(ext)) {
+      setError(t("intakeFileErrorUnsupported"));
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(t("intakeFileErrorTooLarge"));
+      return;
+    }
+
+    setIsParsingFile(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/audit/parse-file", { method: "POST", body: fd });
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const code = body?.error ?? "";
+        if (res.status === 413) setError(t("intakeFileErrorTooLarge"));
+        else if (res.status === 415) setError(t("intakeFileErrorUnsupported"));
+        else if (res.status === 422 && /No readable/i.test(code)) setError(t("intakeFileErrorEmpty"));
+        else if (res.status === 422) setError(t("intakeFileErrorParse"));
+        else setError(code || t("intakeFileErrorGeneric"));
+        return;
+      }
+
+      const text = String(body.text ?? "");
+      if (!text.trim()) {
+        setError(t("intakeFileErrorEmpty"));
+        return;
+      }
+
+      setDecisionText(text);
+      setFileStatus({
+        filename: file.name,
+        truncated: Boolean(body.truncated),
+        size: formatBytes(Number(body.extractedSize ?? new Blob([text]).size)),
+      });
+    } catch (err) {
+      console.error(err);
+      setError(t("intakeFileErrorGeneric"));
+    } finally {
+      setIsParsingFile(false);
+    }
+  }
 
   const match = useMemo(() => {
     if (decisionText.trim().length < 30) return null;
@@ -121,11 +191,55 @@ export function AuditIntake({ templates, locale }: Props) {
         <textarea
           id="decision-text"
           value={decisionText}
-          onChange={(e) => setDecisionText(e.target.value)}
+          onChange={(e) => {
+            setDecisionText(e.target.value);
+            if (fileStatus) setFileStatus(null);
+          }}
           placeholder={t("intakePlaceholder")}
           rows={10}
           className="w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-3 text-sm font-mono leading-relaxed text-[color:var(--text-primary)] transition-colors focus:outline-none focus:border-[color:var(--accent-warm)] focus:ring-2 focus:ring-[rgb(var(--accent-warm-rgb)/0.10)] resize-y"
         />
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={FILE_ACCEPT}
+            onChange={onFileChange}
+            className="hidden"
+            disabled={isParsingFile || isPending}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isParsingFile || isPending}
+            className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-xs text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--border-hover)] disabled:opacity-50"
+          >
+            {isParsingFile ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t("intakeFileParsing")}
+              </>
+            ) : (
+              <>
+                <Upload className="h-3.5 w-3.5" />
+                {t("intakeFileButton")}
+              </>
+            )}
+          </button>
+          {fileStatus ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--text-tertiary)]">
+              <FileText className="h-3.5 w-3.5" />
+              {fileStatus.truncated
+                ? t("intakeFileLoadedTruncated", { filename: fileStatus.filename })
+                : t("intakeFileLoaded", { filename: fileStatus.filename, size: fileStatus.size })}
+            </span>
+          ) : (
+            <span className="text-xs text-[color:var(--text-tertiary)]">
+              {t("intakeFileHint")}
+            </span>
+          )}
+        </div>
       </div>
 
       <div>
