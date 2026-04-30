@@ -72,3 +72,4 @@ docs/
 
 # worker dist
 worker/dist/
+.gstack/
