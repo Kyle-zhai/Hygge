@@ -5,6 +5,7 @@ import { config } from "./config.js";
 import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
+import { processAuditJob } from "./processors/audit-council.js";
 import { startHttpServer } from "./http-server.js";
 import { supabase } from "./supabase.js";
 import { log } from "./utils/logger.js";
@@ -45,6 +46,14 @@ const debateWorker = new Worker("debate-response", processDebateResponse, {
   concurrency: 3,
   drainDelay: 1000,
   stalledInterval: 600_000,
+});
+
+const auditWorker = new Worker("audit", processAuditJob, {
+  connection,
+  concurrency: Number(process.env.AUDIT_CONCURRENCY ?? 2),
+  drainDelay: 2000,
+  stalledInterval: 600_000,
+  lockDuration: 60_000,
 });
 
 function jobDuration(job: { processedOn?: number; finishedOn?: number }): number | undefined {
@@ -169,6 +178,28 @@ function attachLogs(queue: string, worker: Worker) {
 attachLogs("evaluations", evaluationWorker);
 attachLogs("persona-generation", personaWorker);
 attachLogs("debate-response", debateWorker);
+attachLogs("audit", auditWorker);
+
+// Mark the audit session as failed when the job throws after retries are exhausted,
+// so the UI can stop showing the "running" spinner forever. The "failed" event
+// fires per attempt; only flip to failed on the final attempt so a transient
+// LLM blip during attempt #1 of N doesn't lock the session into a failed UI
+// state while later attempts are still pending.
+auditWorker.on("failed", (job, err) => {
+  const auditSessionId = job?.data?.auditSessionId as string | undefined;
+  if (!auditSessionId || !job) return;
+  const totalAttempts = job.opts.attempts ?? 1;
+  if (job.attemptsMade < totalAttempts) return;
+  void supabase
+    .from("audit_sessions")
+    .update({ status: "failed" })
+    .eq("id", auditSessionId)
+    .neq("status", "signed_off")
+    .then(({ error }) => {
+      if (error) log.error("audit.fail_status_update_failed", { auditSessionId, error: error.message });
+      else log.info("audit.marked_failed", { auditSessionId, error: err.message });
+    });
+});
 
 const httpServer = startHttpServer();
 
@@ -178,6 +209,7 @@ async function shutdown(signal: string) {
     evaluationWorker.close(),
     personaWorker.close(),
     debateWorker.close(),
+    auditWorker.close(),
     new Promise<void>((resolve) => httpServer.close(() => resolve())),
   ]);
   process.exit(0);
