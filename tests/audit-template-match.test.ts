@@ -42,7 +42,27 @@ describe("matchTemplate", () => {
       "Includes our LLM agent, a model fine-tuned on industry data, and an inference API.";
     const result = matchTemplate(text);
     expect(result.alternates).not.toContain(result.primary_slug);
-    expect(result.alternates.length).toBeLessThanOrEqual(2);
+    expect(new Set(result.alternates).size).toBe(result.alternates.length);
+  });
+
+  it("classifies Chinese AI hiring decisions to hiring-decision-audit", () => {
+    const text =
+      "我们要在下周三发布一个 AI 招聘助手，自动筛选 1000 份简历并打分。" +
+      "算法是 Llama 3 微调，未做偏差测试。HR 部门要求 7 天内上线。";
+    const result = matchTemplate(text);
+    expect(result.primary_slug).toBe("hiring-decision-audit");
+    expect(result.alternates).toContain("ai-feature-release");
+  });
+
+  it("surfaces every non-primary template as an alternate", () => {
+    const text =
+      "Per Article 14 of the EU AI Act we need to ensure human oversight on this " +
+      "credit-scoring model.";
+    const result = matchTemplate(text);
+    expect(result.alternates).toContain("ai-feature-release");
+    expect(result.alternates).toContain("hiring-decision-audit");
+    expect(result.alternates).toContain("product-launch-premortem");
+    expect(result.alternates).toContain("strategy-premortem");
   });
 
   it("only inspects the first 2000 chars (long preambles do not skew the match)", () => {
