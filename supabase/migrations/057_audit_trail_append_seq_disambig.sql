@@ -2,20 +2,20 @@
 --
 -- Fix `column reference "seq" is ambiguous` in audit_trail_append.
 --
--- Postgres treats the names declared in `RETURNS TABLE (...)` as
--- variables inside the function body. So inside audit_trail_append the
--- name `seq` referred to BOTH the OUT column declared by RETURNS TABLE
--- and the `seq` column of public.audit_trail — and Postgres rejected
--- the SELECT with `column reference "seq" is ambiguous`. This blocked
--- every audit session creation with:
+-- Postgres treats the names declared in `RETURNS TABLE (seq int, ...)`
+-- as variables inside the function body. Inside audit_trail_append the
+-- bare name `seq` matched BOTH the OUT column from RETURNS TABLE and
+-- `public.audit_trail.seq` — Postgres rejected the SELECT with
+-- `column reference "seq" is ambiguous` and every audit session
+-- creation failed with:
 --
 --   Failed to write opening audit_trail row, rolling back session:
 --   audit_trail.append: rpc failed (column reference "seq" is ambiguous)
 --
--- The fix: rename the OUT columns to `out_seq` / `out_this_hash`. The
--- RPC return-shape changes only in name; the JS callers in
--- src/lib/audit/hash-chain.ts / worker/src/audit/hash-chain.ts ignore
--- field names and unwrap from the array, so they keep working.
+-- Fix: keep the function signature unchanged (so CREATE OR REPLACE is
+-- allowed; renaming OUT columns would change the return type and
+-- require DROP+CREATE), and instead qualify the column reference as
+-- `audit_trail.seq`. That removes the ambiguity unambiguously.
 
 set client_min_messages to warning;
 
@@ -27,7 +27,7 @@ create or replace function public.audit_trail_append(
   p_payload_sha256 text,
   p_ts timestamptz
 )
-returns table (out_seq int, out_this_hash text)
+returns table (seq int, this_hash text)
 language plpgsql
 security definer
 set search_path = public
@@ -47,9 +47,8 @@ begin
     raise exception 'audit_trail_append: session % not found', p_session_id;
   end if;
 
-  -- Qualify the column to disambiguate from any local-scope name. Even
-  -- with the OUT columns renamed above, qualifying is the defensive
-  -- thing to do — it survives future signature edits.
+  -- Qualify the column to disambiguate from the OUT column of the same
+  -- name declared in RETURNS TABLE.
   select coalesce(max(audit_trail.seq), -1) + 1
     into v_next_seq
     from public.audit_trail
