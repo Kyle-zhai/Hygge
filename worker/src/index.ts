@@ -6,6 +6,7 @@ import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
 import { processAuditJob } from "./processors/audit-council.js";
+import { processAuditScopingJob } from "./processors/audit-scoping.js";
 import { startHttpServer } from "./http-server.js";
 import { supabase } from "./supabase.js";
 import { log } from "./utils/logger.js";
@@ -52,6 +53,18 @@ const auditWorker = new Worker("audit", processAuditJob, {
   connection,
   concurrency: Number(process.env.AUDIT_CONCURRENCY ?? 2),
   drainDelay: 2000,
+  stalledInterval: 600_000,
+  lockDuration: 60_000,
+});
+
+// Conversational scoping (Layer 1a + Layer 1b). Lighter per-turn than the full
+// audit, so concurrency can be higher without saturating the LLM budget. Each
+// user "respond" call enqueues a fresh job; the processor itself short-circuits
+// on terminal/awaiting_user states, so re-enqueues are safe.
+const auditScopingWorker = new Worker("audit-scoping", processAuditScopingJob, {
+  connection,
+  concurrency: Number(process.env.AUDIT_SCOPING_CONCURRENCY ?? 4),
+  drainDelay: 1500,
   stalledInterval: 600_000,
   lockDuration: 60_000,
 });
@@ -179,6 +192,7 @@ attachLogs("evaluations", evaluationWorker);
 attachLogs("persona-generation", personaWorker);
 attachLogs("debate-response", debateWorker);
 attachLogs("audit", auditWorker);
+attachLogs("audit-scoping", auditScopingWorker);
 
 // Mark the audit session as failed when the job throws after retries are exhausted,
 // so the UI can stop showing the "running" spinner forever. The "failed" event
@@ -201,6 +215,29 @@ auditWorker.on("failed", (job, err) => {
     });
 });
 
+// Same logic for scoping: terminal failure flips audit_scoping_sessions.status
+// to 'failed' so the chat UI can render a recoverable error state instead of
+// an infinite spinner. We don't touch the parent audit_sessions row — the user
+// can retry by submitting a new answer or restart scoping cleanly.
+auditScopingWorker.on("failed", (job, err) => {
+  const scopingId = job?.data?.scopingId as string | undefined;
+  if (!scopingId || !job) return;
+  const totalAttempts = job.opts.attempts ?? 1;
+  if (job.attemptsMade < totalAttempts) return;
+  void supabase
+    .from("audit_scoping_sessions")
+    .update({
+      status: "failed",
+      error_message: err.message.slice(0, 2000),
+    })
+    .eq("id", scopingId)
+    .neq("status", "scope_locked")
+    .then(({ error }) => {
+      if (error) log.error("audit_scoping.fail_status_update_failed", { scopingId, error: error.message });
+      else log.info("audit_scoping.marked_failed", { scopingId, error: err.message });
+    });
+});
+
 const httpServer = startHttpServer();
 
 async function shutdown(signal: string) {
@@ -210,6 +247,7 @@ async function shutdown(signal: string) {
     personaWorker.close(),
     debateWorker.close(),
     auditWorker.close(),
+    auditScopingWorker.close(),
     new Promise<void>((resolve) => httpServer.close(() => resolve())),
   ]);
   process.exit(0);
