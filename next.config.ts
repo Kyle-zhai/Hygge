@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // officeparser does dynamic require() of pdfjs/tesseract workers at
+  // runtime; bundling it makes those resolves fail and OfficeParser ends
+  // up undefined in the function. Keep it external so Node resolves it
+  // normally at runtime.
+  serverExternalPackages: ["officeparser"],
 };
 
 export default withNextIntl(nextConfig);
