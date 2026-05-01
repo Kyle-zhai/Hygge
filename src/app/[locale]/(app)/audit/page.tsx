@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ShieldCheck, ArrowRight, Plus, Clock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { AuditSession, AuditSessionStatus, AuditTemplate } from "@/lib/audit/types";
+import { AuditListRow } from "@/components/audit/audit-list-row";
 
 type AuditSessionRow = Pick<
   AuditSession,
@@ -100,34 +101,33 @@ export default async function AuditIndexPage() {
             const Icon = STATUS_ICON[session.status];
             const tpl = templateMap.get(session.template_slug);
             const tplName = tpl ? (locale === "zh" ? tpl.name_zh : tpl.name_en) : session.template_slug;
+            const iconClassName = `h-5 w-5 shrink-0 ${
+              session.status === "running" ? "animate-spin" : ""
+            } ${
+              session.status === "failed"
+                ? "text-[#F87171]"
+                : session.status === "signed_off"
+                ? "text-emerald-600"
+                : "text-[color:var(--text-tertiary)]"
+            }`;
             return (
-              <li key={session.id}>
-                <Link
-                  href={`/${locale}/audit/${session.id}`}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-[color:var(--bg-primary)]/40 transition-colors"
-                >
-                  <Icon
-                    className={`h-5 w-5 shrink-0 ${
-                      session.status === "running" ? "animate-spin" : ""
-                    } ${
-                      session.status === "failed" ? "text-[#F87171]" :
-                      session.status === "signed_off" ? "text-emerald-600" :
-                      "text-[color:var(--text-tertiary)]"
-                    }`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate text-[color:var(--text-primary)]">{decisionPreview(session.decision_text)}</div>
-                    <div className="text-xs text-[color:var(--text-tertiary)] mt-1 flex items-center gap-3">
-                      <span>{tplName}</span>
-                      <span>·</span>
-                      <span>{t(`sessionStatus${statusKey(session.status)}`)}</span>
-                      <span>·</span>
-                      <span>{formatRelative(session.created_at, locale)}</span>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-[color:var(--text-tertiary)] shrink-0" />
-                </Link>
-              </li>
+              <AuditListRow
+                key={session.id}
+                sessionId={session.id}
+                href={`/${locale}/audit/${session.id}`}
+                status={session.status}
+                icon={<Icon className={iconClassName} />}
+                preview={decisionPreview(session.decision_text)}
+                meta={
+                  <>
+                    <span>{tplName}</span>
+                    <span>·</span>
+                    <span>{t(`sessionStatus${statusKey(session.status)}`)}</span>
+                    <span>·</span>
+                    <span>{formatRelative(session.created_at, locale)}</span>
+                  </>
+                }
+              />
             );
           })}
         </ul>
