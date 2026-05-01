@@ -15,6 +15,7 @@ import { RiskHeatmap } from "./risk-heatmap";
 import { FindingRow } from "./finding-row";
 import { SignoffBlock } from "./signoff-block";
 import { createClient } from "@/lib/supabase/client";
+import { riskTier, compareByRiskDesc, type RiskTier } from "@/lib/audit/risk-tier";
 
 interface Props {
   session: AuditSession;
@@ -82,8 +83,24 @@ export function AuditSessionView({
     for (const f of findings) {
       grouped.get(f.finding_kind)?.push(f);
     }
+    // Sort each kind's findings by S×P desc so the most acute risks
+    // surface first — users no longer have to scan the whole list to
+    // find the worst items.
+    for (const list of grouped.values()) list.sort(compareByRiskDesc);
     return grouped;
   }, [findings]);
+
+  const tierCountsByKind = useMemo(() => {
+    const out = new Map<AuditFindingKind, Record<RiskTier, number>>();
+    for (const [kind, list] of findingsByKind.entries()) {
+      const counts: Record<RiskTier, number> = {
+        critical: 0, high: 0, medium: 0, low: 0, unrated: 0,
+      };
+      for (const f of list) counts[riskTier(f.severity, f.probability).tier] += 1;
+      out.set(kind, counts);
+    }
+    return out;
+  }, [findingsByKind]);
 
   const allDispositioned = useMemo(
     () => findings.length > 0 && findings.filter((f) => f.finding_kind !== "no_risk" && f.finding_kind !== "mitigation").every((f) => !!f.user_disposition),
@@ -127,11 +144,45 @@ export function AuditSessionView({
             {KIND_ORDER.map((kind) => {
               const list = findingsByKind.get(kind) ?? [];
               if (list.length === 0) return null;
+              const counts = tierCountsByKind.get(kind);
+              const showTierChips =
+                kind === "risk" || kind === "blind_spot" || kind === "dissent";
               return (
                 <div key={kind} className="space-y-2">
-                  <h3 className="text-xs uppercase tracking-wider text-[color:var(--text-tertiary)]">
-                    {t(`findingKind${findingKindKey(kind)}` as never)} · {list.length}
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-xs uppercase tracking-wider text-[color:var(--text-tertiary)]">
+                      {t(`findingKind${findingKindKey(kind)}` as never)} · {list.length}
+                    </h3>
+                    {showTierChips && counts && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {(["critical", "high", "medium", "low"] as const).map((tier) => {
+                          if (!counts[tier]) return null;
+                          // Map a tier label to the matching style by passing
+                          // a representative S×P score into riskTier (the
+                          // numbers don't reach the UI; only the styling).
+                          const sample =
+                            tier === "critical" ? riskTier(5, 5) :
+                            tier === "high" ? riskTier(4, 4) :
+                            tier === "medium" ? riskTier(3, 3) :
+                            riskTier(2, 2);
+                          return (
+                            <span
+                              key={tier}
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                              style={{
+                                backgroundColor: sample.bgSoft,
+                                color: sample.bg,
+                                border: `1px solid ${sample.border}`,
+                              }}
+                            >
+                              <span>{counts[tier]}</span>
+                              <span>{t(`riskTier${tier[0].toUpperCase() + tier.slice(1)}` as never)}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                   <ul className="space-y-2">
                     {list.map((finding) => (
                       <FindingRow
