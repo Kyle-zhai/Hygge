@@ -8,7 +8,14 @@ const STUCK_THRESHOLD_MINUTES = 15;
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Fail-closed: an unset CRON_SECRET in any environment must NOT silently
+  // open this endpoint, since it mutates user state (marks running audits
+  // failed, refunds quota).
+  if (!cronSecret) {
+    console.error("cron.sweep_stuck_audits.no_cron_secret");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
