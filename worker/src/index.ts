@@ -7,6 +7,7 @@ import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
 import { processAuditJob } from "./processors/audit-council.js";
 import { processAuditScopingJob } from "./processors/audit-scoping.js";
+import { processAuditPipelineJob } from "./processors/audit-pipeline.js";
 import { startHttpServer } from "./http-server.js";
 import { supabase } from "./supabase.js";
 import { log } from "./utils/logger.js";
@@ -67,6 +68,19 @@ const auditScopingWorker = new Worker("audit-scoping", processAuditScopingJob, {
   drainDelay: 1500,
   stalledInterval: 600_000,
   lockDuration: 60_000,
+});
+
+// Multi-agent audit kernel orchestrator (Layer 2 → 3 → [4] → 5).
+// Concurrency is intentionally low because each job fans out internally
+// (~24 LLM calls for a typical 8-task × 3-persona run). Lock duration is
+// extra-long because synthesis can take >60s on Pro-tier; we don't want a
+// stalled-job re-pickup mid-LLM-call.
+const auditPipelineWorker = new Worker("audit-pipeline", processAuditPipelineJob, {
+  connection,
+  concurrency: Number(process.env.AUDIT_PIPELINE_CONCURRENCY ?? 1),
+  drainDelay: 2000,
+  stalledInterval: 600_000,
+  lockDuration: 300_000,
 });
 
 function jobDuration(job: { processedOn?: number; finishedOn?: number }): number | undefined {
@@ -193,6 +207,7 @@ attachLogs("persona-generation", personaWorker);
 attachLogs("debate-response", debateWorker);
 attachLogs("audit", auditWorker);
 attachLogs("audit-scoping", auditScopingWorker);
+attachLogs("audit-pipeline", auditPipelineWorker);
 
 // Mark the audit session as failed when the job throws after retries are exhausted,
 // so the UI can stop showing the "running" spinner forever. The "failed" event
@@ -212,6 +227,26 @@ auditWorker.on("failed", (job, err) => {
     .then(({ error }) => {
       if (error) log.error("audit.fail_status_update_failed", { auditSessionId, error: error.message });
       else log.info("audit.marked_failed", { auditSessionId, error: err.message });
+    });
+});
+
+// Pipeline (Layers 2-5) terminal failure: flip audit_sessions.status to 'failed'
+// so the report UI can show a recoverable error instead of an indefinite spinner.
+// Skip if the session has already moved past pipeline (signed_off) so a stale
+// late-firing event can't undo a manual review.
+auditPipelineWorker.on("failed", (job, err) => {
+  const sessionId = job?.data?.sessionId as string | undefined;
+  if (!sessionId || !job) return;
+  const totalAttempts = job.opts.attempts ?? 1;
+  if (job.attemptsMade < totalAttempts) return;
+  void supabase
+    .from("audit_sessions")
+    .update({ status: "failed" })
+    .eq("id", sessionId)
+    .neq("status", "signed_off")
+    .then(({ error }) => {
+      if (error) log.error("audit_pipeline.fail_status_update_failed", { sessionId, error: error.message });
+      else log.info("audit_pipeline.marked_failed", { sessionId, error: err.message });
     });
 });
 
@@ -248,6 +283,7 @@ async function shutdown(signal: string) {
     debateWorker.close(),
     auditWorker.close(),
     auditScopingWorker.close(),
+    auditPipelineWorker.close(),
     new Promise<void>((resolve) => httpServer.close(() => resolve())),
   ]);
   process.exit(0);

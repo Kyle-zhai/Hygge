@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, ScanSearch, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AuditSessionView } from "@/components/audit/audit-session-view";
 import { AuditScopingEntry } from "@/components/audit/audit-scoping-entry";
+import { AuditPipelineRunner } from "@/components/audit/audit-pipeline-runner";
 import type { AuditFinding, AuditSession, AuditSignoff, AuditTemplate } from "@/lib/audit/types";
 
 interface PageProps {
@@ -88,7 +89,7 @@ export default async function AuditDetailPage({ params }: PageProps) {
         )}
       </div>
 
-      {renderScopingBanner(scoping, id, locale, t)}
+      {renderScopingBanner(scoping, id, locale, t, session)}
 
       <AuditSessionView
         session={session}
@@ -111,6 +112,7 @@ function renderScopingBanner(
   auditSessionId: string,
   locale: string,
   t: Awaited<ReturnType<typeof getTranslations<"audit">>>,
+  session: AuditSession,
 ) {
   if (!scoping) {
     return (
@@ -127,25 +129,48 @@ function renderScopingBanner(
   }
 
   if (scoping.status === "scope_locked") {
+    const decisionMeta = (session.decision_meta ?? {}) as Record<string, unknown>;
+    const replyLanguage: "en" | "zh" =
+      decisionMeta.reply_language === "zh" ? "zh" : "en";
+    const pipelineError =
+      typeof decisionMeta.pipeline_error === "string"
+        ? decisionMeta.pipeline_error
+        : null;
     return (
-      <div className="mb-6 rounded-xl border border-[color:var(--accent-warm)]/30 bg-[rgb(var(--accent-warm-rgb)/0.06)] px-4 py-3 flex items-center gap-3">
-        <ScanSearch className="h-4 w-4 text-[color:var(--accent-warm)] shrink-0" />
-        <div className="flex-1 text-xs text-[color:var(--text-tertiary)]">
-          <span className="text-[color:var(--text-primary)] font-medium">
-            {t("scopingBannerLockedTitle")}
-          </span>{" "}
-          {t("scopingBannerLockedSubtitle", {
-            inCount: scoping.scope_in.length,
-            outCount: scoping.scope_out.length,
-          })}
+      <div className="mb-6 space-y-3">
+        <AuditPipelineRunner
+          auditSessionId={auditSessionId}
+          locale={locale}
+          replyLanguage={replyLanguage}
+          initialStatus={session.status}
+          initialPipelineError={pipelineError}
+          labels={{
+            runningTitle: t("pipelineBannerRunningTitle"),
+            runningSubtitle: t("pipelineBannerRunningSubtitle"),
+            readyTitle: t("pipelineBannerReadyTitle"),
+            readySubtitle: t("pipelineBannerReadySubtitle"),
+            readyView: t("pipelineBannerReadyView"),
+            failedTitle: t("pipelineBannerFailedTitle"),
+            failedRetry: t("pipelineBannerFailedRetry"),
+            startError: t("pipelineBannerStartError"),
+          }}
+        />
+        <div className="flex items-center gap-2 text-xs text-[color:var(--text-tertiary)]">
+          <ScanSearch className="h-3.5 w-3.5 text-[color:var(--accent-warm)]" />
+          <span>
+            {t("scopingBannerLockedSubtitle", {
+              inCount: scoping.scope_in.length,
+              outCount: scoping.scope_out.length,
+            })}
+          </span>
+          <Link
+            href={`/${locale}/audit/${auditSessionId}/scope`}
+            className="inline-flex items-center gap-1 hover:text-[color:var(--accent-warm)] transition-colors"
+          >
+            {t("scopingBannerLockedView")}
+            <ArrowRight className="h-3 w-3" />
+          </Link>
         </div>
-        <Link
-          href={`/${locale}/audit/${auditSessionId}/scope`}
-          className="inline-flex items-center gap-1 text-xs text-[color:var(--text-primary)] hover:text-[color:var(--accent-warm)] transition-colors"
-        >
-          {t("scopingBannerLockedView")}
-          <ArrowRight className="h-3 w-3" />
-        </Link>
       </div>
     );
   }
