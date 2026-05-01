@@ -313,6 +313,7 @@
     "findingDispositionPrompt": "How will you handle this?",
     "findingDispositionNote": "Add a note (optional)",
     "heatmapTitle": "Severity × Probability",
+    "heatmapHelp": "Each cell counts findings at that combo. Top-right = catastrophic and likely (act first). Darker red = denser cluster.",
     "heatmapAxisSeverity": "Severity",
     "heatmapAxisProbability": "Probability",
     "auditTrailTitle": "Audit trail",
