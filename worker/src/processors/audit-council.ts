@@ -6,6 +6,11 @@ import type { Persona } from "../types/persona.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { log } from "../utils/logger.js";
 import { appendAuditTrail } from "../audit/hash-chain.js";
+import {
+  loadSessionFiles,
+  ensureExtractedText,
+  composeDecisionContext,
+} from "../audit/source-files.js";
 
 export interface AuditJobData {
   auditSessionId: string;
@@ -90,12 +95,23 @@ export async function processAuditJob(job: Job<AuditJobData>): Promise<void> {
   }
   const personas = personaRows as Persona[];
 
+  // Hydrate decisionText with content from any audit_session_files attached
+  // to this session. The browser uploads files directly to Storage; we
+  // download + parse here in the worker so officeparser's dynamic requires
+  // resolve cleanly (Vercel bundles them and breaks).
+  const sourceFilesRaw = await loadSessionFiles(auditSessionId);
+  const sourceFiles = await ensureExtractedText(sourceFilesRaw);
+  const enrichedDecisionText = composeDecisionContext(
+    decisionText,
+    sourceFiles,
+  );
+
   const allFindings: Array<RawFinding & { persona_id: string }> = [];
   let personaSuccessCount = 0;
 
   for (const persona of personas) {
     try {
-      const result = await runPersonaCouncil(llm, persona, tpl, decisionText, decisionMeta);
+      const result = await runPersonaCouncil(llm, persona, tpl, enrichedDecisionText, decisionMeta);
       for (const f of result.findings) {
         allFindings.push({ ...f, persona_id: persona.id });
       }
