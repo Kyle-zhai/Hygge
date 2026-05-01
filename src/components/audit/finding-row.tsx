@@ -34,6 +34,11 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
 
   const tier = riskTier(finding.severity, finding.probability);
   const tierLabel = t(`riskTier${tierKey(tier.tier)}` as never);
+  const sevLabel = t("findingSeverity");
+  const probLabel = t("findingProbability");
+  const badgeTooltip = tier.score != null
+    ? `${sevLabel} ${finding.severity} × ${probLabel} ${finding.probability} = ${tier.score}/25 — ${tierLabel}`
+    : tierLabel;
 
   return (
     <li
@@ -45,19 +50,23 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-start gap-4 pl-6 pr-4 py-3 text-left"
       >
-        {/* Tier badge — single, prominent. Replaces the previous tiny S/P
-            stack. The S×P numerals stay below as a smaller subtitle for
-            users who want the underlying components. */}
-        <div className="shrink-0 flex flex-col items-stretch gap-1 w-20 pt-0.5">
+        {/* Tier badge — single, prominent. Subtitle below labels each
+            number explicitly so the user doesn't have to guess what
+            "5 × 5" means. */}
+        <div className="shrink-0 flex flex-col items-stretch gap-1 w-24 pt-0.5">
           <span
+            title={badgeTooltip}
             className="inline-flex items-center justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
             style={{ backgroundColor: tier.bg, color: tier.fg }}
           >
             {tierLabel}
           </span>
           {tier.score != null && (
-            <span className="text-center text-[11px] font-mono text-[color:var(--text-tertiary)]">
-              {finding.severity}×{finding.probability} = {tier.score}
+            <span
+              title={badgeTooltip}
+              className="text-center text-[10px] text-[color:var(--text-tertiary)] leading-tight"
+            >
+              {sevLabel} {finding.severity} · {probLabel} {finding.probability}
             </span>
           )}
         </div>
