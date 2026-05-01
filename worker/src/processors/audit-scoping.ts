@@ -18,6 +18,8 @@
 // retry can't accidentally clobber a pending question.
 
 import type { Job } from "bullmq";
+import { Queue } from "bullmq";
+import IORedis from "ioredis";
 import { supabase } from "../supabase.js";
 import { buildAuxLLM, type LLMOverrides } from "../llm/factory.js";
 import { log } from "../utils/logger.js";
@@ -43,6 +45,21 @@ export interface AuditScopingJobData {
 
 const MAX_TURNS_PER_JOB = 6; // soft cap so a single job can't loop forever
 const MAX_PASSAGES_FOR_LLM = 60; // Layer 1b prompt budget; truncate if upload is huge
+
+// Lazy-initialized queue handle for self-re-enqueue when we hit the per-job
+// turn cap with status still 'scoping'. Mirrors the API-side helper but is
+// scoped to the worker process so we don't open a second pool unnecessarily.
+let _scopingQueue: Queue | null = null;
+function getScopingQueue(): Queue {
+  if (_scopingQueue) return _scopingQueue;
+  let url = process.env.REDIS_URL || "redis://localhost:6379";
+  if (url.includes("upstash.io") && url.startsWith("redis://")) {
+    url = url.replace("redis://", "rediss://");
+  }
+  const connection = new IORedis(url, { maxRetriesPerRequest: null });
+  _scopingQueue = new Queue("audit-scoping", { connection });
+  return _scopingQueue;
+}
 
 // ============================================
 // DB row shapes
@@ -332,13 +349,20 @@ async function runScopingPhase(
     });
   }
 
-  // Hit per-job turn cap with state still scoping. Just return; caller can
-  // re-queue (e.g. cron sweeper or API) to continue.
+  // Hit per-job turn cap with state still scoping. Re-enqueue ourselves with a
+  // short delay so the loop continues without stalling. Without this the
+  // session would be stuck in 'scoping' forever (no user action triggers a
+  // resume — only ask/done/answer/finalize do).
   log.warn("audit_scoping.turn_cap_hit", {
     scopingId: state.id,
     turnsThisJob,
     cursor: state.cursor,
   });
+  await getScopingQueue().add(
+    "scoping-turn",
+    { scopingId: state.id, replyLanguage },
+    { delay: 1000 },
+  );
 }
 
 // ============================================
