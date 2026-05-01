@@ -52,10 +52,15 @@ export function RiskHeatmap({ findings }: Props) {
                   key={`${sev}-${prob}`}
                   className="aspect-square rounded-sm flex items-center justify-center text-[10px] font-medium"
                   style={{
+                    // rgb() with comma syntax does NOT allow `/ alpha`. The
+                    // previous code used `rgb(R, G, B / A)` which browsers
+                    // failed to parse, falling back to transparent — the
+                    // entire heatmap rendered as empty cells. Use rgba()
+                    // (legacy comma form) so it parses cleanly.
                     backgroundColor:
                       count === 0
-                        ? "rgb(var(--muted-rgb, 240 240 240) / 0.15)"
-                        : `rgb(${Math.round(180 + 75 * danger)}, ${Math.round(140 - 80 * danger)}, ${Math.round(80 - 50 * danger)} / ${0.25 + 0.65 * intensity})`,
+                        ? "rgba(180, 180, 180, 0.10)"
+                        : `rgba(${Math.round(180 + 75 * danger)}, ${Math.round(140 - 80 * danger)}, ${Math.round(80 - 50 * danger)}, ${0.25 + 0.65 * intensity})`,
                     color: count > 0 ? "white" : "transparent",
                   }}
                   title={`severity ${sev} × probability ${prob} — ${count}`}
