@@ -1,9 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, ScanSearch, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AuditSessionView } from "@/components/audit/audit-session-view";
+import { AuditScopingEntry } from "@/components/audit/audit-scoping-entry";
 import type { AuditFinding, AuditSession, AuditSignoff, AuditTemplate } from "@/lib/audit/types";
 
 interface PageProps {
@@ -20,10 +21,15 @@ export default async function AuditDetailPage({ params }: PageProps) {
 
   const t = await getTranslations("audit");
 
-  const [sessionRes, findingsRes, signoffsRes] = await Promise.all([
+  const [sessionRes, findingsRes, signoffsRes, scopingRes] = await Promise.all([
     supabase.from("audit_sessions").select("*").eq("id", id).maybeSingle(),
     supabase.from("audit_findings").select("*").eq("session_id", id).order("display_order"),
     supabase.from("audit_signoffs").select("*").eq("session_id", id).order("created_at"),
+    supabase
+      .from("audit_scoping_sessions")
+      .select("id, status, scope_in, scope_out, scope_locked_at")
+      .eq("audit_session_id", id)
+      .maybeSingle(),
   ]);
 
   if (!sessionRes.data) notFound();
@@ -32,6 +38,13 @@ export default async function AuditDetailPage({ params }: PageProps) {
   if (session.user_id !== user.id) notFound();
   const findings = (findingsRes.data ?? []) as AuditFinding[];
   const signoffs = (signoffsRes.data ?? []) as AuditSignoff[];
+  const scoping = (scopingRes.data ?? null) as {
+    id: string;
+    status: "created" | "annotating" | "scoping" | "awaiting_user" | "scope_locked" | "failed";
+    scope_in: Array<{ law_id: string }>;
+    scope_out: Array<{ law_id: string }>;
+    scope_locked_at: string | null;
+  } | null;
 
   const { data: templateRow } = await supabase
     .from("audit_templates")
@@ -75,6 +88,8 @@ export default async function AuditDetailPage({ params }: PageProps) {
         )}
       </div>
 
+      {renderScopingBanner(scoping, id, locale, t)}
+
       <AuditSessionView
         session={session}
         findings={findings}
@@ -82,6 +97,93 @@ export default async function AuditDetailPage({ params }: PageProps) {
         locale={locale}
         currentUserId={user.id}
       />
+    </div>
+  );
+}
+
+function renderScopingBanner(
+  scoping: {
+    id: string;
+    status: "created" | "annotating" | "scoping" | "awaiting_user" | "scope_locked" | "failed";
+    scope_in: Array<{ law_id: string }>;
+    scope_out: Array<{ law_id: string }>;
+  } | null,
+  auditSessionId: string,
+  locale: string,
+  t: Awaited<ReturnType<typeof getTranslations<"audit">>>,
+) {
+  if (!scoping) {
+    return (
+      <div className="mb-6">
+        <AuditScopingEntry
+          auditSessionId={auditSessionId}
+          locale={locale}
+          startLabel={t("scopingEntryStart")}
+          hintLabel={t("scopingEntryHint")}
+          betaLabel={t("scopingEntryBeta")}
+        />
+      </div>
+    );
+  }
+
+  if (scoping.status === "scope_locked") {
+    return (
+      <div className="mb-6 rounded-xl border border-[color:var(--accent-warm)]/30 bg-[rgb(var(--accent-warm-rgb)/0.06)] px-4 py-3 flex items-center gap-3">
+        <ScanSearch className="h-4 w-4 text-[color:var(--accent-warm)] shrink-0" />
+        <div className="flex-1 text-xs text-[color:var(--text-tertiary)]">
+          <span className="text-[color:var(--text-primary)] font-medium">
+            {t("scopingBannerLockedTitle")}
+          </span>{" "}
+          {t("scopingBannerLockedSubtitle", {
+            inCount: scoping.scope_in.length,
+            outCount: scoping.scope_out.length,
+          })}
+        </div>
+        <Link
+          href={`/${locale}/audit/${auditSessionId}/scope`}
+          className="inline-flex items-center gap-1 text-xs text-[color:var(--text-primary)] hover:text-[color:var(--accent-warm)] transition-colors"
+        >
+          {t("scopingBannerLockedView")}
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    );
+  }
+
+  if (scoping.status === "failed") {
+    return (
+      <div className="mb-6 rounded-xl border border-[#F87171]/30 bg-[#F87171]/10 px-4 py-3 flex items-center gap-3">
+        <ScanSearch className="h-4 w-4 text-[#F87171] shrink-0" />
+        <div className="flex-1 text-xs text-[#F87171]">
+          {t("scopingBannerFailed")}
+        </div>
+        <Link
+          href={`/${locale}/audit/${auditSessionId}/scope`}
+          className="inline-flex items-center gap-1 text-xs text-[#F87171] hover:text-[#F87171]/80 transition-colors"
+        >
+          {t("scopingBannerFailedView")}
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 rounded-xl border border-[color:var(--accent-warm)]/40 bg-[rgb(var(--accent-warm-rgb)/0.08)] px-4 py-3 flex items-center gap-3">
+      <ScanSearch className="h-4 w-4 text-[color:var(--accent-warm)] shrink-0 animate-pulse" />
+      <div className="flex-1 text-xs text-[color:var(--text-tertiary)]">
+        <span className="text-[color:var(--text-primary)] font-medium">
+          {t("scopingBannerInProgressTitle")}
+        </span>{" "}
+        {t("scopingBannerInProgressSubtitle")}
+      </div>
+      <Link
+        href={`/${locale}/audit/${auditSessionId}/scope`}
+        className="inline-flex items-center gap-1 text-xs text-[color:var(--text-primary)] hover:text-[color:var(--accent-warm)] transition-colors"
+      >
+        {t("scopingBannerInProgressContinue")}
+        <ArrowRight className="h-3 w-3" />
+      </Link>
     </div>
   );
 }
