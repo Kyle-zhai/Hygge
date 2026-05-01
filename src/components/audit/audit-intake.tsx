@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, Loader2, Sparkles, ShieldCheck, Upload, FileText, X } from "lucide-react";
 import type { AuditTemplate, DecisionUrgency } from "@/lib/audit/types";
 import { matchTemplate } from "@/lib/audit/template-match";
+import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   templates: AuditTemplate[];
@@ -24,12 +25,12 @@ const ALLOWED_UPLOAD_EXT = new Set([
 interface AttachedFile {
   fileId: string;
   filename: string;
-  text: string;
   size: string;
-  truncated: boolean;
-  ocrApplied: boolean;
-  attachmentCount: number;
+  // sizeBytes for posting to /api/audit/sessions etc.
+  sizeBytes: number;
 }
+
+const STORAGE_BUCKET = "audit-uploads";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
@@ -73,6 +74,11 @@ export function AuditIntake({ templates, locale }: Props) {
   // small chip. submitText concatenates them server-bound.
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
 
+  // Upload directly to Supabase Storage from the browser, mirroring the
+  // /evaluate flow. The Vercel function never touches the binary, so the
+  // 90s timeout / officeparser bundle issues don't apply. The audit
+  // pipeline worker (Railway) downloads + parses asynchronously when the
+  // session runs, and caches extracted_text back onto audit_session_files.
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
@@ -97,42 +103,54 @@ export function AuditIntake({ templates, locale }: Props) {
 
     setIsParsingFile(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/audit/parse-file", { method: "POST", body: fd });
-      const body = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const code = body?.error ?? "";
-        if (res.status === 413) setError(t("intakeFileErrorTooLarge"));
-        else if (res.status === 415) setError(t("intakeFileErrorUnsupported"));
-        else if (res.status === 422 && /image[-\s]?only|scanned|OCR could not/i.test(code)) {
-          setError(t("intakeFileErrorImageOnly"));
-        }
-        else if (res.status === 422 && /No readable/i.test(code)) setError(t("intakeFileErrorEmpty"));
-        else if (res.status === 422) setError(t("intakeFileErrorParse"));
-        else setError(code || t("intakeFileErrorGeneric"));
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError(t("intakeFileErrorGeneric"));
         return;
       }
 
-      const text = String(body.text ?? "");
-      const fileId = String(body.file_id ?? "");
-      if (!text.trim() || !fileId) {
-        setError(t("intakeFileErrorEmpty"));
+      const fileId = crypto.randomUUID();
+      const storagePath = `${user.id}/${fileId}.${ext || "bin"}`;
+      const uploadRes = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(storagePath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (uploadRes.error) {
+        console.error("audit upload failed", uploadRes.error);
+        setError(t("intakeFileErrorGeneric"));
         return;
       }
 
-      const attachments = Array.isArray(body.attachments) ? body.attachments : [];
+      const { error: insertErr } = await supabase
+        .from("audit_session_files")
+        .insert({
+          id: fileId,
+          user_id: user.id,
+          session_id: null,
+          filename: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size_bytes: file.size,
+          storage_path: storagePath,
+        });
+      if (insertErr) {
+        console.error("audit_session_files insert failed", insertErr);
+        await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+        setError(t("intakeFileErrorGeneric"));
+        return;
+      }
+
       setAttachedFiles((prev) => [
         ...prev,
         {
           fileId,
           filename: file.name,
-          text,
-          size: formatBytes(Number(body.extractedSize ?? new Blob([text]).size)),
-          truncated: Boolean(body.truncated),
-          ocrApplied: Boolean(body.ocrApplied),
-          attachmentCount: attachments.length,
+          size: formatBytes(file.size),
+          sizeBytes: file.size,
         },
       ]);
     } catch (err) {
@@ -143,20 +161,23 @@ export function AuditIntake({ templates, locale }: Props) {
     }
   }
 
-  function removeAttachedFile(fileId: string) {
+  async function removeAttachedFile(fileId: string) {
+    const target = attachedFiles.find((f) => f.fileId === fileId);
     setAttachedFiles((prev) => prev.filter((f) => f.fileId !== fileId));
+    if (!target) return;
+    try {
+      const supabase = createClient();
+      // Best-effort cleanup. Server-side orphan sweep also covers this.
+      await supabase.from("audit_session_files").delete().eq("id", fileId);
+    } catch (err) {
+      console.error("audit file cleanup failed", err);
+    }
   }
 
-  // What we actually send as decision_text: the textarea (manual context) +
-  // a divider per attached file's content. Any one of them alone is allowed.
-  const submitText = useMemo(() => {
-    const manual = decisionText.trim();
-    const fileBlock = attachedFiles
-      .map((f) => `--- ${f.filename} ---\n${f.text.trim()}`)
-      .join("\n\n");
-    if (manual && fileBlock) return `${manual}\n\n${fileBlock}`;
-    return manual || fileBlock;
-  }, [decisionText, attachedFiles]);
+  // decision_text contains only the user's narrative. File contents are
+  // pulled from Storage by the audit pipeline worker and prepended at
+  // run time (composeDecisionContext in worker/src/processors/audit-pipeline.ts).
+  const submitText = decisionText.trim();
 
   const match = useMemo(() => {
     if (submitText.length < 30) return null;
@@ -187,7 +208,9 @@ export function AuditIntake({ templates, locale }: Props) {
 
   function onSubmit() {
     setError(null);
-    if (submitText.length < 20) {
+    // Either a typed narrative OR at least one uploaded file is required —
+    // the worker pulls extracted text from attached files at run time.
+    if (submitText.length < 20 && attachedFiles.length === 0) {
       setError(t("errorTextRequired"));
       return;
     }
@@ -299,11 +322,7 @@ export function AuditIntake({ templates, locale }: Props) {
               >
                 <FileText className="h-3.5 w-3.5 text-[color:var(--accent-warm)]" />
                 <span>
-                  {f.truncated
-                    ? t("intakeFileLoadedTruncated", { filename: f.filename })
-                    : t("intakeFileLoaded", { filename: f.filename, size: f.size })}
-                  {f.ocrApplied ? " · OCR" : ""}
-                  {f.attachmentCount > 0 ? ` · ${f.attachmentCount} img` : ""}
+                  {t("intakeFileLoaded", { filename: f.filename, size: f.size })}
                 </span>
                 <button
                   type="button"

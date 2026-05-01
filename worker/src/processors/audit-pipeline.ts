@@ -139,13 +139,15 @@ export async function processAuditPipelineJob(
 
   await markRunning(session, replyLanguage);
 
-  // Gap 6: hydrate decision_text with a Source Documents preamble built
-  // from audit_session_files. The file's full markdown (with image OCR
-  // already inlined by /api/audit/parse-file) is included by the frontend
-  // in decision_text already; here we add a structural index so the
-  // planner/analyst agents know which file each section came from and
-  // how many images / OCR signals each carries.
-  const sourceFiles = await loadSessionFiles(session.id);
+  // Gap 5+6: source documents live in Storage, parsed lazily here in the
+  // worker (officeparser works in plain Node without bundler issues).
+  // ensureExtractedText downloads each not-yet-parsed file, runs
+  // officeparser (with OCR fallback for image-only PDFs/PPTX), and caches
+  // extracted_text + attachment metadata on the row so reruns skip the
+  // parse cost. The composed context block is what reaches every agent
+  // (planner / analyst / synthesizer) instead of the user-only narrative.
+  const sourceFilesRaw = await loadSessionFiles(session.id);
+  const sourceFiles = await ensureExtractedText(sourceFilesRaw);
   const enrichedDecisionText = composeDecisionContext(
     session.decision_text,
     sourceFiles,
@@ -571,14 +573,20 @@ async function fetchScoping(sessionId: string): Promise<ScopingRow | null> {
 }
 
 // ============================================
-// Source-document context (Gap 6)
+// Source-document context (Gaps 5+6: persisted upload, worker-side parse)
 // ============================================
+const PLAIN_TEXT_EXT = new Set(["txt", "md"]);
+const MAX_EXTRACTED_BYTES_PER_FILE = 256 * 1024;
+
 interface SessionFileRow {
   id: string;
   filename: string;
   mime_type: string;
   size_bytes: number;
+  storage_path: string;
+  extracted_text: string | null;
   ocr_applied: boolean;
+  parser_error: string | null;
   attachments_meta: Array<{
     name: string;
     mimeType: string;
@@ -591,7 +599,9 @@ interface SessionFileRow {
 async function loadSessionFiles(sessionId: string): Promise<SessionFileRow[]> {
   const { data, error } = await supabase
     .from("audit_session_files")
-    .select("id, filename, mime_type, size_bytes, ocr_applied, attachments_meta")
+    .select(
+      "id, filename, mime_type, size_bytes, storage_path, extracted_text, ocr_applied, parser_error, attachments_meta",
+    )
     .eq("session_id", sessionId)
     .order("created_at", { ascending: true });
   if (error) {
@@ -604,34 +614,252 @@ async function loadSessionFiles(sessionId: string): Promise<SessionFileRow[]> {
   return (data ?? []) as SessionFileRow[];
 }
 
-// Build a "## Source Documents" preface that lists each attached file with
-// counts of images / OCR signals. The body of each file (already markdown
-// with image OCR inlined by /api/audit/parse-file) is in decision_text
-// because the intake UI concatenates it before posting. This preface gives
-// the planner/analyst structural awareness — e.g. "this risk came from
-// slide deck X, not the memo Y".
+// Download each file with no cached extracted_text from Storage and parse
+// it in the worker (Railway Node env, where officeparser works without
+// bundler issues). Result is cached back to the row so reruns don't repay
+// the parse cost. Files that fail to parse are recorded with parser_error
+// so they're not retried indefinitely.
+async function ensureExtractedText(
+  files: SessionFileRow[],
+): Promise<SessionFileRow[]> {
+  const out: SessionFileRow[] = [];
+  for (const f of files) {
+    if (f.extracted_text || f.parser_error) {
+      out.push(f);
+      continue;
+    }
+    try {
+      const parsed = await downloadAndParse(f);
+      const updateRow = {
+        extracted_text: parsed.text,
+        extracted_bytes: Buffer.byteLength(parsed.text, "utf8"),
+        ocr_applied: parsed.ocrApplied,
+        attachments_meta: parsed.attachments,
+        parser_error: null,
+      };
+      const { error: upErr } = await supabase
+        .from("audit_session_files")
+        .update(updateRow)
+        .eq("id", f.id);
+      if (upErr) {
+        log.warn("audit_pipeline.session_file_cache_failed", {
+          fileId: f.id,
+          error: upErr.message,
+        });
+      }
+      out.push({ ...f, ...updateRow });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.warn("audit_pipeline.session_file_parse_failed", {
+        fileId: f.id,
+        filename: f.filename,
+        error: msg,
+      });
+      await supabase
+        .from("audit_session_files")
+        .update({ parser_error: msg })
+        .eq("id", f.id);
+      out.push({ ...f, parser_error: msg });
+    }
+  }
+  return out;
+}
+
+interface ParsedFile {
+  text: string;
+  ocrApplied: boolean;
+  attachments: SessionFileRow["attachments_meta"];
+}
+
+async function downloadAndParse(f: SessionFileRow): Promise<ParsedFile> {
+  const { data: blob, error: dlErr } = await supabase.storage
+    .from("audit-uploads")
+    .download(f.storage_path);
+  if (dlErr || !blob) {
+    throw new Error(`storage download failed: ${dlErr?.message ?? "no blob"}`);
+  }
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const ext = f.filename.split(".").pop()?.toLowerCase() ?? "";
+
+  if (PLAIN_TEXT_EXT.has(ext)) {
+    return {
+      text: clipUtf8(buffer.toString("utf8"), MAX_EXTRACTED_BYTES_PER_FILE),
+      ocrApplied: false,
+      attachments: [],
+    };
+  }
+
+  // Lazy import — keeps bullmq cold start lean for sessions without files.
+  const { OfficeParser } = await import("officeparser");
+
+  const fastAst = await OfficeParser.parseOffice(buffer, {
+    extractAttachments: true,
+    ocr: false,
+    ignoreNotes: false,
+  });
+  let text = astToMarkdown(fastAst);
+  let ocrApplied = false;
+  let attachments = collectAttachments(fastAst);
+
+  if (text.trim().length === 0 && (ext === "pdf" || ext === "pptx" || ext === "odp")) {
+    const ocrAst = await OfficeParser.parseOffice(buffer, {
+      extractAttachments: true,
+      ocr: true,
+      ignoreNotes: false,
+    });
+    text = astToMarkdown(ocrAst);
+    attachments = collectAttachments(ocrAst);
+    ocrApplied = true;
+  }
+
+  return {
+    text: clipUtf8(text, MAX_EXTRACTED_BYTES_PER_FILE),
+    ocrApplied,
+    attachments,
+  };
+}
+
+// Minimal markdown emitter — preserves headings / lists / table cells /
+// slide+sheet+page boundaries. Mirrors the structure of the deleted
+// /api/audit/parse-file walker, kept compact here because the worker
+// has full Node and the Vercel bundle isn't a concern.
+function astToMarkdown(ast: {
+  content?: Array<{ type: string; text?: string; children?: Array<unknown>; metadata?: unknown }>;
+  attachments?: Array<{ name?: string; ocrText?: string; altText?: string; mimeType?: string }>;
+}): string {
+  const attMap = new Map<string, { ocrText?: string; altText?: string }>();
+  for (const a of ast.attachments ?? []) {
+    if (a.name) attMap.set(a.name, { ocrText: a.ocrText, altText: a.altText });
+  }
+  const parts: string[] = [];
+  function walk(node: { type: string; text?: string; children?: unknown[]; metadata?: unknown }, depth: number) {
+    const text = (node.text ?? "").replace(/\s+/g, " ").trim();
+    switch (node.type) {
+      case "heading": {
+        const lvl = Math.min(Math.max((node.metadata as { level?: number } | undefined)?.level ?? 2, 1), 6);
+        if (text) parts.push("#".repeat(lvl) + " " + text);
+        break;
+      }
+      case "paragraph":
+        if (text) parts.push(text);
+        break;
+      case "list": {
+        const meta = node.metadata as { listType?: string; indentation?: number } | undefined;
+        const indent = "  ".repeat(meta?.indentation ?? 0);
+        const bullet = meta?.listType === "ordered" ? "1." : "-";
+        if (text) parts.push(`${indent}${bullet} ${text}`);
+        break;
+      }
+      case "slide": {
+        const n = (node.metadata as { slideNumber?: number } | undefined)?.slideNumber ?? "?";
+        parts.push("");
+        parts.push(`## Slide ${n}`);
+        for (const c of (node.children ?? []) as Array<typeof node>) walk(c, depth + 1);
+        break;
+      }
+      case "sheet": {
+        const n = (node.metadata as { sheetName?: string } | undefined)?.sheetName ?? "?";
+        parts.push("");
+        parts.push(`## Sheet: ${n}`);
+        for (const c of (node.children ?? []) as Array<typeof node>) walk(c, depth + 1);
+        break;
+      }
+      case "page": {
+        const n = (node.metadata as { pageNumber?: number } | undefined)?.pageNumber ?? "?";
+        parts.push("");
+        parts.push(`<!-- page ${n} -->`);
+        for (const c of (node.children ?? []) as Array<typeof node>) walk(c, depth + 1);
+        break;
+      }
+      case "table":
+      case "row":
+      case "cell":
+        // Tables: flatten cells separated by " | " — losslessly recoverable
+        // by the LLM but not strictly markdown table syntax.
+        if (text) parts.push(text);
+        for (const c of (node.children ?? []) as Array<typeof node>) walk(c, depth + 1);
+        break;
+      case "image": {
+        const meta = node.metadata as { altText?: string; attachmentName?: string } | undefined;
+        const att = meta?.attachmentName ? attMap.get(meta.attachmentName) : undefined;
+        const alt = (att?.altText ?? meta?.altText ?? "image").trim();
+        const ocr = att?.ocrText?.trim();
+        parts.push(`![${alt}](${meta?.attachmentName ?? ""})`);
+        if (ocr) parts.push(`> Image OCR (${alt}): ${ocr.replace(/\s+/g, " ")}`);
+        break;
+      }
+      case "note":
+        if (text) parts.push(`> note: ${text}`);
+        break;
+      default:
+        if (text) parts.push(text);
+        for (const c of (node.children ?? []) as Array<typeof node>) walk(c, depth + 1);
+    }
+  }
+  for (const node of ast.content ?? []) walk(node as { type: string; text?: string; children?: unknown[]; metadata?: unknown }, 0);
+  return parts.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function collectAttachments(ast: {
+  attachments?: Array<{
+    name?: string;
+    mimeType?: string;
+    altText?: string;
+    ocrText?: string;
+    data?: string;
+    type?: string;
+  }>;
+}): SessionFileRow["attachments_meta"] {
+  const out: SessionFileRow["attachments_meta"] = [];
+  for (const a of ast.attachments ?? []) {
+    if (out.length >= 64) break;
+    out.push({
+      name: a.name ?? "",
+      mimeType: a.mimeType ?? "",
+      altText: a.altText,
+      ocrText: a.ocrText,
+      bytes: a.data ? Math.floor(a.data.length * 0.75) : 0,
+    });
+  }
+  return out;
+}
+
+function clipUtf8(s: string, maxBytes: number): string {
+  const buf = Buffer.from(s, "utf8");
+  if (buf.byteLength <= maxBytes) return s;
+  let end = maxBytes;
+  while (end > 0 && (buf[end] & 0b1100_0000) === 0b1000_0000) end -= 1;
+  return buf.subarray(0, end).toString("utf8");
+}
+
+// Build a context block where each source file's extracted_text is injected
+// before the user's typed narrative. This is what reaches planner / analyst
+// / synthesizer. If a file failed to parse, surface that explicitly so the
+// agents don't pretend they had the content.
 function composeDecisionContext(
   decisionText: string,
   files: SessionFileRow[],
 ): string {
   if (files.length === 0) return decisionText;
-  const lines: string[] = ["## Source Documents", ""];
+  const sections: string[] = [];
   for (const f of files) {
-    const imageCount = (f.attachments_meta ?? []).filter(
-      (a) => a.mimeType?.startsWith("image/"),
-    ).length;
-    const ocrSignal = f.ocr_applied ? " · OCR" : "";
-    const imgSignal = imageCount > 0 ? ` · ${imageCount} image${imageCount === 1 ? "" : "s"}` : "";
-    lines.push(`- ${f.filename} (${formatSize(f.size_bytes)}${ocrSignal}${imgSignal})`);
+    const header = `## Source Document: ${f.filename}` +
+      (f.ocr_applied ? " (OCR applied)" : "");
+    if (f.extracted_text && f.extracted_text.trim().length > 0) {
+      sections.push(`${header}\n\n${f.extracted_text.trim()}`);
+    } else if (f.parser_error) {
+      sections.push(
+        `${header}\n\n> Could not extract text from this file: ${f.parser_error}`,
+      );
+    } else {
+      sections.push(`${header}\n\n> (no extractable text)`);
+    }
   }
-  lines.push("");
-  return `${lines.join("\n")}\n${decisionText}`;
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  const narrative = decisionText.trim();
+  if (narrative) {
+    return `${sections.join("\n\n")}\n\n## Submitter Narrative\n\n${narrative}`;
+  }
+  return sections.join("\n\n");
 }
 
 async function markRunning(
