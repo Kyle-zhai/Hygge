@@ -8,6 +8,7 @@ import type {
   AuditFindingDisposition,
   AuditSessionStatus,
 } from "@/lib/audit/types";
+import { riskTier } from "@/lib/audit/risk-tier";
 
 interface Props {
   finding: AuditFinding;
@@ -31,33 +32,39 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
   const editable = sessionStatus !== "signed_off" && sessionStatus !== "archived";
   const skipDisposition = finding.finding_kind === "no_risk" || finding.finding_kind === "mitigation";
 
+  const tier = riskTier(finding.severity, finding.probability);
+  const tierLabel = t(`riskTier${tierKey(tier.tier)}` as never);
+
   return (
-    <li className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)]">
+    <li
+      className="relative rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] overflow-hidden"
+      style={{ boxShadow: `inset 6px 0 0 0 ${tier.bg}` }}
+    >
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-start gap-3 px-4 py-3 text-left"
+        className="w-full flex items-start gap-4 pl-6 pr-4 py-3 text-left"
       >
-        <div className="flex flex-col gap-1 shrink-0 pt-0.5">
-          {finding.severity != null && (
-            <span className="text-[10px] inline-flex items-center gap-1">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{
-                  backgroundColor: severityColor(finding.severity),
-                }}
-              />
-              <span className="text-[color:var(--text-tertiary)]">S{finding.severity}</span>
+        {/* Tier badge — single, prominent. Replaces the previous tiny S/P
+            stack. The S×P numerals stay below as a smaller subtitle for
+            users who want the underlying components. */}
+        <div className="shrink-0 flex flex-col items-stretch gap-1 w-20 pt-0.5">
+          <span
+            className="inline-flex items-center justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
+            style={{ backgroundColor: tier.bg, color: tier.fg }}
+          >
+            {tierLabel}
+          </span>
+          {tier.score != null && (
+            <span className="text-center text-[11px] font-mono text-[color:var(--text-tertiary)]">
+              {finding.severity}×{finding.probability} = {tier.score}
             </span>
           )}
-          {finding.probability != null && (
-            <span className="text-[10px] text-[color:var(--text-tertiary)]">P{finding.probability}</span>
-          )}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pt-0.5">
           <p className="text-sm leading-relaxed">{finding.claim}</p>
         </div>
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2 pt-1">
           {finding.user_disposition && (
             <Check className="h-4 w-4 text-emerald-600" />
           )}
@@ -128,12 +135,14 @@ export function FindingRow({ finding, sessionStatus, onDispositionChange }: Prop
   );
 }
 
-function severityColor(severity: number): string {
-  if (severity >= 5) return "rgb(220 38 38)";
-  if (severity >= 4) return "rgb(234 88 12)";
-  if (severity >= 3) return "rgb(202 138 4)";
-  if (severity >= 2) return "rgb(101 163 13)";
-  return "rgb(34 197 94)";
+function tierKey(t: "critical" | "high" | "medium" | "low" | "unrated"): string {
+  return ({
+    critical: "Critical",
+    high: "High",
+    medium: "Medium",
+    low: "Low",
+    unrated: "Unrated",
+  } as const)[t];
 }
 
 function dispositionKey(d: AuditFindingDisposition): string {
