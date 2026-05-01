@@ -26,6 +26,18 @@ export const maxDuration = 15;
 
 const VALID_LANGS = new Set(["en", "zh"]);
 
+// Mirror of the cron sweeper threshold (sweep-stuck-audits/route.ts). If a
+// session has been 'running' for longer than this, the worker is presumed
+// dead and the user is allowed to re-enqueue without waiting for the cron.
+const STALE_RUNNING_THRESHOLD_MS = 15 * 60 * 1000;
+
+function isStaleRunning(pipelineStartedAt: string | null): boolean {
+  if (!pipelineStartedAt) return true; // legacy rows pre-migration 055
+  const startedMs = Date.parse(pipelineStartedAt);
+  if (Number.isNaN(startedMs)) return true;
+  return Date.now() - startedMs > STALE_RUNNING_THRESHOLD_MS;
+}
+
 interface Ctx {
   params: Promise<{ id: string }>;
 }
@@ -61,7 +73,7 @@ export async function POST(request: Request, ctx: Ctx) {
   // we hit it explicitly so error messages are precise.
   const { data: session, error: sessionErr } = await supabase
     .from("audit_sessions")
-    .select("id, user_id, workspace_id, status")
+    .select("id, user_id, workspace_id, status, pipeline_started_at")
     .eq("id", sessionId)
     .maybeSingle();
   if (sessionErr || !session) {
@@ -82,7 +94,7 @@ export async function POST(request: Request, ctx: Ctx) {
       { status: 409 },
     );
   }
-  if (session.status === "running") {
+  if (session.status === "running" && !isStaleRunning(session.pipeline_started_at)) {
     return NextResponse.json(
       { error: "Pipeline already in progress for this audit." },
       { status: 409 },

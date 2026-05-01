@@ -547,7 +547,11 @@ async function markRunning(
   delete (meta as Record<string, unknown>).pipeline_error;
   const { error } = await supabase
     .from("audit_sessions")
-    .update({ status: "running", decision_meta: meta })
+    .update({
+      status: "running",
+      decision_meta: meta,
+      pipeline_started_at: new Date().toISOString(),
+    })
     .eq("id", session.id);
   if (error) throw new Error(`mark running failed: ${error.message}`);
   await appendAuditTrail({

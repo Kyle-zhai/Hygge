@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/sweep-stuck-evaluations",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/sweep-stuck-audits",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
