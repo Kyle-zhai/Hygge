@@ -313,6 +313,7 @@
     "findingDispositionPrompt": "如何处置？",
     "findingDispositionNote": "添加备注（可选）",
     "heatmapTitle": "严重度 × 概率",
+    "heatmapHelp": "每格统计该组合下的风险数。右上角 = 严重且高概率（优先处理）。颜色越红表示越集中。",
     "heatmapAxisSeverity": "严重度",
     "heatmapAxisProbability": "概率",
     "auditTrailTitle": "审计日志",
