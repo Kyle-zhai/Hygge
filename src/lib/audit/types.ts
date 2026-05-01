@@ -54,7 +54,10 @@ export interface AuditSession {
 export interface AuditFinding {
   id: string;
   session_id: string;
-  persona_id: string;
+  // Legacy column — null for new-kernel rows. Resolve persona name from
+  // `pool_persona_id` first, fall back to `persona_id` for older rows.
+  persona_id: string | null;
+  pool_persona_id: string | null;
   finding_kind: AuditFindingKind;
   severity: number | null;
   probability: number | null;

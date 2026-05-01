@@ -93,19 +93,53 @@ export default async function AuditReportPage({ params }: PageProps) {
     .maybeSingle();
   const template = templateRow as AuditTemplate | null;
 
-  const personaIds = Array.from(new Set(findings.map((f) => f.persona_id)));
-  const { data: personaRows } = personaIds.length
-    ? await supabase
-        .from("personas")
-        .select("id, identity")
-        .in("id", personaIds)
-    : { data: [] };
-  const personaMap = new Map(
-    (personaRows ?? []).map((row: { id: string; identity: { name: string; locale_variants?: Record<string, { name: string }> } }) => [
-      row.id,
-      row.identity?.locale_variants?.[locale]?.name ?? row.identity?.name ?? row.id,
-    ])
+  // New-kernel findings carry the persona id on `pool_persona_id` (text FK to
+  // audit_persona_pool). Legacy findings still use `persona_id` (uuid FK to
+  // personas). Resolve from both so report rows render a localized name in
+  // both cases.
+  const legacyPersonaIds = Array.from(
+    new Set(findings.map((f) => f.persona_id).filter((v): v is string => Boolean(v))),
   );
+  const poolPersonaIds = Array.from(
+    new Set(
+      findings.map((f) => f.pool_persona_id).filter((v): v is string => Boolean(v)),
+    ),
+  );
+
+  const [personaRowsRes, poolRowsRes] = await Promise.all([
+    legacyPersonaIds.length
+      ? supabase.from("personas").select("id, identity").in("id", legacyPersonaIds)
+      : Promise.resolve({ data: [] }),
+    poolPersonaIds.length
+      ? supabase
+          .from("audit_persona_pool")
+          .select("id, display_name_en, display_name_zh")
+          .in("id", poolPersonaIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const personaMap = new Map<string, string>();
+  for (const row of (personaRowsRes.data ?? []) as Array<{
+    id: string;
+    identity: { name: string; locale_variants?: Record<string, { name: string }> };
+  }>) {
+    personaMap.set(
+      row.id,
+      row.identity?.locale_variants?.[locale]?.name ??
+        row.identity?.name ??
+        row.id,
+    );
+  }
+  for (const row of (poolRowsRes.data ?? []) as Array<{
+    id: string;
+    display_name_en: string;
+    display_name_zh: string;
+  }>) {
+    personaMap.set(
+      row.id,
+      locale === "zh" ? row.display_name_zh || row.display_name_en : row.display_name_en,
+    );
+  }
 
   const findingsByKind = new Map<AuditFindingKind, AuditFinding[]>();
   for (const f of findings) {
@@ -128,7 +162,7 @@ export default async function AuditReportPage({ params }: PageProps) {
     for (const oo of synthesizedReport.out_of_scope) lawIds.add(oo.law_id);
     if (lawIds.size > 0) {
       const { data: lawRows } = await supabase
-        .from("law_catalog")
+        .from("audit_law_catalog")
         .select("id, name_en, name_zh")
         .in("id", Array.from(lawIds));
       for (const row of lawRows ?? []) {
@@ -217,7 +251,10 @@ export default async function AuditReportPage({ params }: PageProps) {
                         {list.map((f) => (
                           <tr key={f.id} className="border-t border-[color:var(--border-default)] break-inside-avoid">
                             <td className="px-3 py-2 align-top text-xs text-[color:var(--text-tertiary)]">
-                              {personaMap.get(f.persona_id) ?? f.persona_id}
+                              {(() => {
+                                const id = f.pool_persona_id ?? f.persona_id ?? "";
+                                return personaMap.get(id) ?? id ?? "—";
+                              })()}
                             </td>
                             <td className="px-3 py-2 align-top font-mono text-xs">
                               {f.severity ?? "—"} × {f.probability ?? "—"}
