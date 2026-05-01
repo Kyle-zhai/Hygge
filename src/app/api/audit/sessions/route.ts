@@ -56,14 +56,21 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!decision_text || decision_text.trim().length < 20) {
-    return NextResponse.json({ error: "decision_text too short" }, { status: 400 });
+  // Either a typed narrative OR at least one attached file must be provided.
+  // The audit pipeline worker pulls extracted text from attached files at
+  // run time and prepends it to decision_text.
+  const decisionTextStr = (decision_text ?? "").trim();
+  if (decisionTextStr.length < 20 && pendingFileIds.length === 0) {
+    return NextResponse.json(
+      { error: "decision_text or at least one uploaded file required" },
+      { status: 400 },
+    );
   }
   if (!template_slug) {
     return NextResponse.json({ error: "template_slug required" }, { status: 400 });
   }
 
-  const decisionBytes = Buffer.byteLength(decision_text, "utf8");
+  const decisionBytes = Buffer.byteLength(decisionTextStr, "utf8");
   if (decisionBytes > MAX_DECISION_BYTES) {
     return NextResponse.json(
       { error: `decision_text exceeds ${MAX_DECISION_BYTES} bytes (${decisionBytes} received)` },
@@ -89,14 +96,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Monthly audit limit reached" }, { status: 429 });
   }
 
-  const decisionHash = sha256Hex(decision_text);
+  const decisionHash = sha256Hex(decisionTextStr);
 
   const { data: session, error: sessionErr } = await supabase
     .from("audit_sessions")
     .insert({
       user_id: user.id,
       template_slug,
-      decision_text,
+      decision_text: decisionTextStr,
       decision_text_sha256: decisionHash,
       decision_meta: decision_meta ?? {},
       status: "pending",
@@ -118,11 +125,12 @@ export async function POST(request: Request) {
       .eq("user_id", user.id);
   }
 
-  // Attach any pending uploads created earlier by /api/audit/parse-file. We
-  // verify ownership and that the rows aren't already attached to a different
-  // session before claiming them. The select-then-update pattern surfaces
-  // stale or hijacked IDs as a clear error rather than silently dropping
-  // attachment context.
+  // Attach any pending uploads the browser created in audit_session_files
+  // before submitting (browser uploads directly to Storage, mirroring the
+  // /evaluate flow). We verify ownership and that the rows aren't already
+  // attached to a different session before claiming them. The
+  // select-then-update pattern surfaces stale or hijacked IDs as a clear
+  // error rather than silently dropping attachment context.
   if (pendingFileIds.length > 0) {
     const admin = createAdminClient();
     const { data: pendingRows, error: pendingErr } = await admin
@@ -180,7 +188,7 @@ export async function POST(request: Request) {
     await enqueueAudit({
       auditSessionId: session.id,
       templateSlug: template_slug,
-      decisionText: decision_text,
+      decisionText: decisionTextStr,
       decisionMeta: decision_meta ?? {},
       userId: user.id,
       workspaceId: session.workspace_id ?? null,
