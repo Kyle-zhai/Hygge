@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 10;
 
@@ -38,18 +39,29 @@ export async function DELETE(_request: Request, ctx: Ctx) {
     );
   }
 
-  // FK cascades on session_id handle audit_findings, audit_trail,
-  // audit_scoping_sessions, audit_session_files. Storage objects under
-  // audit-uploads/{user_id}/... are not directly tied to FKs; they get
-  // orphaned and can be reaped by a sweeper later.
-  const { error: deleteErr } = await supabase
+  // The audit_sessions table has SELECT/INSERT/UPDATE RLS policies but no
+  // DELETE policy — a delete via the user's JWT silently no-ops (returns
+  // 200 with zero affected rows). Now that ownership is verified above,
+  // do the delete with the service-role admin client so it actually runs.
+  // FK cascades on session_id then handle audit_findings, audit_trail,
+  // audit_scoping_sessions, and audit_session_files. Storage objects
+  // under audit-uploads/{user_id}/ orphan and can be reaped later.
+  const admin = createAdminClient();
+  const { count, error: deleteErr } = await admin
     .from("audit_sessions")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", id)
     .eq("user_id", user.id);
   if (deleteErr) {
     console.error("audit/sessions DELETE failed", { id, error: deleteErr.message });
     return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+  }
+  if (!count) {
+    console.error("audit/sessions DELETE affected 0 rows", { id, userId: user.id });
+    return NextResponse.json(
+      { error: "Audit could not be deleted." },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ ok: true });
