@@ -16,9 +16,20 @@ const URGENCY_OPTIONS: DecisionUrgency[] = ["low", "medium", "high"];
 
 const FILE_ACCEPT = ".pdf,.docx,.pptx,.xlsx,.odt,.odp,.ods,.rtf,.txt,.md";
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_FILES = 8;
 const ALLOWED_UPLOAD_EXT = new Set([
   "pdf", "docx", "pptx", "xlsx", "odt", "odp", "ods", "rtf", "txt", "md",
 ]);
+
+interface AttachedFile {
+  fileId: string;
+  filename: string;
+  text: string;
+  size: string;
+  truncated: boolean;
+  ocrApplied: boolean;
+  attachmentCount: number;
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
@@ -57,15 +68,10 @@ export function AuditIntake({ templates, locale }: Props) {
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isParsingFile, setIsParsingFile] = useState(false);
-  // Parsed file content stays in state but is NOT pushed into the textarea.
-  // The user sees a small chip with the filename + extracted size; the actual
-  // text is concatenated server-bound at submit time.
-  const [attachedFile, setAttachedFile] = useState<{
-    filename: string;
-    text: string;
-    size: string;
-    truncated: boolean;
-  } | null>(null);
+  // Parsed file contents stay in state — not in the textarea. We support
+  // attaching multiple files (memo + slides + spreadsheet); each gets a
+  // small chip. submitText concatenates them server-bound.
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -73,7 +79,11 @@ export function AuditIntake({ templates, locale }: Props) {
     if (!file) return;
 
     setError(null);
-    setAttachedFile(null);
+
+    if (attachedFiles.length >= MAX_FILES) {
+      setError(t("intakeFileErrorTooMany", { max: MAX_FILES }));
+      return;
+    }
 
     const ext = (file.name.split(".").pop() || "").toLowerCase();
     if (!ALLOWED_UPLOAD_EXT.has(ext)) {
@@ -96,7 +106,7 @@ export function AuditIntake({ templates, locale }: Props) {
         const code = body?.error ?? "";
         if (res.status === 413) setError(t("intakeFileErrorTooLarge"));
         else if (res.status === 415) setError(t("intakeFileErrorUnsupported"));
-        else if (res.status === 422 && /image[-\s]?only|scanned|no extractable text/i.test(code)) {
+        else if (res.status === 422 && /image[-\s]?only|scanned|OCR could not/i.test(code)) {
           setError(t("intakeFileErrorImageOnly"));
         }
         else if (res.status === 422 && /No readable/i.test(code)) setError(t("intakeFileErrorEmpty"));
@@ -106,17 +116,25 @@ export function AuditIntake({ templates, locale }: Props) {
       }
 
       const text = String(body.text ?? "");
-      if (!text.trim()) {
+      const fileId = String(body.file_id ?? "");
+      if (!text.trim() || !fileId) {
         setError(t("intakeFileErrorEmpty"));
         return;
       }
 
-      setAttachedFile({
-        filename: file.name,
-        text,
-        size: formatBytes(Number(body.extractedSize ?? new Blob([text]).size)),
-        truncated: Boolean(body.truncated),
-      });
+      const attachments = Array.isArray(body.attachments) ? body.attachments : [];
+      setAttachedFiles((prev) => [
+        ...prev,
+        {
+          fileId,
+          filename: file.name,
+          text,
+          size: formatBytes(Number(body.extractedSize ?? new Blob([text]).size)),
+          truncated: Boolean(body.truncated),
+          ocrApplied: Boolean(body.ocrApplied),
+          attachmentCount: attachments.length,
+        },
+      ]);
     } catch (err) {
       console.error(err);
       setError(t("intakeFileErrorGeneric"));
@@ -125,16 +143,20 @@ export function AuditIntake({ templates, locale }: Props) {
     }
   }
 
+  function removeAttachedFile(fileId: string) {
+    setAttachedFiles((prev) => prev.filter((f) => f.fileId !== fileId));
+  }
+
   // What we actually send as decision_text: the textarea (manual context) +
-  // a divider + the attached file content. Either is allowed alone.
+  // a divider per attached file's content. Any one of them alone is allowed.
   const submitText = useMemo(() => {
     const manual = decisionText.trim();
-    const fileText = attachedFile?.text.trim() ?? "";
-    if (manual && fileText) {
-      return `${manual}\n\n--- ${attachedFile?.filename ?? "attached"} ---\n${fileText}`;
-    }
-    return manual || fileText;
-  }, [decisionText, attachedFile]);
+    const fileBlock = attachedFiles
+      .map((f) => `--- ${f.filename} ---\n${f.text.trim()}`)
+      .join("\n\n");
+    if (manual && fileBlock) return `${manual}\n\n${fileBlock}`;
+    return manual || fileBlock;
+  }, [decisionText, attachedFiles]);
 
   const match = useMemo(() => {
     if (submitText.length < 30) return null;
@@ -186,8 +208,11 @@ export function AuditIntake({ templates, locale }: Props) {
               owner: owner || undefined,
               urgency,
               language: locale,
-              attached_filename: attachedFile?.filename ?? undefined,
+              attached_filenames: attachedFiles.length
+                ? attachedFiles.map((f) => f.filename)
+                : undefined,
             },
+            pending_file_ids: attachedFiles.map((f) => f.fileId),
           }),
         });
 
@@ -227,8 +252,8 @@ export function AuditIntake({ templates, locale }: Props) {
           id="decision-text"
           value={decisionText}
           onChange={(e) => setDecisionText(e.target.value)}
-          placeholder={attachedFile ? t("intakePlaceholderWithFile") : t("intakePlaceholder")}
-          rows={attachedFile ? 4 : 10}
+          placeholder={attachedFiles.length > 0 ? t("intakePlaceholderWithFile") : t("intakePlaceholder")}
+          rows={attachedFiles.length > 0 ? 4 : 10}
           className="w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-3 text-sm font-mono leading-relaxed text-[color:var(--text-primary)] transition-colors focus:outline-none focus:border-[color:var(--accent-warm)] focus:ring-2 focus:ring-[rgb(var(--accent-warm-rgb)/0.10)] resize-y"
         />
 
@@ -259,32 +284,39 @@ export function AuditIntake({ templates, locale }: Props) {
               </>
             )}
           </button>
-          {attachedFile ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-2.5 py-1 text-xs text-[color:var(--text-primary)]">
-              <FileText className="h-3.5 w-3.5 text-[color:var(--accent-warm)]" />
-              <span>
-                {attachedFile.truncated
-                  ? t("intakeFileLoadedTruncated", { filename: attachedFile.filename })
-                  : t("intakeFileLoaded", {
-                      filename: attachedFile.filename,
-                      size: attachedFile.size,
-                    })}
-              </span>
-              <button
-                type="button"
-                onClick={() => setAttachedFile(null)}
-                aria-label={t("intakeFileRemove")}
-                className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ) : (
+          {attachedFiles.length === 0 && (
             <span className="text-xs text-[color:var(--text-tertiary)]">
               {t("intakeFileHint")}
             </span>
           )}
         </div>
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {attachedFiles.map((f) => (
+              <span
+                key={f.fileId}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-2.5 py-1 text-xs text-[color:var(--text-primary)]"
+              >
+                <FileText className="h-3.5 w-3.5 text-[color:var(--accent-warm)]" />
+                <span>
+                  {f.truncated
+                    ? t("intakeFileLoadedTruncated", { filename: f.filename })
+                    : t("intakeFileLoaded", { filename: f.filename, size: f.size })}
+                  {f.ocrApplied ? " · OCR" : ""}
+                  {f.attachmentCount > 0 ? ` · ${f.attachmentCount} img` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachedFile(f.fileId)}
+                  aria-label={t("intakeFileRemove")}
+                  className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

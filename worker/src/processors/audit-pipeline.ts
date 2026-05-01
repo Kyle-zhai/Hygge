@@ -139,6 +139,18 @@ export async function processAuditPipelineJob(
 
   await markRunning(session, replyLanguage);
 
+  // Gap 6: hydrate decision_text with a Source Documents preamble built
+  // from audit_session_files. The file's full markdown (with image OCR
+  // already inlined by /api/audit/parse-file) is included by the frontend
+  // in decision_text already; here we add a structural index so the
+  // planner/analyst agents know which file each section came from and
+  // how many images / OCR signals each carries.
+  const sourceFiles = await loadSessionFiles(session.id);
+  const enrichedDecisionText = composeDecisionContext(
+    session.decision_text,
+    sourceFiles,
+  );
+
   try {
     const auxLlm = buildAuxLLM(auxLlmOverrides);
     const proLlm = buildLLM(llmOverrides);
@@ -146,7 +158,7 @@ export async function processAuditPipelineJob(
     // Layer 2 — planner
     const { plannerLaws, personas } = await loadPlannerInputs(scoping.scope_in);
     const planner = await runPlanner(auxLlm, {
-      decisionText: session.decision_text,
+      decisionText: enrichedDecisionText,
       scopeIn: scoping.scope_in,
       laws: plannerLaws,
       personas,
@@ -184,7 +196,7 @@ export async function processAuditPipelineJob(
       tasks: planner.tasks,
       lawById,
       personaById,
-      decisionText: session.decision_text,
+      decisionText: enrichedDecisionText,
       replyLanguage,
     });
     await appendAuditTrail({
@@ -209,7 +221,7 @@ export async function processAuditPipelineJob(
       analyses,
       lawById,
       personaById,
-      decisionText: session.decision_text,
+      decisionText: enrichedDecisionText,
       replyLanguage,
       sessionId: session.id,
     });
@@ -255,7 +267,7 @@ export async function processAuditPipelineJob(
       jurisdiction: l.jurisdiction,
     }));
     const report = await runSynthesizer(proLlm, {
-      decisionText: session.decision_text,
+      decisionText: enrichedDecisionText,
       scopeIn: scoping.scope_in,
       scopeOut: scoping.scope_out,
       laws: synthLaws,
@@ -373,38 +385,57 @@ async function runAnalysisLayer(
   const workers: Promise<void>[] = [];
 
   const worker = async (): Promise<void> => {
+    // Defense-in-depth: the entire loop body lives inside a try/catch so
+    // that any future edit can't silently break partial-failure recovery.
+    // If a sync error escapes the inner try, the placeholder fallback still
+    // runs and the pipeline continues for the remaining work items.
     while (true) {
       const i = cursor++;
       if (i >= worklist.length) return;
       const { task, personaId } = worklist[i];
-      const law = input.lawById.get(task.law_id);
-      const persona = input.personaById.get(personaId);
-      if (!law || !persona) {
-        log.warn("audit_pipeline.analysis_skip_missing", {
-          taskId: task.id,
-          lawId: task.law_id,
-          personaId,
-          lawFound: !!law,
-          personaFound: !!persona,
-        });
-        continue;
-      }
       try {
-        const res = await runPersonaAnalysis(input.llm, {
-          task,
-          law: toAnalystLaw(law),
-          persona: toAnalystPersona(persona),
-          decisionText: input.decisionText,
-          replyLanguage: input.replyLanguage,
-        });
-        results.push(res);
-      } catch (err) {
-        log.error("audit_pipeline.analysis_pair_failed", {
+        const law = input.lawById.get(task.law_id);
+        const persona = input.personaById.get(personaId);
+        if (!law || !persona) {
+          log.warn("audit_pipeline.analysis_skip_missing", {
+            taskId: task.id,
+            lawId: task.law_id,
+            personaId,
+            lawFound: !!law,
+            personaFound: !!persona,
+          });
+          continue;
+        }
+        try {
+          const res = await runPersonaAnalysis(input.llm, {
+            task,
+            law: toAnalystLaw(law),
+            persona: toAnalystPersona(persona),
+            decisionText: input.decisionText,
+            replyLanguage: input.replyLanguage,
+          });
+          results.push(res);
+        } catch (err) {
+          log.error("audit_pipeline.analysis_pair_failed", {
+            taskId: task.id,
+            personaId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          results.push({
+            task_id: task.id,
+            persona_id: personaId,
+            findings: [],
+            searchCacheIds: [],
+            searchLastVerifiedAt: null,
+            searchHadResults: false,
+          });
+        }
+      } catch (outerErr) {
+        log.error("audit_pipeline.analysis_outer_failed", {
           taskId: task.id,
           personaId,
-          error: err instanceof Error ? err.message : String(err),
+          error: outerErr instanceof Error ? outerErr.message : String(outerErr),
         });
-        // Push an empty placeholder so accounting still works.
         results.push({
           task_id: task.id,
           persona_id: personaId,
@@ -539,6 +570,70 @@ async function fetchScoping(sessionId: string): Promise<ScopingRow | null> {
   return (data as ScopingRow | null) ?? null;
 }
 
+// ============================================
+// Source-document context (Gap 6)
+// ============================================
+interface SessionFileRow {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  ocr_applied: boolean;
+  attachments_meta: Array<{
+    name: string;
+    mimeType: string;
+    altText?: string;
+    ocrText?: string;
+    bytes: number;
+  }>;
+}
+
+async function loadSessionFiles(sessionId: string): Promise<SessionFileRow[]> {
+  const { data, error } = await supabase
+    .from("audit_session_files")
+    .select("id, filename, mime_type, size_bytes, ocr_applied, attachments_meta")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+  if (error) {
+    log.warn("audit_pipeline.session_files_load_failed", {
+      sessionId,
+      error: error.message,
+    });
+    return [];
+  }
+  return (data ?? []) as SessionFileRow[];
+}
+
+// Build a "## Source Documents" preface that lists each attached file with
+// counts of images / OCR signals. The body of each file (already markdown
+// with image OCR inlined by /api/audit/parse-file) is in decision_text
+// because the intake UI concatenates it before posting. This preface gives
+// the planner/analyst structural awareness — e.g. "this risk came from
+// slide deck X, not the memo Y".
+function composeDecisionContext(
+  decisionText: string,
+  files: SessionFileRow[],
+): string {
+  if (files.length === 0) return decisionText;
+  const lines: string[] = ["## Source Documents", ""];
+  for (const f of files) {
+    const imageCount = (f.attachments_meta ?? []).filter(
+      (a) => a.mimeType?.startsWith("image/"),
+    ).length;
+    const ocrSignal = f.ocr_applied ? " · OCR" : "";
+    const imgSignal = imageCount > 0 ? ` · ${imageCount} image${imageCount === 1 ? "" : "s"}` : "";
+    lines.push(`- ${f.filename} (${formatSize(f.size_bytes)}${ocrSignal}${imgSignal})`);
+  }
+  lines.push("");
+  return `${lines.join("\n")}\n${decisionText}`;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
 async function markRunning(
   session: AuditSessionRow,
   replyLanguage: "en" | "zh",
@@ -624,7 +719,12 @@ async function persistFindings(
     severity: f.severity,
     probability: f.probability,
     claim: f.claim,
-    evidence_refs: [],
+    // Backfill the legacy `evidence_refs` shape from citations so the
+    // pre-multi-agent report renderer (Risk Register table) keeps showing
+    // citation links. New renderers should read `citations` directly.
+    evidence_refs: (f.citations ?? [])
+      .filter((c) => c?.url)
+      .map((c) => ({ kind: "url", ref: c.url })),
     suggested_mitigation: f.suggested_mitigation,
     confidence: f.confidence,
     basis: f.basis,

@@ -9,7 +9,12 @@ import { appendAuditTrail, sha256Hex } from "@/lib/audit/hash-chain";
 
 export const maxDuration = 15;
 
-const MAX_DECISION_BYTES = 64 * 1024;
+// Audit decisions can include the user's narrative + the parsed text from one
+// or more uploaded source documents (memo, slides, spreadsheet). We cap at
+// 1MB to keep the row small enough for Postgres + the function payload limit
+// while still allowing several long source docs to ride along.
+const MAX_DECISION_BYTES = 1024 * 1024;
+const MAX_PENDING_FILES = 8;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -29,11 +34,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { decision_text, template_slug, decision_meta } = (body ?? {}) as {
+  const {
+    decision_text,
+    template_slug,
+    decision_meta,
+    pending_file_ids,
+  } = (body ?? {}) as {
     decision_text?: string;
     template_slug?: string;
     decision_meta?: Record<string, unknown>;
+    pending_file_ids?: string[];
   };
+
+  const pendingFileIds = Array.isArray(pending_file_ids)
+    ? pending_file_ids.filter((v): v is string => typeof v === "string" && v.length > 0)
+    : [];
+  if (pendingFileIds.length > MAX_PENDING_FILES) {
+    return NextResponse.json(
+      { error: `Too many files; max ${MAX_PENDING_FILES} per audit` },
+      { status: 400 },
+    );
+  }
 
   if (!decision_text || decision_text.trim().length < 20) {
     return NextResponse.json({ error: "decision_text too short" }, { status: 400 });
@@ -95,6 +116,36 @@ export async function POST(request: Request) {
       .from("subscriptions")
       .update({ evaluations_used: effective.evaluationsUsed + 1 })
       .eq("user_id", user.id);
+  }
+
+  // Attach any pending uploads created earlier by /api/audit/parse-file. We
+  // verify ownership and that the rows aren't already attached to a different
+  // session before claiming them. The select-then-update pattern surfaces
+  // stale or hijacked IDs as a clear error rather than silently dropping
+  // attachment context.
+  if (pendingFileIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: pendingRows, error: pendingErr } = await admin
+      .from("audit_session_files")
+      .select("id, user_id, session_id")
+      .in("id", pendingFileIds);
+    if (pendingErr) {
+      console.error("audit/sessions pending-files lookup failed", {
+        error: pendingErr.message,
+      });
+    }
+    const validIds: string[] = [];
+    for (const row of pendingRows ?? []) {
+      if (row.user_id !== user.id) continue;
+      if (row.session_id && row.session_id !== session.id) continue;
+      validIds.push(row.id as string);
+    }
+    if (validIds.length > 0) {
+      await admin
+        .from("audit_session_files")
+        .update({ session_id: session.id, attached_at: new Date().toISOString() })
+        .in("id", validIds);
+    }
   }
 
   try {
