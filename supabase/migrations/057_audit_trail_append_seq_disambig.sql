@@ -1,21 +1,30 @@
 -- 057_audit_trail_append_seq_disambig.sql
 --
--- Fix `column reference "seq" is ambiguous` in audit_trail_append.
+-- Fix `column reference "seq" is ambiguous` AND `function digest(text,
+-- unknown) does not exist` in audit_trail_append.
 --
--- Postgres treats the names declared in `RETURNS TABLE (seq int, ...)`
--- as variables inside the function body. Inside audit_trail_append the
--- bare name `seq` matched BOTH the OUT column from RETURNS TABLE and
--- `public.audit_trail.seq` — Postgres rejected the SELECT with
--- `column reference "seq" is ambiguous` and every audit session
--- creation failed with:
+-- Two pre-existing bugs in migration 046, neither of which surfaced
+-- before because nobody had successfully completed an audit session
+-- start in production yet:
 --
---   Failed to write opening audit_trail row, rolling back session:
---   audit_trail.append: rpc failed (column reference "seq" is ambiguous)
+-- 1. `RETURNS TABLE (seq int, ...)` injects `seq` as a variable in
+--    the function body. Inside `audit_trail_append`, the bare name
+--    `seq` matched BOTH the OUT column AND `public.audit_trail.seq`,
+--    so Postgres aborted with:
+--      column reference "seq" is ambiguous
 --
--- Fix: keep the function signature unchanged (so CREATE OR REPLACE is
--- allowed; renaming OUT columns would change the return type and
--- require DROP+CREATE), and instead qualify the column reference as
--- `audit_trail.seq`. That removes the ambiguity unambiguously.
+-- 2. `set search_path = public` excludes the `extensions` schema
+--    where Supabase installs pgcrypto. So `digest(...)` couldn't
+--    resolve at runtime, failing with:
+--      function digest(text, unknown) does not exist
+--
+-- Fixes:
+--   - Qualify the SELECT with `audit_trail.seq` to disambiguate.
+--     Keeping the original RETURNS TABLE column names means
+--     CREATE OR REPLACE is allowed (changing the return type would
+--     force DROP+CREATE).
+--   - Set search_path = public, extensions so pgcrypto's digest()
+--     resolves. This matches Supabase's standard pgcrypto location.
 
 set client_min_messages to warning;
 
@@ -30,7 +39,7 @@ create or replace function public.audit_trail_append(
 returns table (seq int, this_hash text)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_prev_hash text;
