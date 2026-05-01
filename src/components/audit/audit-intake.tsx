@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Loader2, Sparkles, ShieldCheck, Upload, FileText } from "lucide-react";
+import { ChevronDown, Loader2, Sparkles, ShieldCheck, Upload, FileText, X } from "lucide-react";
 import type { AuditTemplate, DecisionUrgency } from "@/lib/audit/types";
 import { matchTemplate } from "@/lib/audit/template-match";
 
@@ -57,7 +57,15 @@ export function AuditIntake({ templates, locale }: Props) {
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isParsingFile, setIsParsingFile] = useState(false);
-  const [fileStatus, setFileStatus] = useState<{ filename: string; truncated: boolean; size: string } | null>(null);
+  // Parsed file content stays in state but is NOT pushed into the textarea.
+  // The user sees a small chip with the filename + extracted size; the actual
+  // text is concatenated server-bound at submit time.
+  const [attachedFile, setAttachedFile] = useState<{
+    filename: string;
+    text: string;
+    size: string;
+    truncated: boolean;
+  } | null>(null);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -65,7 +73,7 @@ export function AuditIntake({ templates, locale }: Props) {
     if (!file) return;
 
     setError(null);
-    setFileStatus(null);
+    setAttachedFile(null);
 
     const ext = (file.name.split(".").pop() || "").toLowerCase();
     if (!ALLOWED_UPLOAD_EXT.has(ext)) {
@@ -88,6 +96,9 @@ export function AuditIntake({ templates, locale }: Props) {
         const code = body?.error ?? "";
         if (res.status === 413) setError(t("intakeFileErrorTooLarge"));
         else if (res.status === 415) setError(t("intakeFileErrorUnsupported"));
+        else if (res.status === 422 && /image[-\s]?only|scanned|no extractable text/i.test(code)) {
+          setError(t("intakeFileErrorImageOnly"));
+        }
         else if (res.status === 422 && /No readable/i.test(code)) setError(t("intakeFileErrorEmpty"));
         else if (res.status === 422) setError(t("intakeFileErrorParse"));
         else setError(code || t("intakeFileErrorGeneric"));
@@ -100,11 +111,11 @@ export function AuditIntake({ templates, locale }: Props) {
         return;
       }
 
-      setDecisionText(text);
-      setFileStatus({
+      setAttachedFile({
         filename: file.name,
-        truncated: Boolean(body.truncated),
+        text,
         size: formatBytes(Number(body.extractedSize ?? new Blob([text]).size)),
+        truncated: Boolean(body.truncated),
       });
     } catch (err) {
       console.error(err);
@@ -114,9 +125,20 @@ export function AuditIntake({ templates, locale }: Props) {
     }
   }
 
+  // What we actually send as decision_text: the textarea (manual context) +
+  // a divider + the attached file content. Either is allowed alone.
+  const submitText = useMemo(() => {
+    const manual = decisionText.trim();
+    const fileText = attachedFile?.text.trim() ?? "";
+    if (manual && fileText) {
+      return `${manual}\n\n--- ${attachedFile?.filename ?? "attached"} ---\n${fileText}`;
+    }
+    return manual || fileText;
+  }, [decisionText, attachedFile]);
+
   const match = useMemo(() => {
-    if (decisionText.trim().length < 30) return null;
-    const m = matchTemplate(decisionText);
+    if (submitText.length < 30) return null;
+    const m = matchTemplate(submitText);
     if (!m) return null;
     const validSlugs = new Set(templates.map((tpl) => tpl.slug));
     if (!validSlugs.has(m.primary_slug)) return null;
@@ -124,7 +146,7 @@ export function AuditIntake({ templates, locale }: Props) {
       ...m,
       alternates: m.alternates.filter((slug) => validSlugs.has(slug)),
     };
-  }, [decisionText, templates]);
+  }, [submitText, templates]);
 
   const effectiveSelectedSlug = selectedSlug ?? match?.primary_slug ?? null;
 
@@ -143,7 +165,7 @@ export function AuditIntake({ templates, locale }: Props) {
 
   function onSubmit() {
     setError(null);
-    if (decisionText.trim().length < 20) {
+    if (submitText.length < 20) {
       setError(t("errorTextRequired"));
       return;
     }
@@ -158,23 +180,36 @@ export function AuditIntake({ templates, locale }: Props) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            decision_text: decisionText,
+            decision_text: submitText,
             template_slug: effectiveSelectedSlug,
             decision_meta: {
               owner: owner || undefined,
               urgency,
               language: locale,
+              attached_filename: attachedFile?.filename ?? undefined,
             },
           }),
         });
 
+        const body = (await res.json().catch(() => ({}))) as {
+          id?: string;
+          error?: string;
+        };
+
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? "create_failed");
+          // Surface the server-side reason so users see what's actually
+          // wrong (quota, bad template, payload too large, etc.) instead of
+          // a generic "audit failed" wall.
+          const serverMsg = body?.error?.toString().trim();
+          setError(serverMsg ? serverMsg : t("errorRunFailed"));
+          return;
         }
 
-        const { id } = await res.json();
-        router.push(`/${locale}/audit/${id}`);
+        if (!body.id) {
+          setError(t("errorRunFailed"));
+          return;
+        }
+        router.push(`/${locale}/audit/${body.id}`);
       } catch (err) {
         console.error(err);
         setError(t("errorRunFailed"));
@@ -191,12 +226,9 @@ export function AuditIntake({ templates, locale }: Props) {
         <textarea
           id="decision-text"
           value={decisionText}
-          onChange={(e) => {
-            setDecisionText(e.target.value);
-            if (fileStatus) setFileStatus(null);
-          }}
-          placeholder={t("intakePlaceholder")}
-          rows={10}
+          onChange={(e) => setDecisionText(e.target.value)}
+          placeholder={attachedFile ? t("intakePlaceholderWithFile") : t("intakePlaceholder")}
+          rows={attachedFile ? 4 : 10}
           className="w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-primary)] px-4 py-3 text-sm font-mono leading-relaxed text-[color:var(--text-primary)] transition-colors focus:outline-none focus:border-[color:var(--accent-warm)] focus:ring-2 focus:ring-[rgb(var(--accent-warm-rgb)/0.10)] resize-y"
         />
 
@@ -227,12 +259,25 @@ export function AuditIntake({ templates, locale }: Props) {
               </>
             )}
           </button>
-          {fileStatus ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--text-tertiary)]">
-              <FileText className="h-3.5 w-3.5" />
-              {fileStatus.truncated
-                ? t("intakeFileLoadedTruncated", { filename: fileStatus.filename })
-                : t("intakeFileLoaded", { filename: fileStatus.filename, size: fileStatus.size })}
+          {attachedFile ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] px-2.5 py-1 text-xs text-[color:var(--text-primary)]">
+              <FileText className="h-3.5 w-3.5 text-[color:var(--accent-warm)]" />
+              <span>
+                {attachedFile.truncated
+                  ? t("intakeFileLoadedTruncated", { filename: attachedFile.filename })
+                  : t("intakeFileLoaded", {
+                      filename: attachedFile.filename,
+                      size: attachedFile.size,
+                    })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAttachedFile(null)}
+                aria-label={t("intakeFileRemove")}
+                className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </span>
           ) : (
             <span className="text-xs text-[color:var(--text-tertiary)]">

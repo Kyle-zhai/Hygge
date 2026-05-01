@@ -112,6 +112,15 @@ export async function POST(req: Request) {
 
   const trimmed = rawText.replace(/\r\n/g, "\n").trim();
   if (trimmed.length === 0) {
+    if (ext === "pdf") {
+      return NextResponse.json(
+        {
+          error: "PDF appears to be image-only or scanned. No extractable text layer.",
+          code: "image_only_pdf",
+        },
+        { status: 422 }
+      );
+    }
     return NextResponse.json(
       { error: "No readable text found in file" },
       { status: 422 }
