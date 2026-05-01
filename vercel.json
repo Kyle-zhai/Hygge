@@ -9,7 +9,7 @@
     },
     {
       "path": "/api/cron/sweep-stuck-audits",
-      "schedule": "*/10 * * * *"
+      "schedule": "15 3 * * *"
     }
   ]
 }
