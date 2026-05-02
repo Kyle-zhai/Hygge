@@ -151,7 +151,7 @@ export async function processAuditPipelineJob(
   // extracted_text + attachment metadata on the row so reruns skip the
   // parse cost. The composed context block is what reaches every agent
   // (planner / analyst / synthesizer) instead of the user-only narrative.
-  const sourceFilesRaw = await loadSessionFiles(session.id);
+  const sourceFilesRaw = await loadSessionFiles(session.id, session.user_id);
   const sourceFiles = await ensureExtractedText(sourceFilesRaw);
   const enrichedDecisionText = composeDecisionContext(
     session.decision_text,

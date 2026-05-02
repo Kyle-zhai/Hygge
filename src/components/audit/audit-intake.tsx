@@ -28,6 +28,9 @@ interface AttachedFile {
   size: string;
   // sizeBytes for posting to /api/audit/sessions etc.
   sizeBytes: number;
+  // Storage path so removeAttachedFile can also clean up the bucket
+  // object instead of leaking a 10MB private blob per pre-submit cancel.
+  storagePath: string;
 }
 
 const STORAGE_BUCKET = "audit-uploads";
@@ -151,6 +154,7 @@ export function AuditIntake({ templates, locale }: Props) {
           filename: file.name,
           size: formatBytes(file.size),
           sizeBytes: file.size,
+          storagePath,
         },
       ]);
     } catch (err) {
@@ -167,8 +171,13 @@ export function AuditIntake({ templates, locale }: Props) {
     if (!target) return;
     try {
       const supabase = createClient();
-      // Best-effort cleanup. Server-side orphan sweep also covers this.
-      await supabase.from("audit_session_files").delete().eq("id", fileId);
+      // Best-effort cleanup of both the row AND the underlying storage
+      // object. Without the storage.remove call, every cancelled upload
+      // would leak a 10MB private object under the user's prefix.
+      await Promise.all([
+        supabase.from("audit_session_files").delete().eq("id", fileId),
+        supabase.storage.from(STORAGE_BUCKET).remove([target.storagePath]),
+      ]);
     } catch (err) {
       console.error("audit file cleanup failed", err);
     }
