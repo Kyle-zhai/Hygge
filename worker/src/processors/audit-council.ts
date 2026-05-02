@@ -99,7 +99,7 @@ export async function processAuditJob(job: Job<AuditJobData>): Promise<void> {
   // to this session. The browser uploads files directly to Storage; we
   // download + parse here in the worker so officeparser's dynamic requires
   // resolve cleanly (Vercel bundles them and breaks).
-  const sourceFilesRaw = await loadSessionFiles(auditSessionId);
+  const sourceFilesRaw = await loadSessionFiles(auditSessionId, userId);
   const sourceFiles = await ensureExtractedText(sourceFilesRaw);
   const enrichedDecisionText = composeDecisionContext(
     decisionText,

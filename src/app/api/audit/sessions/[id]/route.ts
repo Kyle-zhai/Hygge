@@ -44,9 +44,22 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   // 200 with zero affected rows). Now that ownership is verified above,
   // do the delete with the service-role admin client so it actually runs.
   // FK cascades on session_id then handle audit_findings, audit_trail,
-  // audit_scoping_sessions, and audit_session_files. Storage objects
-  // under audit-uploads/{user_id}/ orphan and can be reaped later.
+  // audit_scoping_sessions, and audit_session_files.
   const admin = createAdminClient();
+
+  // Pull the storage paths first so we can clean up the binaries after
+  // the row delete cascades. Without this the bucket would accumulate
+  // private 10MB objects forever — each deleted audit leaks up to 8 of
+  // them per user. Best-effort: a storage failure shouldn't roll back
+  // the row delete, just log it for the orphan reaper.
+  const { data: fileRows } = await admin
+    .from("audit_session_files")
+    .select("storage_path")
+    .eq("session_id", id);
+  const storagePaths = (fileRows ?? [])
+    .map((r) => (r as { storage_path: string }).storage_path)
+    .filter((p): p is string => Boolean(p));
+
   const { count, error: deleteErr } = await admin
     .from("audit_sessions")
     .delete({ count: "exact" })
@@ -62,6 +75,20 @@ export async function DELETE(_request: Request, ctx: Ctx) {
       { error: "Audit could not be deleted." },
       { status: 500 },
     );
+  }
+
+  if (storagePaths.length > 0) {
+    const { error: removeErr } = await admin.storage
+      .from("audit-uploads")
+      .remove(storagePaths);
+    if (removeErr) {
+      console.error("audit/sessions storage cleanup failed", {
+        id,
+        paths: storagePaths.length,
+        error: removeErr.message,
+      });
+      // Intentionally don't fail the request — the row + cascades are gone.
+    }
   }
 
   return NextResponse.json({ ok: true });
