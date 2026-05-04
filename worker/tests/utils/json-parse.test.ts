@@ -40,4 +40,36 @@ describe("robustJsonParse", () => {
     expect(parsed.extracted_quotes.length).toBeGreaterThanOrEqual(2);
     expect(parsed.extracted_quotes[0]).toBe("democratizing the sublime");
   });
+
+  it("recovers from smart/curly quotes used as JSON delimiters", () => {
+    // U+201C/U+201D used in place of ASCII " — common LLM output bug.
+    // Note: normalization also converts curly apostrophes inside string
+    // content (O’Brien → O'Brien). That's acceptable here because
+    // smart-quote normalization only runs when the original input failed
+    // to parse; if the JSON was valid with curly content, the first
+    // attempt would have succeeded without normalization.
+    const smart = '{“name”: “Margaret O’Brien”, “score”: 7}';
+    expect(robustJsonParse(smart)).toEqual({ name: "Margaret O'Brien", score: 7 });
+  });
+
+  it("recovers from trailing commas before } or ]", () => {
+    const trailing = '{"items": [1, 2, 3,], "name": "X",}';
+    expect(robustJsonParse(trailing)).toEqual({ items: [1, 2, 3], name: "X" });
+  });
+
+  it("error preview points to the failure position with ±100 char context", () => {
+    // Construct a long-ish payload where a single-quoted key is buried deep
+    const padding = "x".repeat(500);
+    const broken = `{"a":"${padding}", 'broken_key':1}`;
+    try {
+      robustJsonParse(broken);
+      throw new Error("should have thrown");
+    } catch (e) {
+      const msg = (e as Error).message;
+      expect(msg).toContain("No valid JSON found");
+      expect(msg).toContain("<<<HERE>>>");
+      // Preview should show the error region, not start of input
+      expect(msg).toContain("chars ");
+    }
+  });
 });
