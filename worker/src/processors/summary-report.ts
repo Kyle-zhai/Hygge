@@ -1,4 +1,4 @@
-import type { LLMAdapter } from "../llm/adapter.js";
+import { LLMTruncatedError, type LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type {
   SummaryReport,
@@ -273,6 +273,47 @@ function normalizePersonaAnalysis(raw: unknown): { entries: PersonaAnalysisEntry
   };
 }
 
+const SUMMARY_BASE_MAX_TOKENS = 8192;
+const SUMMARY_RETRY_MAX_TOKENS = 16384;
+
+// Summary reports produce large JSON (multi-dimensional analysis + persona
+// entries + debate highlights + references). MiMo-V2.5-Pro hits the 8192
+// ceiling on rich inputs, so bump and retry once when finish_reason=length.
+// On retry failure we surface *which* failure mode hit so the operator knows
+// whether the cap is provider-side (HTTP 4xx) or genuine output overflow
+// (still truncated even at 16k — signal to split the report into many calls).
+async function completeWithRetryOnTruncation(
+  llm: LLMAdapter,
+  request: { system: string; prompt: string; jsonMode?: boolean },
+  context: string,
+) {
+  try {
+    return await llm.complete({ ...request, maxTokens: SUMMARY_BASE_MAX_TOKENS });
+  } catch (e) {
+    if (!(e instanceof LLMTruncatedError)) throw e;
+    console.log(
+      `[${context}] Truncated at ${SUMMARY_BASE_MAX_TOKENS} tokens (output=${e.outputTokens}) — retrying with ${SUMMARY_RETRY_MAX_TOKENS}`,
+    );
+    try {
+      return await llm.complete({ ...request, maxTokens: SUMMARY_RETRY_MAX_TOKENS });
+    } catch (retryErr) {
+      if (retryErr instanceof LLMTruncatedError) {
+        throw new Error(
+          `[${context}] Output exceeds gateway/model max even at max_tokens=${SUMMARY_RETRY_MAX_TOKENS} (outputTokens=${retryErr.outputTokens}). Output is genuinely too large — split the report into multiple LLM calls.`,
+          { cause: retryErr },
+        );
+      }
+      if (retryErr instanceof Error && /LLM API error \(4\d\d\)/.test(retryErr.message)) {
+        throw new Error(
+          `[${context}] Provider rejected max_tokens=${SUMMARY_RETRY_MAX_TOKENS} (HTTP 4xx) — gateway/model caps the output below ${SUMMARY_RETRY_MAX_TOKENS}. Lower SUMMARY_RETRY_MAX_TOKENS or split the report. Underlying: ${retryErr.message}`,
+          { cause: retryErr },
+        );
+      }
+      throw retryErr;
+    }
+  }
+}
+
 export interface ReviewForSummary {
   persona_id: string;
   persona_name: string;
@@ -293,7 +334,7 @@ export async function generateTopicSummaryReport(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
-  const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
+  const response = await completeWithRetryOnTruncation(llm, { system, prompt, jsonMode: true }, "TopicSummary");
   let parsed: LooseRecord;
   try {
     parsed = robustJsonParse(response.text) as LooseRecord;
@@ -338,7 +379,7 @@ export async function generateSummaryReport(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
-  const response = await llm.complete({ system, prompt, maxTokens: 8192, jsonMode: true });
+  const response = await completeWithRetryOnTruncation(llm, { system, prompt, jsonMode: true }, "SummaryReport");
   let parsed: LooseRecord;
   try {
     parsed = robustJsonParse(response.text) as LooseRecord;
