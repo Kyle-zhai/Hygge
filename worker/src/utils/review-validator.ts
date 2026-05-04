@@ -49,9 +49,26 @@ export interface ReviewValidation {
   unusedExtractedQuotes: string[];
   extractedCount: number;
   verbatimReviewCount: number;
+  missingScoresField: boolean;
+  expectedScoresKey: string;
 }
 
-export function validatePersonaReview(parsed: Record<string, unknown>, rawInput: string): ReviewValidation {
+/**
+ * Optional pre-computed schema check for the score-bearing field.
+ * The validator can't decide on its own whether to require `scores` or
+ * `stances` — the caller knows the mode/dimensions and computes presence.
+ * When omitted, validator skips the check (backward compatible).
+ */
+export interface ScoresPresenceCheck {
+  present: boolean;
+  expectedKey: string;
+}
+
+export function validatePersonaReview(
+  parsed: Record<string, unknown>,
+  rawInput: string,
+  scoresCheck?: ScoresPresenceCheck,
+): ReviewValidation {
   const review: string = typeof parsed?.review_text === "string" ? parsed.review_text : "";
   const reviewLower = review.toLowerCase();
   const rtMasked = maskContractions(review);
@@ -104,6 +121,8 @@ export function validatePersonaReview(parsed: Record<string, unknown>, rawInput:
     unusedExtractedQuotes,
     extractedCount: extractedQuotesRaw.length,
     verbatimReviewCount: verbatimReviewQuotes.length,
+    missingScoresField: scoresCheck ? !scoresCheck.present : false,
+    expectedScoresKey: scoresCheck?.expectedKey ?? "scores",
   };
 }
 
@@ -117,6 +136,10 @@ export interface ReviewValidationOptions {
 }
 
 export function hasReviewViolations(v: ReviewValidation, opts?: ReviewValidationOptions): boolean {
+  // Missing the score-bearing field is always a violation — it kills the
+  // discussion downstream (no scores → orchestrator throws), so it must
+  // trigger a retry regardless of mode or quote-check settings.
+  if (v.missingScoresField) return true;
   if (v.bannedHits.length > 0) return true;
   if (opts?.skipSubmissionQuoteChecks) return false;
   return (
@@ -129,6 +152,11 @@ export function hasReviewViolations(v: ReviewValidation, opts?: ReviewValidation
 
 export function buildReviewRetryInstructions(v: ReviewValidation, opts?: ReviewValidationOptions): string {
   const items: string[] = [];
+  if (v.missingScoresField) {
+    items.push(
+      `- Output is MISSING the required \`${v.expectedScoresKey}\` field. You MUST include \`${v.expectedScoresKey}\` as a JSON object at the top level — without it the entire response is unusable. Do not omit it under any circumstance.`,
+    );
+  }
   if (!opts?.skipSubmissionQuoteChecks) {
     if (v.invalidExtractedQuotes.length) {
       const list = v.invalidExtractedQuotes.slice(0, 5).map((q) => `"${String(q).slice(0, 80)}"`).join(", ");
