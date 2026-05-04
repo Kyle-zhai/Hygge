@@ -1,4 +1,4 @@
-import { LLMTruncatedError, type LLMAdapter } from "../llm/adapter.js";
+import type { LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores, ProjectParsedData, TopicClassification } from "../types/evaluation.js";
 import type {
   SummaryReport,
@@ -13,8 +13,11 @@ import type {
   ReportReference,
 } from "../types/report.js";
 import { robustJsonParse } from "../utils/json-parse.js";
+import { completeAndParseJson } from "../utils/llm-helpers.js";
 import { buildSummaryReportPrompt, buildTopicSummaryReportPrompt } from "../prompts/summary-report.js";
 import { replyLanguageDirective, type ReplyLanguage } from "./language-detect.js";
+
+const SUMMARY_BUDGET = { base: 8192, retry: 16384 };
 
 type LooseRecord = Record<string, unknown>;
 
@@ -273,93 +276,6 @@ function normalizePersonaAnalysis(raw: unknown): { entries: PersonaAnalysisEntry
   };
 }
 
-const SUMMARY_BASE_MAX_TOKENS = 8192;
-const SUMMARY_RETRY_MAX_TOKENS = 16384;
-
-// Summary reports produce large JSON (multi-dimensional analysis + persona
-// entries + debate highlights + references). MiMo-V2.5-Pro hits the 8192
-// ceiling on rich inputs, so bump and retry once when finish_reason=length.
-// On retry failure we surface *which* failure mode hit so the operator knows
-// whether the cap is provider-side (HTTP 4xx) or genuine output overflow
-// (still truncated even at 16k — signal to split the report into many calls).
-async function completeWithRetryOnTruncation(
-  llm: LLMAdapter,
-  request: { system: string; prompt: string; jsonMode?: boolean },
-  context: string,
-) {
-  try {
-    return await llm.complete({ ...request, maxTokens: SUMMARY_BASE_MAX_TOKENS });
-  } catch (e) {
-    if (!(e instanceof LLMTruncatedError)) throw e;
-    console.log(
-      `[${context}] Truncated at ${SUMMARY_BASE_MAX_TOKENS} tokens (output=${e.outputTokens}) — retrying with ${SUMMARY_RETRY_MAX_TOKENS}`,
-    );
-    try {
-      return await llm.complete({ ...request, maxTokens: SUMMARY_RETRY_MAX_TOKENS });
-    } catch (retryErr) {
-      if (retryErr instanceof LLMTruncatedError) {
-        throw new Error(
-          `[${context}] Output exceeds gateway/model max even at max_tokens=${SUMMARY_RETRY_MAX_TOKENS} (outputTokens=${retryErr.outputTokens}). Output is genuinely too large — split the report into multiple LLM calls.`,
-          { cause: retryErr },
-        );
-      }
-      if (retryErr instanceof Error && /LLM API error \(4\d\d\)/.test(retryErr.message)) {
-        throw new Error(
-          `[${context}] Provider rejected max_tokens=${SUMMARY_RETRY_MAX_TOKENS} (HTTP 4xx) — gateway/model caps the output below ${SUMMARY_RETRY_MAX_TOKENS}. Lower SUMMARY_RETRY_MAX_TOKENS or split the report. Underlying: ${retryErr.message}`,
-          { cause: retryErr },
-        );
-      }
-      throw retryErr;
-    }
-  }
-}
-
-/**
- * Call the LLM, attempt to parse the response as JSON, and retry once with a
- * strict-format reminder if the first parse fails. LLMs occasionally emit
- * malformed JSON (smart quotes, trailing commas, single quotes on keys) that
- * even robustJsonParse can't always rescue — a re-prompt with the parser
- * error embedded almost always recovers it.
- */
-async function completeAndParseJson(
-  llm: LLMAdapter,
-  request: { system: string; prompt: string },
-  context: string,
-): Promise<LooseRecord> {
-  const response = await completeWithRetryOnTruncation(
-    llm,
-    { ...request, jsonMode: true },
-    context,
-  );
-  try {
-    return robustJsonParse(response.text) as LooseRecord;
-  } catch (firstErr) {
-    const errMsg = (firstErr as Error).message;
-    console.warn(
-      `[${context}] JSON parse failed on first attempt: ${errMsg.slice(0, 300)}. Raw text (first 800 chars):`,
-      response.text.slice(0, 800),
-    );
-    const retryPrompt = `${request.prompt}\n\n---\n\nYour previous response had INVALID JSON (parser error: ${errMsg.slice(0, 200)}). Regenerate the response with these strict requirements:\n- Every property name MUST be in straight ASCII double quotes (")\n- NO trailing commas before } or ]\n- NO markdown code fences\n- NO comments or explanatory prose outside the JSON\n- Output JSON ONLY — the entire response must be parseable by JSON.parse() on the first try.`;
-    const retryResponse = await completeWithRetryOnTruncation(
-      llm,
-      { system: request.system, prompt: retryPrompt, jsonMode: true },
-      `${context}-Retry`,
-    );
-    try {
-      return robustJsonParse(retryResponse.text) as LooseRecord;
-    } catch (secondErr) {
-      console.error(
-        `[${context}] JSON parse failed AFTER retry. Retry raw text (first 800 chars):`,
-        retryResponse.text.slice(0, 800),
-      );
-      throw new Error(
-        `${context} JSON parse failed after retry: ${(secondErr as Error).message}`,
-        { cause: secondErr },
-      );
-    }
-  }
-}
-
 export interface ReviewForSummary {
   persona_id: string;
   persona_name: string;
@@ -380,7 +296,7 @@ export async function generateTopicSummaryReport(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
-  const parsed = await completeAndParseJson(llm, { system, prompt }, "TopicSummary");
+  const parsed = await completeAndParseJson<LooseRecord>(llm, { system, prompt }, "TopicSummary", SUMMARY_BUDGET);
   const feasibility = await backfillFeasibility(llm, project, reviews, {
     if_feasible: normalizeIfFeasible(parsed.if_feasible),
     if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),
@@ -418,7 +334,7 @@ export async function generateSummaryReport(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
-  const parsed = await completeAndParseJson(llm, { system, prompt }, "SummaryReport");
+  const parsed = await completeAndParseJson<LooseRecord>(llm, { system, prompt }, "SummaryReport", SUMMARY_BUDGET);
   const feasibility = await backfillFeasibility(llm, project, reviews, {
     if_feasible: normalizeIfFeasible(parsed.if_feasible),
     if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),

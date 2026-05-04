@@ -22,7 +22,7 @@
 //   - overall_compliance is constrained to a fixed enum
 
 import type { LLMAdapter } from "../llm/adapter.js";
-import { robustJsonParse } from "../utils/json-parse.js";
+import { completeAndParseJson } from "../utils/llm-helpers.js";
 import { log } from "../utils/logger.js";
 import type { ScopedLaw } from "./scoping-agent.js";
 import type {
@@ -541,20 +541,26 @@ export async function runSynthesizer(
   const system = buildSynthSystem();
   const prompt = buildSynthPrompt(input);
 
+  // Use the shared completeAndParseJson helper: auto-retry on truncation
+  // (5000 base, 8192 retry) and re-prompt on parse failure with strict-JSON
+  // instruction. If both attempts fail, throw — the caller (audit-pipeline)
+  // will markFailed and the user retries explicitly. This is intentionally
+  // stricter than the previous "silent empty report" behavior, which masked
+  // real failures as legitimate-looking unknowns.
   let parsed: RawSynthOutput | null = null;
   try {
-    const response = await llm.complete({
-      system,
-      prompt,
-      maxTokens: 3500,
-      jsonMode: true,
-    });
-    parsed = robustJsonParse<RawSynthOutput>(response.text);
+    parsed = await completeAndParseJson<RawSynthOutput>(
+      llm,
+      { system, prompt },
+      "synthesizer",
+      { base: 5000, retry: 8192 },
+    );
   } catch (err) {
     log.error("synthesizer.llm_failed", {
       error: err instanceof Error ? err.message : String(err),
       findingCount: input.findings.length,
     });
+    throw err;
   }
 
   const executive_summary =

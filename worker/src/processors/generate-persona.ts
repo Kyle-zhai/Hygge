@@ -180,6 +180,34 @@ export async function processPersonaGeneration(job: Job<PersonaJobData>) {
   const response = await llm.complete({ system, prompt, maxTokens: 4096 });
   const persona = robustJsonParse<Omit<Persona, "id" | "created_at"> & { description?: string; tags?: string[] }>(response.text);
 
+  // LLMs occasionally drop top-level fields. Without these guards, the
+  // mutation below throws a cryptic TypeError on `.name` / `.avatar` that
+  // doesn't tell the operator which field was missing. Validate up front
+  // so failure messages are actionable.
+  const requiredFields: Array<keyof typeof persona> = [
+    "identity",
+    "demographics",
+    "social_context",
+    "financial_profile",
+    "psychology",
+    "behaviors",
+    "evaluation_lens",
+    "life_narrative",
+    "internal_conflicts",
+    "contextual_behaviors",
+    "latent_needs",
+    "system_prompt",
+  ];
+  const missing = requiredFields.filter((k) => persona[k] === undefined || persona[k] === null);
+  if (missing.length > 0) {
+    throw new Error(
+      `generatePersona: LLM omitted required top-level fields: ${missing.join(", ")}. Raw text (first 500 chars): ${response.text.slice(0, 500)}`,
+    );
+  }
+  if (!persona.identity || typeof persona.identity !== "object") {
+    throw new Error(`generatePersona: identity is not an object`);
+  }
+
   persona.identity.name = name;
   if (avatarUrl) persona.identity.avatar = avatarUrl;
   if (persona.identity.locale_variants?.en) {

@@ -18,6 +18,7 @@
 
 import type { LLMAdapter } from "../llm/adapter.js";
 import { robustJsonParse } from "../utils/json-parse.js";
+import { completeWithTruncationRetry } from "../utils/llm-helpers.js";
 import { log } from "../utils/logger.js";
 import { tavilySearch, type TavilyResult } from "./tavily-client.js";
 import type { PlannedTask } from "./planner.js";
@@ -323,17 +324,27 @@ export async function runPersonaAnalysis(
 
   let raw: RawAnalystOutput | null = null;
   try {
-    const response = await llm.complete({
-      system,
-      prompt,
-      maxTokens: 2400,
-      jsonMode: true,
-    });
+    const response = await completeWithTruncationRetry(
+      llm,
+      { system, prompt, jsonMode: true },
+      "analyst",
+      { base: 2400, retry: 4096 },
+    );
     raw = robustJsonParse<RawAnalystOutput>(response.text);
   } catch (err) {
-    log.error("analyst.llm_failed", {
+    // Distinguish truncation from other failures. The fallback (empty findings)
+    // converts both into "no compliance issues found" downstream, which is
+    // misleading for truncation: the analyst DID find issues, the LLM just
+    // ran out of budget producing them. Surfacing the distinction lets ops
+    // raise the budget rather than treating it as no-issue.
+    const isTruncated =
+      (err instanceof Error && err.message.includes("LLMTruncatedError")) ||
+      (err instanceof Error && err.message.includes("Output exceeds gateway/model max")) ||
+      (err instanceof Error && err.message.includes("Provider rejected max_tokens"));
+    log.error(isTruncated ? "analyst.llm_truncated" : "analyst.llm_failed", {
       taskId: input.task.id,
       personaId: input.persona.id,
+      truncated: isTruncated,
       error: err instanceof Error ? err.message : String(err),
     });
     return {
