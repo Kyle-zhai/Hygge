@@ -285,7 +285,11 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
     const personaList = personas as Persona[];
     const reviewsStartedAt = Date.now();
 
-    const batchResults = await Promise.all(
+    // Fault-soft batch: a single persona's LLM flakiness (e.g. schema drift
+    // making generatePersonaReview throw) shouldn't kill the whole discussion.
+    // Use allSettled, then keep the discussion alive as long as enough
+    // personas reviewed successfully (≥2 AND ≥50%, capped by total).
+    const settled = await Promise.allSettled(
       personaList.map(async (persona) => {
         const review = await withTiming(
           "orchestrator.persona_review",
@@ -315,10 +319,41 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         };
       })
     );
+
+    const batchResults: typeof reviews = [];
+    const failures: Array<{ personaId: string; personaName: string; error: string }> = [];
+    for (let i = 0; i < settled.length; i++) {
+      const r = settled[i];
+      const persona = personaList[i];
+      if (r.status === "fulfilled") {
+        batchResults.push(r.value);
+      } else {
+        const errMsg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        log.error("orchestrator.persona_review_failed", {
+          ...ctx,
+          personaId: persona.id,
+          personaName: persona.identity.name,
+          error: errMsg,
+        });
+        failures.push({ personaId: persona.id, personaName: persona.identity.name, error: errMsg });
+      }
+    }
+
+    const total = personaList.length;
+    const minRequired = Math.min(total, Math.max(2, Math.ceil(total / 2)));
+    if (batchResults.length < minRequired) {
+      throw new Error(
+        `Persona reviews failed: only ${batchResults.length}/${total} succeeded (need ≥${minRequired}). Failed: ${failures.map((f) => `${f.personaName} — ${f.error}`).join("; ")}`,
+      );
+    }
+
     reviews.push(...batchResults);
     log.info("orchestrator.reviews_done", {
       ...ctx,
       reviewCount: reviews.length,
+      totalPersonas: total,
+      failedPersonas: failures.length,
+      failedNames: failures.map((f) => f.personaName),
       durationMs: Date.now() - reviewsStartedAt,
     });
 

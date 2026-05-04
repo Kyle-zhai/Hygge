@@ -67,6 +67,23 @@ export async function generatePersonaReview(
   const validatorOpts = { skipSubmissionQuoteChecks: isShortTopicQuery(mode, rawInput) };
   const MAX_RETRIES = 2;
 
+  // The scoring object lives under different keys per mode:
+  //   - topic + dimensions  → `stances` (with `scores` as legacy fallback)
+  //   - everything else     → `scores`
+  // LLMs occasionally drop this field entirely (schema drift), which the
+  // existing validator wouldn't catch — feed presence into the validation
+  // retry loop so missing scores triggers a fix-it retry instead of a hard fail.
+  const expectStances = !!dimensions && mode === "topic";
+  const expectedScoresKey = expectStances ? "stances" : "scores";
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    !!v && typeof v === "object" && !Array.isArray(v);
+  const computeScoresCheck = (p: Record<string, unknown>) => ({
+    present: expectStances
+      ? (isPlainObject(p.stances) || isPlainObject(p.scores))
+      : isPlainObject(p.scores),
+    expectedKey: expectedScoresKey,
+  });
+
   let attempt = 0;
   let outcome = await tryComplete(prompt, BASE_MAX_TOKENS);
   // Recovery loop: retry once with a higher token budget if the first call was
@@ -84,10 +101,10 @@ export async function generatePersonaReview(
 
   let response = outcome.response;
   let parsed = outcome.parsed;
-  let validation = validatePersonaReview(parsed, rawInput);
+  let validation = validatePersonaReview(parsed, rawInput, computeScoresCheck(parsed));
   for (; attempt < MAX_RETRIES && hasReviewViolations(validation, validatorOpts); attempt++) {
     console.log(
-      `[PersonaReview:${persona.identity.name}] Validation retry ${attempt + 1}/${MAX_RETRIES} — banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} invalidExtracted:${validation.invalidExtractedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount} unused:${validation.unusedExtractedQuotes.length} shortTopic:${validatorOpts.skipSubmissionQuoteChecks}`,
+      `[PersonaReview:${persona.identity.name}] Validation retry ${attempt + 1}/${MAX_RETRIES} — missingScores:${validation.missingScoresField} banned:${validation.bannedHits.length} fabricated:${validation.fabricatedQuotes.length} invalidExtracted:${validation.invalidExtractedQuotes.length} extractedCount:${validation.extractedCount} verbatimReviewCount:${validation.verbatimReviewCount} unused:${validation.unusedExtractedQuotes.length} shortTopic:${validatorOpts.skipSubmissionQuoteChecks}`,
     );
     const retryInstructions = buildReviewRetryInstructions(validation, validatorOpts);
     const retryTail = validatorOpts.skipSubmissionQuoteChecks
@@ -101,7 +118,7 @@ export async function generatePersonaReview(
     }
     response = retryOutcome.response;
     parsed = retryOutcome.parsed;
-    validation = validatePersonaReview(parsed, rawInput);
+    validation = validatePersonaReview(parsed, rawInput, computeScoresCheck(parsed));
   }
   if (hasReviewViolations(validation, validatorOpts)) {
     console.log(

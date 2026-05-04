@@ -94,6 +94,41 @@ describe("generatePersonaReview", () => {
     expect(complete).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
   });
 
+  it("retries when the response is missing the scores field, then succeeds", async () => {
+    // First response: valid JSON, all required fields EXCEPT `scores`.
+    // Without the validator catching this, persona-review would throw at the
+    // final scores check and kill the whole discussion. The validator now
+    // flags missingScoresField → retry loop fires → second response succeeds.
+    // Run in short-topic mode so quote-checks are skipped — isolates the
+    // missing-scores retry from the verbatim-quote retry path.
+    const missingScores = JSON.stringify({
+      review_text: "Strong technical decisions but pricing is too aggressive for indie devs.",
+      strengths: ["Clean API"],
+      weaknesses: ["Expensive"],
+    });
+    const goodPayload = JSON.stringify({
+      scores: { usability: 7, market_fit: 6, design: 8, tech_quality: 8, innovation: 6, pricing: 4 },
+      review_text: "Strong technical decisions but pricing is too aggressive for indie devs.",
+      strengths: ["Clean API"],
+      weaknesses: ["Expensive"],
+    });
+    const complete = vi
+      .fn()
+      .mockResolvedValueOnce({ text: missingScores, model: "qwen", usage: { inputTokens: 100, outputTokens: 200 } })
+      .mockResolvedValue({ text: goodPayload, model: "qwen", usage: { inputTokens: 100, outputTokens: 250 } });
+    const llm: LLMAdapter = { complete };
+
+    const result = await generatePersonaReview(
+      llm, mockPersona, mockProject, "What do you think?",
+      undefined, "topic",
+    );
+    expect(result.scores.usability).toBe(7);
+    expect(complete).toHaveBeenCalledTimes(2);
+    // Second call should be a retry prompt that explicitly demands the scores field.
+    const retryPrompt = complete.mock.calls[1][0].prompt as string;
+    expect(retryPrompt).toMatch(/MISSING.*scores|scores.*MISSING/i);
+  });
+
   it("records the fallback model when the chain falls through mid-review", async () => {
     // Simulates FallbackLLM returning the second entry's model on a successful
     // response: llm_model must reflect the model that actually produced the output.
