@@ -1,6 +1,7 @@
 import http from "node:http";
 import { buildLLM, type LLMOverrides } from "./llm/factory.js";
 import { log } from "./utils/logger.js";
+import { robustJsonParse } from "./utils/json-parse.js";
 
 type PersonaSummary = {
   id: string;
@@ -41,7 +42,7 @@ async function handleRecommend(body: RecommendBody): Promise<{ recommended_ids: 
     jsonMode: true,
   });
 
-  const parsed = JSON.parse(response.text) as { recommended_ids?: string[]; reasoning?: string };
+  const parsed = robustJsonParse<{ recommended_ids?: string[]; reasoning?: string }>(response.text);
   return {
     recommended_ids: Array.isArray(parsed.recommended_ids) ? parsed.recommended_ids : [],
     reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "",

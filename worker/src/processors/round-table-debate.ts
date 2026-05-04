@@ -39,7 +39,7 @@ import { rankReflectionLines } from "./reflection-ranker.js";
 import { scoreToMReads, buildToMCalibrationReflections } from "./tom-calibration.js";
 import { detectReplyLanguageWeighted } from "./language-detect.js";
 
-const ROUND_MAX_TOKENS = 3072;
+const ROUND_MAX_TOKENS = 4096;
 
 export function parseBeliefUpdate(raw: unknown): BeliefUpdate | null {
   if (!raw || typeof raw !== "object") return null;
@@ -133,6 +133,12 @@ export async function runRoundTableDebate(
     validIds = Array.from(new Set([...validIds, ...nameMatched]));
   }
   if (validIds.length < 2) {
+    log.warn("debate.selection_fallback", {
+      evaluationId,
+      rawIdCount: rawIds.length,
+      validBeforeFallback: validIds.length,
+      fallback: "personas.slice(0, 4)",
+    });
     validIds = personas.slice(0, Math.min(personas.length, 4)).map((p) => p.id);
   }
   if (validIds.length < 2) throw new Error(`Debate selection returned ${validIds.length} valid personas (need ≥2)`);
@@ -263,6 +269,13 @@ export async function runRoundTableDebate(
     const messages = Array.isArray(parsed.messages)
       ? (parsed.messages as Array<Record<string, unknown>>)
       : [];
+    if (!Array.isArray(parsed.messages)) {
+      log.warn("debate.round_messages_missing", {
+        evaluationId,
+        round: upcomingRound,
+        parsedKeys: Object.keys(parsed),
+      });
+    }
 
     const cleanedMessages = messages.map((m) => ({
       persona_id: typeof m.persona_id === "string" ? m.persona_id : "",

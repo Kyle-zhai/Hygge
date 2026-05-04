@@ -21,6 +21,7 @@
 
 import type { LLMAdapter } from "../llm/adapter.js";
 import { robustJsonParse } from "../utils/json-parse.js";
+import { completeWithTruncationRetry } from "../utils/llm-helpers.js";
 import { log } from "../utils/logger.js";
 import type { ScopedLaw } from "./scoping-agent.js";
 
@@ -273,18 +274,31 @@ export async function runPlanner(
   const system = buildPlannerSystem();
   const prompt = buildPlannerPrompt(input);
 
-  const response = await llm.complete({
-    system,
-    prompt,
-    maxTokens: 2400,
-    jsonMode: true,
-  });
+  const response = await completeWithTruncationRetry(
+    llm,
+    { system, prompt, jsonMode: true },
+    "planner",
+    { base: 3500, retry: 5000 },
+  );
   const parsed = robustJsonParse<RawPlannerOutput>(response.text);
 
   const tasks = sanitizeTasks(parsed?.tasks, validLawIds, validPersonaIds, maxTasks);
   const personaUnion = new Set<string>();
   for (const t of tasks) for (const p of t.target_personas) personaUnion.add(p);
 
+  // sanitizeTasks silently discards malformed tasks; if the count is short of
+  // the expected number, surface that — most likely truncation chopped the
+  // last few entries. Without this log, audits run on partial plans with no
+  // indication of why fewer tasks emerged than the prompt requested.
+  const rawTaskCount = Array.isArray(parsed?.tasks) ? parsed.tasks.length : 0;
+  if (rawTaskCount > tasks.length) {
+    log.warn("planner.tasks_dropped", {
+      rawCount: rawTaskCount,
+      keptCount: tasks.length,
+      lawCount: validLawIds.size,
+      personaCount: validPersonaIds.size,
+    });
+  }
   if (tasks.length === 0) {
     log.error("planner.no_tasks", {
       preview: response.text.slice(0, 200),

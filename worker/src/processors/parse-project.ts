@@ -40,5 +40,11 @@ export async function parseProject(
     maxTokens: 2048,
     jsonMode: true,
   });
-  return robustJsonParse<ProjectParsedData>(response.text);
+  const parsed = robustJsonParse<ProjectParsedData | null>(response.text);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error(
+      `parseProject: LLM returned non-object (got ${parsed === null ? "null" : typeof parsed}). Raw text (first 300 chars): ${response.text.slice(0, 300)}`,
+    );
+  }
+  return parsed;
 }

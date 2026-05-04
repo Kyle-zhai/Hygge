@@ -2,7 +2,7 @@ import type { LLMAdapter } from "../llm/adapter.js";
 import type { EvaluationScores } from "../types/evaluation.js";
 import type { Persona } from "../types/persona.js";
 import type { ScenarioSimulationResult } from "../types/report.js";
-import { robustJsonParse } from "../utils/json-parse.js";
+import { completeAndParseJson } from "../utils/llm-helpers.js";
 import { buildScenarioSimulationPrompt } from "../prompts/scenario-simulation.js";
 import type { ReplyLanguage } from "./language-detect.js";
 
@@ -24,15 +24,12 @@ export async function runScenarioSimulation(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<ScenarioSimulationResult> {
   const { system, prompt, computedStances } = buildScenarioSimulationPrompt(personas, reviews, replyLanguage);
-  const response = await llm.complete({ system, prompt, maxTokens: 4096, jsonMode: true });
-
-  let result: ScenarioSimulationResult;
-  try {
-    result = robustJsonParse<ScenarioSimulationResult>(response.text);
-  } catch (e) {
-    console.error("[ScenarioSimulation] JSON parse failed. Raw response:", response.text.slice(0, 500));
-    throw e;
-  }
+  const result = await completeAndParseJson<ScenarioSimulationResult>(
+    llm,
+    { system, prompt },
+    "ScenarioSimulation",
+    { base: 4096, retry: 8192 },
+  );
 
   // Enforce initial_adoption stances from computed values (same thresholds as opinion-drift)
   if (result.initial_adoption) {
