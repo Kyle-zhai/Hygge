@@ -314,6 +314,52 @@ async function completeWithRetryOnTruncation(
   }
 }
 
+/**
+ * Call the LLM, attempt to parse the response as JSON, and retry once with a
+ * strict-format reminder if the first parse fails. LLMs occasionally emit
+ * malformed JSON (smart quotes, trailing commas, single quotes on keys) that
+ * even robustJsonParse can't always rescue — a re-prompt with the parser
+ * error embedded almost always recovers it.
+ */
+async function completeAndParseJson(
+  llm: LLMAdapter,
+  request: { system: string; prompt: string },
+  context: string,
+): Promise<LooseRecord> {
+  const response = await completeWithRetryOnTruncation(
+    llm,
+    { ...request, jsonMode: true },
+    context,
+  );
+  try {
+    return robustJsonParse(response.text) as LooseRecord;
+  } catch (firstErr) {
+    const errMsg = (firstErr as Error).message;
+    console.warn(
+      `[${context}] JSON parse failed on first attempt: ${errMsg.slice(0, 300)}. Raw text (first 800 chars):`,
+      response.text.slice(0, 800),
+    );
+    const retryPrompt = `${request.prompt}\n\n---\n\nYour previous response had INVALID JSON (parser error: ${errMsg.slice(0, 200)}). Regenerate the response with these strict requirements:\n- Every property name MUST be in straight ASCII double quotes (")\n- NO trailing commas before } or ]\n- NO markdown code fences\n- NO comments or explanatory prose outside the JSON\n- Output JSON ONLY — the entire response must be parseable by JSON.parse() on the first try.`;
+    const retryResponse = await completeWithRetryOnTruncation(
+      llm,
+      { system: request.system, prompt: retryPrompt, jsonMode: true },
+      `${context}-Retry`,
+    );
+    try {
+      return robustJsonParse(retryResponse.text) as LooseRecord;
+    } catch (secondErr) {
+      console.error(
+        `[${context}] JSON parse failed AFTER retry. Retry raw text (first 800 chars):`,
+        retryResponse.text.slice(0, 800),
+      );
+      throw new Error(
+        `${context} JSON parse failed after retry: ${(secondErr as Error).message}`,
+        { cause: secondErr },
+      );
+    }
+  }
+}
+
 export interface ReviewForSummary {
   persona_id: string;
   persona_name: string;
@@ -334,14 +380,7 @@ export async function generateTopicSummaryReport(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildTopicSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
-  const response = await completeWithRetryOnTruncation(llm, { system, prompt, jsonMode: true }, "TopicSummary");
-  let parsed: LooseRecord;
-  try {
-    parsed = robustJsonParse(response.text) as LooseRecord;
-  } catch (e) {
-    console.error("[TopicSummary] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
-    throw new Error(`Topic summary JSON parse failed: ${(e as Error).message}`);
-  }
+  const parsed = await completeAndParseJson(llm, { system, prompt }, "TopicSummary");
   const feasibility = await backfillFeasibility(llm, project, reviews, {
     if_feasible: normalizeIfFeasible(parsed.if_feasible),
     if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),
@@ -379,14 +418,7 @@ export async function generateSummaryReport(
   replyLanguage: ReplyLanguage = "en",
 ): Promise<Omit<SummaryReport, "id" | "evaluation_id">> {
   const { system, prompt } = buildSummaryReportPrompt(project, reviews, rawInput, dimensions, replyLanguage);
-  const response = await completeWithRetryOnTruncation(llm, { system, prompt, jsonMode: true }, "SummaryReport");
-  let parsed: LooseRecord;
-  try {
-    parsed = robustJsonParse(response.text) as LooseRecord;
-  } catch (e) {
-    console.error("[SummaryReport] JSON parse failed. Raw text (first 500 chars):", response.text.slice(0, 500));
-    throw new Error(`Summary report JSON parse failed: ${(e as Error).message}`);
-  }
+  const parsed = await completeAndParseJson(llm, { system, prompt }, "SummaryReport");
   const feasibility = await backfillFeasibility(llm, project, reviews, {
     if_feasible: normalizeIfFeasible(parsed.if_feasible),
     if_not_feasible: normalizeIfNotFeasible(parsed.if_not_feasible),

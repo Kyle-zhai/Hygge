@@ -4,34 +4,59 @@
  * - leading/trailing chatter around the JSON block
  * - unescaped control characters inside strings
  * - invalid backslash escapes (e.g. \$, \₹, \p)
+ * - smart/curly quotes used as JSON delimiters
+ * - trailing commas before } or ]
  */
 export function robustJsonParse<T = unknown>(text: string): T {
   const stripped = stripFencesAndChatter(text);
   const noCtrl = stripControlChars(stripped);
   const fixedEsc = fixInvalidEscapes(noCtrl);
-  const balanced = balanceStringQuotes(fixedEsc);
+  const noSmartQuotes = normalizeSmartQuotes(fixedEsc);
+  const noTrailingCommas = stripTrailingCommas(noSmartQuotes);
+  const balanced = balanceStringQuotes(noTrailingCommas);
   const attempts = [
     text,
     stripped,
     noCtrl,
     fixedEsc,
+    noSmartQuotes,
+    noTrailingCommas,
     balanced,
     closeUnbalancedBrackets(balanced),
   ];
 
   let lastErr: unknown;
+  let lastCandidate = "";
   for (const candidate of attempts) {
     try {
       return JSON.parse(candidate);
     } catch (err) {
       lastErr = err;
+      lastCandidate = candidate;
     }
   }
 
-  const preview = attempts[attempts.length - 1].slice(0, 200);
   throw new Error(
-    `No valid JSON found after cleanup. Last error: ${(lastErr as Error)?.message ?? "unknown"}. Preview: ${preview}`,
+    `No valid JSON found after cleanup. Last error: ${(lastErr as Error)?.message ?? "unknown"}. Preview: ${buildErrorPreview(lastCandidate, lastErr)}`,
   );
+}
+
+/**
+ * Show ±100 chars around the byte offset reported by JSON.parse, with a
+ * `<<<HERE>>>` marker. Falls back to the leading 200 chars if the error
+ * message doesn't carry a position.
+ */
+function buildErrorPreview(text: string, err: unknown): string {
+  const msg = (err as Error)?.message ?? "";
+  const m = msg.match(/position\s+(\d+)/i);
+  if (!m) return text.slice(0, 200);
+  const pos = Number.parseInt(m[1], 10);
+  if (!Number.isFinite(pos)) return text.slice(0, 200);
+  const start = Math.max(0, pos - 100);
+  const end = Math.min(text.length, pos + 100);
+  const before = text.slice(start, pos);
+  const after = text.slice(pos, end);
+  return `(chars ${start}-${end} of ${text.length}) ${before}<<<HERE>>>${after}`;
 }
 
 function stripFencesAndChatter(text: string): string {
@@ -91,6 +116,46 @@ function stripControlChars(text: string): string {
 
 function fixInvalidEscapes(text: string): string {
   return text.replace(/\\([^"\\/bfnrtu])/g, "$1");
+}
+
+/**
+ * Replace "smart"/curly Unicode quotes with their ASCII equivalents.
+ * LLMs occasionally emit `"`/`"` (U+201C/U+201D) as JSON string delimiters,
+ * which JSON.parse rejects. Single curly quotes (U+2018/U+2019) don't break
+ * JSON delimiters but normalize them too for inside-string consistency.
+ */
+function normalizeSmartQuotes(text: string): string {
+  return text
+    .replace(/[“”„‟″‶]/g, '"')
+    .replace(/[‘’‚‛′‵]/g, "'");
+}
+
+/**
+ * Strip trailing commas before `}` or `]` (outside string literals).
+ * Common LLM output bug: `{"a":1,"b":2,}` or `[1,2,3,]` both fail JSON.parse.
+ */
+function stripTrailingCommas(text: string): string {
+  let out = "";
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escape) { out += ch; escape = false; continue; }
+      if (ch === "\\") { out += ch; escape = true; continue; }
+      if (ch === '"') inString = false;
+      out += ch;
+      continue;
+    }
+    if (ch === '"') { inString = true; out += ch; continue; }
+    if (ch === ",") {
+      let j = i + 1;
+      while (j < text.length && (text[j] === " " || text[j] === "\t" || text[j] === "\n" || text[j] === "\r")) j++;
+      if (text[j] === "}" || text[j] === "]") continue;
+    }
+    out += ch;
+  }
+  return out;
 }
 
 /**
