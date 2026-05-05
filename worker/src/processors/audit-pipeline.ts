@@ -644,15 +644,19 @@ async function persistFindings(
 
   // Wipe any pre-existing findings for this session — re-runs replace.
   // (Audit trail is append-only; this just keeps the live row set clean.)
+  // Throw on failure: a swallowed wipe combined with a successful insert
+  // chunk leaves the table populated with both runs' rows. Aborting the
+  // insert keeps us in a clean retry state.
   const { error: delErr } = await supabase
     .from("audit_findings")
     .delete()
     .eq("session_id", sessionId);
   if (delErr) {
-    log.warn("audit_pipeline.findings_wipe_failed", {
+    log.error("audit_pipeline.findings_wipe_failed", {
       sessionId,
       error: delErr.message,
     });
+    throw new Error(`audit_findings wipe failed for session ${sessionId}: ${delErr.message}`);
   }
 
   const rows = synthFindings.map((f, i) => ({
@@ -694,21 +698,18 @@ async function persistReport(
   sessionId: string,
   report: SynthesizedReport,
 ): Promise<void> {
-  const { data: prev, error: readErr } = await supabase
-    .from("audit_sessions")
-    .select("decision_meta")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (readErr) throw new Error(`pre-report meta read failed: ${readErr.message}`);
-  const meta = {
-    ...((prev?.decision_meta as Record<string, unknown> | null) ?? {}),
-    synthesized_report: report,
-    synthesized_at: new Date().toISOString(),
-  };
-  const { error } = await supabase
-    .from("audit_sessions")
-    .update({ decision_meta: meta })
-    .eq("id", sessionId);
+  // Atomic JSONB shallow merge via Postgres function (migration 060).
+  // The previous read-modify-write was vulnerable to lost-update races
+  // between two concurrent runs of the same job — both readers would see
+  // the same prior decision_meta and the second writer's update would
+  // clobber any field the first writer added concurrently.
+  const { error } = await supabase.rpc("audit_session_merge_decision_meta", {
+    p_session_id: sessionId,
+    p_merge: {
+      synthesized_report: report,
+      synthesized_at: new Date().toISOString(),
+    },
+  });
   if (error) throw new Error(`report persist failed: ${error.message}`);
 }
 
