@@ -34,7 +34,6 @@ import {
   ScrollText,
 } from "lucide-react";
 
-const SHOW_MARKETPLACE = process.env.NEXT_PUBLIC_ENABLE_MARKETPLACE === "true";
 const SHOW_PUBLICATIONS = process.env.NEXT_PUBLIC_ENABLE_PUBLICATIONS === "true";
 import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
@@ -318,20 +317,18 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           <ScrollText className="h-4 w-4" />
           <span>{locale === "zh" ? "决策审计" : "Decision Audit"}</span>
         </Link>
-        {SHOW_MARKETPLACE && (
-          <Link
-            href={`/${locale}/marketplace`}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-              pathname.includes("/marketplace")
-                ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] font-medium"
-                : "text-[color:var(--text-secondary)] hover:bg-[rgb(var(--bg-tertiary-rgb)/0.60)] hover:text-[color:var(--text-primary)]"
-            }`}
-          >
-            <Store className="h-4 w-4" />
-            <span>{locale === "zh" ? "人格市场" : "Marketplace"}</span>
-          </Link>
-        )}
+        <Link
+          href={`/${locale}/marketplace`}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            pathname.includes("/marketplace")
+              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] font-medium"
+              : "text-[color:var(--text-secondary)] hover:bg-[rgb(var(--bg-tertiary-rgb)/0.60)] hover:text-[color:var(--text-primary)]"
+          }`}
+        >
+          <Store className="h-4 w-4" />
+          <span>{locale === "zh" ? "人格市场" : "Marketplace"}</span>
+        </Link>
         <Link
           href={`/${locale}/personas`}
           onClick={() => setMobileOpen(false)}
