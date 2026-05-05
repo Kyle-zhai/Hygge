@@ -276,6 +276,48 @@ function normalizePersonaAnalysis(raw: unknown): { entries: PersonaAnalysisEntry
   };
 }
 
+function normalizeDimensionAnalysis(raw: unknown): DimensionAnalysis[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e): e is DimensionAnalysis => {
+    if (!e || typeof e !== "object") return false;
+    const r = e as Record<string, unknown>;
+    return typeof r.dimension === "string" && typeof r.analysis === "string";
+  });
+}
+
+function normalizeGoalAssessment(raw: unknown): GoalAssessmentEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e): e is GoalAssessmentEntry => {
+    if (!e || typeof e !== "object") return false;
+    const r = e as Record<string, unknown>;
+    return (
+      typeof r.goal === "string" &&
+      typeof r.achievable === "boolean" &&
+      typeof r.current_status === "string" &&
+      Array.isArray(r.gaps)
+    );
+  });
+}
+
+const VALID_PRIORITIES = new Set(["critical", "high", "medium", "low"]);
+const VALID_DIFFICULTIES = new Set(["easy", "medium", "hard"]);
+
+function normalizeActionItems(raw: unknown): ActionItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e): e is ActionItem => {
+    if (!e || typeof e !== "object") return false;
+    const r = e as Record<string, unknown>;
+    return (
+      typeof r.description === "string" &&
+      typeof r.expected_impact === "string" &&
+      typeof r.priority === "string" &&
+      VALID_PRIORITIES.has(r.priority) &&
+      typeof r.difficulty === "string" &&
+      VALID_DIFFICULTIES.has(r.difficulty)
+    );
+  });
+}
+
 export interface ReviewForSummary {
   persona_id: string;
   persona_name: string;
@@ -305,7 +347,7 @@ export async function generateTopicSummaryReport(
   return {
     overall_score: 0,
     persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
-    multi_dimensional_analysis: (parsed.multi_dimensional_analysis ?? []) as DimensionAnalysis[],
+    multi_dimensional_analysis: normalizeDimensionAnalysis(parsed.multi_dimensional_analysis),
     goal_assessment: [],
     if_not_feasible: feasibility.if_not_feasible,
     if_feasible: feasibility.if_feasible,
@@ -343,11 +385,11 @@ export async function generateSummaryReport(
   return {
     overall_score: typeof parsed.overall_score === "number" ? parsed.overall_score : 0,
     persona_analysis: normalizePersonaAnalysis(parsed.persona_analysis),
-    multi_dimensional_analysis: (parsed.multi_dimensional_analysis ?? []) as DimensionAnalysis[],
-    goal_assessment: (parsed.goal_assessment ?? []) as GoalAssessmentEntry[],
+    multi_dimensional_analysis: normalizeDimensionAnalysis(parsed.multi_dimensional_analysis),
+    goal_assessment: normalizeGoalAssessment(parsed.goal_assessment),
     if_not_feasible: feasibility.if_not_feasible,
     if_feasible: feasibility.if_feasible,
-    action_items: (parsed.action_items ?? []) as ActionItem[],
+    action_items: normalizeActionItems(parsed.action_items),
     market_readiness: parsed.market_readiness as MarketReadiness,
     readiness_label_en: typeof parsed.readiness_label_en === "string" ? parsed.readiness_label_en : undefined,
     readiness_label_zh: typeof parsed.readiness_label_zh === "string" ? parsed.readiness_label_zh : undefined,

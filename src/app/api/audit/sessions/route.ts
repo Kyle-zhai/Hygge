@@ -92,8 +92,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No subscription found" }, { status: 403 });
   }
 
+  // Fast-path 429 when quota is clearly exceeded — skips creating a session
+  // row that would just be rolled back. The atomic increment below is the
+  // authoritative gate; this check only avoids the round trip in the
+  // common over-quota case.
   if (!effective.skipQuota && effective.evaluationsUsed >= effective.evaluationsLimit) {
     return NextResponse.json({ error: "Monthly audit limit reached" }, { status: 429 });
+  }
+
+  // Atomic check-and-increment: closes the TOCTOU window where two
+  // concurrent POSTs both read evaluations_used < limit and both wrote
+  // used+1, double-spending one quota slot. The RPC returns success=false
+  // if quota is exhausted under row lock.
+  if (!effective.skipQuota) {
+    const { data: incrementRows, error: incrementErr } = await supabase.rpc(
+      "increment_evaluations_used",
+      { p_user_id: user.id },
+    );
+    if (incrementErr) {
+      console.error("audit/sessions quota increment failed", { error: incrementErr.message });
+      return NextResponse.json({ error: "Quota check failed. Please retry." }, { status: 500 });
+    }
+    const result = Array.isArray(incrementRows) ? incrementRows[0] : incrementRows;
+    if (!result?.success) {
+      return NextResponse.json({ error: "Monthly audit limit reached" }, { status: 429 });
+    }
   }
 
   const decisionHash = sha256Hex(decisionTextStr);
@@ -112,47 +135,46 @@ export async function POST(request: Request) {
     .single();
 
   if (sessionErr || !session) {
+    // Refund the quota we incremented above — the user's request didn't
+    // actually consume a session.
+    if (!effective.skipQuota) {
+      await supabase.rpc("decrement_evaluations_used", { p_user_id: user.id });
+    }
     return NextResponse.json(
       { error: sessionErr?.message ?? "Failed to create audit session" },
       { status: 500 }
     );
   }
 
-  if (!effective.skipQuota) {
-    await supabase
-      .from("subscriptions")
-      .update({ evaluations_used: effective.evaluationsUsed + 1 })
-      .eq("user_id", user.id);
-  }
-
   // Attach any pending uploads the browser created in audit_session_files
   // before submitting (browser uploads directly to Storage, mirroring the
   // /evaluate flow). We verify ownership and that the rows aren't already
-  // attached to a different session before claiming them. The
-  // select-then-update pattern surfaces stale or hijacked IDs as a clear
-  // error rather than silently dropping attachment context.
+  // attached to a different session before claiming them.
+  //
+  // Atomic single-statement UPDATE: the WHERE clause filters by user_id and
+  // session_id IS NULL in the same SQL as the SET, so there's no
+  // select-then-update race window. RETURNING id lets us see how many rows
+  // we actually claimed; mismatches against pendingFileIds are logged but
+  // don't block session creation (the IDs were likely stale or hijacked).
   if (pendingFileIds.length > 0) {
     const admin = createAdminClient();
-    const { data: pendingRows, error: pendingErr } = await admin
+    const { data: attached, error: attachErr } = await admin
       .from("audit_session_files")
-      .select("id, user_id, session_id")
-      .in("id", pendingFileIds);
-    if (pendingErr) {
-      console.error("audit/sessions pending-files lookup failed", {
-        error: pendingErr.message,
+      .update({ session_id: session.id, attached_at: new Date().toISOString() })
+      .in("id", pendingFileIds)
+      .eq("user_id", user.id)
+      .is("session_id", null)
+      .select("id");
+    if (attachErr) {
+      console.error("audit/sessions pending-files attach failed", {
+        error: attachErr.message,
       });
-    }
-    const validIds: string[] = [];
-    for (const row of pendingRows ?? []) {
-      if (row.user_id !== user.id) continue;
-      if (row.session_id && row.session_id !== session.id) continue;
-      validIds.push(row.id as string);
-    }
-    if (validIds.length > 0) {
-      await admin
-        .from("audit_session_files")
-        .update({ session_id: session.id, attached_at: new Date().toISOString() })
-        .in("id", validIds);
+    } else if ((attached?.length ?? 0) < pendingFileIds.length) {
+      console.warn("audit/sessions partial pending-files attach", {
+        sessionId: session.id,
+        requested: pendingFileIds.length,
+        attached: attached?.length ?? 0,
+      });
     }
   }
 
@@ -171,10 +193,9 @@ export async function POST(request: Request) {
     console.error("Failed to write opening audit_trail row, rolling back session:", trailErr);
     await supabase.from("audit_sessions").update({ status: "failed" }).eq("id", session.id);
     if (!effective.skipQuota) {
-      await supabase
-        .from("subscriptions")
-        .update({ evaluations_used: effective.evaluationsUsed })
-        .eq("user_id", user.id);
+      // Atomic decrement (not "set back to fetched value") so we don't
+      // clobber another concurrent increment from the same user.
+      await supabase.rpc("decrement_evaluations_used", { p_user_id: user.id });
     }
     return NextResponse.json(
       { error: "Failed to initialize audit trail. Please retry." },
@@ -198,10 +219,7 @@ export async function POST(request: Request) {
     console.error("Failed to enqueue audit, rolling back:", queueErr);
     await supabase.from("audit_sessions").update({ status: "failed" }).eq("id", session.id);
     if (!effective.skipQuota) {
-      await supabase
-        .from("subscriptions")
-        .update({ evaluations_used: effective.evaluationsUsed })
-        .eq("user_id", user.id);
+      await supabase.rpc("decrement_evaluations_used", { p_user_id: user.id });
     }
     return NextResponse.json(
       { error: "Audit service temporarily unavailable. Please retry." },

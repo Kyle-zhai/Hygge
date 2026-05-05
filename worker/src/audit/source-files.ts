@@ -284,7 +284,7 @@ function clipUtf8(s: string, maxBytes: number): string {
  * surface.
  */
 // eslint-disable-next-line no-control-regex
-const CONTROL_CHARS_RE = /[ -]/g;
+const CONTROL_CHARS_RE = /[\x00-\x1F\x7F]/g;
 
 function sanitizeMetadata(input: string, maxLen = 240): string {
   return input

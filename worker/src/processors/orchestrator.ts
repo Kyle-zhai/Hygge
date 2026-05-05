@@ -357,10 +357,14 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
       durationMs: Date.now() - reviewsStartedAt,
     });
 
-    // 6. Summary report, scenario sim, and opinion drift all depend on reviews
-    //    but are independent of each other — run them in parallel.
+    // 6. Summary report runs FIRST and alone. Scenario sim, opinion drift,
+    //    and debate are optional add-ons that attach to the summary; if we
+    //    ran them in parallel with summary, a summary failure would discard
+    //    their (expensive) results, and the BullMQ retry would re-spend all
+    //    those tokens. Serializing summary means a summary failure aborts
+    //    BEFORE we spend optional-task tokens.
     log.info("orchestrator.synthesis_start", { ...ctx });
-    const summaryTask = withTiming(
+    const summaryReport = await withTiming(
       mode === "topic" ? "orchestrator.topic_summary" : "orchestrator.summary",
       ctx,
       () =>
@@ -408,7 +412,7 @@ export async function processEvaluation(job: Job<EvaluationJobData>) {
         })
       : Promise.resolve(null);
 
-    const [summaryReport, simulation, drift, debate] = await Promise.all([summaryTask, scenarioTask, driftTask, debateTask]);
+    const [simulation, drift, debate] = await Promise.all([scenarioTask, driftTask, debateTask]);
     summaryReport.scenario_simulation = simulation;
     summaryReport.round_table_debate = debate;
     summaryReport.opinion_drift = drift && drift.length > 0 ? drift : null;

@@ -9,6 +9,7 @@ import {
   deriveInitialBeliefState,
 } from "../types/belief-state.js";
 import { robustJsonParse } from "../utils/json-parse.js";
+import { completeWithTruncationRetry } from "../utils/llm-helpers.js";
 import { supabase } from "../supabase.js";
 import { log } from "../utils/logger.js";
 import {
@@ -121,8 +122,24 @@ export async function runRoundTableDebate(
   ]);
 
   const { system: selSys, prompt: selPrompt } = buildSelectionPrompt(personas, reviews, project, replyLanguage);
-  const selResponse = await llm.complete({ system: selSys, prompt: selPrompt, maxTokens: 512, jsonMode: true });
-  const selection = robustJsonParse<Record<string, unknown>>(selResponse.text);
+  const selResponse = await completeWithTruncationRetry(
+    llm,
+    { system: selSys, prompt: selPrompt, jsonMode: true },
+    "debate.selection",
+    { base: 512, retry: 1024 },
+  );
+  let selection: Record<string, unknown>;
+  try {
+    selection = robustJsonParse<Record<string, unknown>>(selResponse.text);
+  } catch (e) {
+    log.warn("debate.selection_parse_failed", {
+      evaluationId,
+      error: e instanceof Error ? e.message : String(e),
+      preview: selResponse.text.slice(0, 200),
+    });
+    // Empty selection triggers the existing personas.slice(0, 4) fallback below.
+    selection = {};
+  }
 
   const rawIds: string[] = Array.isArray(selection.selected_persona_ids) ? (selection.selected_persona_ids as string[]) : [];
   let validIds = rawIds.filter((id) => personas.some((p) => p.id === id));
@@ -263,8 +280,29 @@ export async function runRoundTableDebate(
       tomStates,
       replyLanguage,
     );
-    const response = await llm.complete({ system, prompt, maxTokens: ROUND_MAX_TOKENS, jsonMode: true });
-    const parsed = robustJsonParse<Record<string, unknown>>(response.text);
+    let response;
+    let parsed: Record<string, unknown>;
+    try {
+      response = await completeWithTruncationRetry(
+        llm,
+        { system, prompt, jsonMode: true },
+        `debate.round_${upcomingRound}`,
+        { base: ROUND_MAX_TOKENS, retry: ROUND_MAX_TOKENS * 2 },
+      );
+      parsed = robustJsonParse<Record<string, unknown>>(response.text);
+    } catch (roundErr) {
+      // Truncation-after-retry or parse failure for this round. Stop the loop
+      // here and return what we have. The orchestrator's outer .catch would
+      // otherwise null out the entire debate, orphaning belief_states and
+      // argument_nodes already persisted from earlier rounds.
+      log.error("debate.round_failed_break_early", {
+        evaluationId,
+        round: upcomingRound,
+        completedRounds: rounds.length,
+        error: roundErr instanceof Error ? roundErr.message : String(roundErr),
+      });
+      break;
+    }
 
     const messages = Array.isArray(parsed.messages)
       ? (parsed.messages as Array<Record<string, unknown>>)
@@ -370,8 +408,25 @@ export async function runRoundTableDebate(
   }
 
   const { system: outSys, prompt: outPrompt } = buildOutcomePrompt(selectedPersonas, rawRounds, project, replyLanguage);
-  const outResponse = await llm.complete({ system: outSys, prompt: outPrompt, maxTokens: 1024, jsonMode: true });
-  const outcome = robustJsonParse<Record<string, unknown>>(outResponse.text);
+  let outcome: Record<string, unknown>;
+  try {
+    const outResponse = await completeWithTruncationRetry(
+      llm,
+      { system: outSys, prompt: outPrompt, jsonMode: true },
+      "debate.outcome",
+      { base: 1024, retry: 2048 },
+    );
+    outcome = robustJsonParse<Record<string, unknown>>(outResponse.text);
+  } catch (outErr) {
+    // Outcome-call failure shouldn't discard 3 rounds of belief-state writes.
+    // Degrade to an empty outcome — UI can still show the round transcript.
+    log.error("debate.outcome_failed_degrade", {
+      evaluationId,
+      completedRounds: rounds.length,
+      error: outErr instanceof Error ? outErr.message : String(outErr),
+    });
+    outcome = {};
+  }
 
   return {
     selected_persona_ids: validIds,

@@ -31,8 +31,11 @@ export async function runScenarioSimulation(
     { base: 4096, retry: 8192 },
   );
 
-  // Enforce initial_adoption stances from computed values (same thresholds as opinion-drift)
-  if (result.initial_adoption) {
+  // Enforce initial_adoption stances from computed values (same thresholds as opinion-drift).
+  // completeAndParseJson returns the typed shape, but the LLM can still emit
+  // a non-array under that key — guard with Array.isArray before .map/.filter
+  // so a malformed shape downgrades gracefully instead of crashing.
+  if (Array.isArray(result.initial_adoption)) {
     result.initial_adoption = result.initial_adoption.map((a) => ({
       ...a,
       stance: (computedStances[a.persona_id] ?? a.stance) as "positive" | "neutral" | "negative",
@@ -40,7 +43,12 @@ export async function runScenarioSimulation(
   }
 
   // Compute adoption_rate_shift from actual stance data instead of trusting LLM
-  if (result.initial_adoption?.length && result.final_adoption?.length) {
+  if (
+    Array.isArray(result.initial_adoption) &&
+    Array.isArray(result.final_adoption) &&
+    result.initial_adoption.length > 0 &&
+    result.final_adoption.length > 0
+  ) {
     const total = result.initial_adoption.length;
     const initialPositive = result.initial_adoption.filter((a) => a.stance === "positive").length;
     const finalPositive = result.final_adoption.filter((a) => a.stance === "positive").length;
