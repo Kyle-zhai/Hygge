@@ -6,7 +6,6 @@ import { LiveDemo } from "@/components/landing/live-demo";
 import { PersonaShowcase } from "@/components/landing/persona-showcase";
 import { FeaturesGrid } from "@/components/landing/features-grid";
 import { CtaSection } from "@/components/landing/cta-section";
-import { AuditMoatSection } from "@/components/landing/audit-moat-section";
 import {
   ProductShowcase,
   type ShowcaseCopy,
@@ -584,79 +583,6 @@ export default async function LandingPage() {
           viewAllHref={`/${locale}/auth/register`}
           personas={samplePersonas}
           hint={isZh ? "拖动旋转 · 悬停暂停 · 点击查看" : "Drag to spin · hover to pause · click to open"}
-        />
-
-        <AuditMoatSection
-          overline={isZh ? "决策审计" : "DECISION AUDIT"}
-          heading={
-            isZh
-              ? "把高风险决策,留下一份能签字的记录。"
-              : "Turn a high-stakes call into a signed, defensible record."
-          }
-          subtitle={
-            isZh
-              ? "Hygge 不只是讨论。每一次审计都会跑过对抗性红队、合规官与领域专家三层视角,产出哈希链可追溯、可双签、可归档的报告——拿去给法务、董事会、监管,都站得住。"
-              : "Hygge isn't just discussion. Every audit runs through an adversarial red team, a compliance officer, and domain experts — producing a hash-chained, dual-signable report you can put in front of legal, your board, or a regulator."
-          }
-          pillars={[
-            {
-              iconName: "ScrollText",
-              title: isZh ? "5 套合规模板" : "5 audit templates",
-              desc: isZh
-                ? "EU AI Act Art.14、招聘决策、AI 功能发布、产品 Pre-Mortem、战略 Pre-Mortem——开箱即用。"
-                : "EU AI Act Art.14, hiring decisions, AI feature release, product pre-mortem, strategy pre-mortem — ready out of the box.",
-            },
-            {
-              iconName: "ShieldCheck",
-              title: isZh ? "哈希链审计追踪" : "Hash-chain trail",
-              desc: isZh
-                ? "每一步操作 SHA-256 串联,数据库强制 insert-only。一行被改动,整条链就断。"
-                : "Every action SHA-256 chained. Insert-only at the database level. Tamper one row, the whole chain breaks.",
-            },
-            {
-              iconName: "FileSignature",
-              title: isZh ? "双签 & 留痕" : "Dual sign-off",
-              desc: isZh
-                ? "决策者 + 合规官分别电子签名,带 IP 哈希。每个发现都要一个明确处置——不能稀里糊涂结案。"
-                : "Decision owner and compliance signer both attest, with hashed IP. Every finding requires an explicit disposition — no quiet pass.",
-            },
-          ]}
-          templates={[
-            {
-              slug: "eu-aia-art14",
-              regulator: "EU AI Act",
-              title: isZh ? "EU AI Act 第14条 人工监督" : "EU AI Act Art.14 Oversight",
-              desc: isZh
-                ? "针对高风险 AI 部署,审计透明度、申诉机制和 human-in-the-loop 控制。"
-                : "Audits high-risk AI deployments against oversight, transparency, redress, and human-in-the-loop controls.",
-            },
-            {
-              slug: "hiring-decision-audit",
-              regulator: "EEOC · GDPR Art.22",
-              title: isZh ? "招聘 / 晋升 / 解雇审计" : "Hiring Decision Audit",
-              desc: isZh
-                ? "审查偏见、未来适配性、法律风险和背调缺口——招聘、晋升、PIP、裁员都适用。"
-                : "Bias, future-fit, legal exposure, reference-check gaps — for hires, promotions, PIPs, layoffs.",
-            },
-            {
-              slug: "ai-feature-release",
-              regulator: "Internal AI Risk",
-              title: isZh ? "AI 功能发布审计" : "AI Feature Release Audit",
-              desc: isZh
-                ? "上线前审视滥用面、数据漂移、监管触发点与人口学伤害。"
-                : "Before you ship: misuse surface, distribution shift, regulatory triggers, demographic harm.",
-            },
-            {
-              slug: "product-launch-premortem",
-              regulator: "Adversarial",
-              title: isZh ? "产品上线 Pre-Mortem" : "Product Launch Pre-Mortem",
-              desc: isZh
-                ? "对抗性红队挖出市场、技术、法律、竞争四类失败模式——发布前一周做一次。"
-                : "Adversarial red team surfaces market, technical, legal, and competitive failure modes a week before launch.",
-            },
-          ]}
-          ctaText={isZh ? "查看完整审计模板" : "See all audit templates"}
-          ctaHref={`/${locale}/auth/register?next=/audit/new`}
         />
 
         <FeaturesGrid

@@ -5,9 +5,6 @@ import { config } from "./config.js";
 import { processEvaluation } from "./processors/orchestrator.js";
 import { processPersonaGeneration } from "./processors/generate-persona.js";
 import { processDebateResponse } from "./processors/debate-response.js";
-import { processAuditJob } from "./processors/audit-council.js";
-import { processAuditScopingJob } from "./processors/audit-scoping.js";
-import { processAuditPipelineJob } from "./processors/audit-pipeline.js";
 import { processDecisionIntakeJob } from "./processors/decision-intake.js";
 import { processDecisionOrchestratorJob } from "./processors/decision-orchestrator.js";
 import { processDecisionMechanismJob } from "./processors/decision-mechanism.js";
@@ -51,39 +48,6 @@ const debateWorker = new Worker("debate-response", processDebateResponse, {
   concurrency: 3,
   drainDelay: 1000,
   stalledInterval: 600_000,
-});
-
-const auditWorker = new Worker("audit", processAuditJob, {
-  connection,
-  concurrency: Number(process.env.AUDIT_CONCURRENCY ?? 2),
-  drainDelay: 2000,
-  stalledInterval: 600_000,
-  lockDuration: 60_000,
-});
-
-// Conversational scoping (Layer 1a + Layer 1b). Lighter per-turn than the full
-// audit, so concurrency can be higher without saturating the LLM budget. Each
-// user "respond" call enqueues a fresh job; the processor itself short-circuits
-// on terminal/awaiting_user states, so re-enqueues are safe.
-const auditScopingWorker = new Worker("audit-scoping", processAuditScopingJob, {
-  connection,
-  concurrency: Number(process.env.AUDIT_SCOPING_CONCURRENCY ?? 4),
-  drainDelay: 1500,
-  stalledInterval: 600_000,
-  lockDuration: 60_000,
-});
-
-// Multi-agent audit kernel orchestrator (Layer 2 → 3 → [4] → 5).
-// Concurrency is intentionally low because each job fans out internally
-// (~24 LLM calls for a typical 8-task × 3-persona run). Lock duration is
-// extra-long because synthesis can take >60s on Pro-tier; we don't want a
-// stalled-job re-pickup mid-LLM-call.
-const auditPipelineWorker = new Worker("audit-pipeline", processAuditPipelineJob, {
-  connection,
-  concurrency: Number(process.env.AUDIT_PIPELINE_CONCURRENCY ?? 1),
-  drainDelay: 2000,
-  stalledInterval: 600_000,
-  lockDuration: 300_000,
 });
 
 // =====================================================================
@@ -254,76 +218,9 @@ function attachLogs(queue: string, worker: Worker) {
 attachLogs("evaluations", evaluationWorker);
 attachLogs("persona-generation", personaWorker);
 attachLogs("debate-response", debateWorker);
-attachLogs("audit", auditWorker);
-attachLogs("audit-scoping", auditScopingWorker);
-attachLogs("audit-pipeline", auditPipelineWorker);
 attachLogs("decision-intake", decisionIntakeWorker);
 attachLogs("decision-orchestrator", decisionOrchestratorWorker);
 attachLogs("decision-mechanism", decisionMechanismWorker);
-
-// Mark the audit session as failed when the job throws after retries are exhausted,
-// so the UI can stop showing the "running" spinner forever. The "failed" event
-// fires per attempt; only flip to failed on the final attempt so a transient
-// LLM blip during attempt #1 of N doesn't lock the session into a failed UI
-// state while later attempts are still pending.
-auditWorker.on("failed", (job, err) => {
-  const auditSessionId = job?.data?.auditSessionId as string | undefined;
-  if (!auditSessionId || !job) return;
-  const totalAttempts = job.opts.attempts ?? 1;
-  if (job.attemptsMade < totalAttempts) return;
-  void supabase
-    .from("audit_sessions")
-    .update({ status: "failed" })
-    .eq("id", auditSessionId)
-    .neq("status", "signed_off")
-    .then(({ error }) => {
-      if (error) log.error("audit.fail_status_update_failed", { auditSessionId, error: error.message });
-      else log.info("audit.marked_failed", { auditSessionId, error: err.message });
-    });
-});
-
-// Pipeline (Layers 2-5) terminal failure: flip audit_sessions.status to 'failed'
-// so the report UI can show a recoverable error instead of an indefinite spinner.
-// Skip if the session has already moved past pipeline (signed_off) so a stale
-// late-firing event can't undo a manual review.
-auditPipelineWorker.on("failed", (job, err) => {
-  const sessionId = job?.data?.sessionId as string | undefined;
-  if (!sessionId || !job) return;
-  const totalAttempts = job.opts.attempts ?? 1;
-  if (job.attemptsMade < totalAttempts) return;
-  void supabase
-    .from("audit_sessions")
-    .update({ status: "failed" })
-    .eq("id", sessionId)
-    .neq("status", "signed_off")
-    .then(({ error }) => {
-      if (error) log.error("audit_pipeline.fail_status_update_failed", { sessionId, error: error.message });
-      else log.info("audit_pipeline.marked_failed", { sessionId, error: err.message });
-    });
-});
-
-// Same logic for scoping: terminal failure flips audit_scoping_sessions.status
-// to 'failed' so the chat UI can render a recoverable error state instead of
-// an infinite spinner. We don't touch the parent audit_sessions row — the user
-// can retry by submitting a new answer or restart scoping cleanly.
-auditScopingWorker.on("failed", (job, err) => {
-  const scopingId = job?.data?.scopingId as string | undefined;
-  if (!scopingId || !job) return;
-  const totalAttempts = job.opts.attempts ?? 1;
-  if (job.attemptsMade < totalAttempts) return;
-  void supabase
-    .from("audit_scoping_sessions")
-    .update({
-      status: "failed",
-      error_message: err.message.slice(0, 2000),
-    })
-    .eq("id", scopingId)
-    .neq("status", "scope_locked")
-    .then(({ error }) => {
-      if (error) log.error("audit_scoping.fail_status_update_failed", { scopingId, error: error.message });
-      else log.info("audit_scoping.marked_failed", { scopingId, error: err.message });
-    });
-});
 
 const httpServer = startHttpServer();
 
@@ -333,9 +230,6 @@ async function shutdown(signal: string) {
     evaluationWorker.close(),
     personaWorker.close(),
     debateWorker.close(),
-    auditWorker.close(),
-    auditScopingWorker.close(),
-    auditPipelineWorker.close(),
     decisionIntakeWorker.close(),
     decisionOrchestratorWorker.close(),
     decisionMechanismWorker.close(),

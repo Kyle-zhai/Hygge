@@ -26,7 +26,6 @@ import {
   type DebateRoundForGraph,
 } from "./argument-graph.js";
 import type { ArgumentNode } from "../types/argument-graph.js";
-import { loadProceduralMemoryByPersona } from "./procedural-memory.js";
 import { parseToMEntries, persistToMState } from "./theory-of-mind.js";
 import type { ToMState } from "../types/theory-of-mind.js";
 import {
@@ -200,9 +199,12 @@ export async function runRoundTableDebate(
     return selectedPersonas.find((p) => p.id === id)?.identity?.name || id;
   };
 
-  const proceduralMemory = evaluationId
-    ? await loadProceduralMemoryByPersona(selectedPersonas.map((p) => p.id))
-    : undefined;
+  // Procedural memory was an audit-era concept (loaded persona-specific
+  // example utterances from a memory table) — removed during the 2026-05-06
+  // reverse pivot. The argument has been simplified to use only the live
+  // round transcript + reflections + ToM state.
+  const proceduralMemory = undefined;
+  void evaluationId; // keep param wiring; no longer drives procedural lookup
 
   // ToM state: per-observer snapshot of what they thought every OTHER persona
   // believed at the END of the previous round. Carried INTO the next round's

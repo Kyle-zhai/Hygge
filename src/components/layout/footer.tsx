@@ -10,8 +10,7 @@ export async function Footer() {
     {
       title: isZh ? "产品" : "Product",
       links: [
-        { href: `/${locale}/auth/register?next=/audit/new`, label: isZh ? "决策审计" : "Decision Audit" },
-        { href: `/${locale}/auth/register?next=/evaluate/new`, label: isZh ? "圆桌讨论" : "Round Table" },
+        { href: `/${locale}/auth/register?next=/decide/new`, label: isZh ? "决策分析" : "Decision Analysis" },
         { href: `/${locale}/auth/register?next=/debates`, label: isZh ? "辩论模式" : "Debate Mode" },
         { href: `/${locale}#pricing`, label: isZh ? "定价" : "Pricing" },
       ],
@@ -43,8 +42,8 @@ export async function Footer() {
             </p>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-[color:var(--text-tertiary)]">
               {isZh
-                ? "把高风险决策放上桌子,留下一份能签字的审计记录。"
-                : "Put high-stakes decisions on the table, walk away with a signed audit trail."}
+                ? "把决策放上桌子,让一群 agent 帮你深度剖析。"
+                : "Put your decisions on the table — a panel of agents helps you analyze them in depth."}
             </p>
           </div>
           {sections.map((section) => (
