@@ -29,6 +29,34 @@ export const personaQueue = new Queue("persona-generation", {
   },
 });
 
+// Decision flow queues. See spec
+// docs/superpowers/specs/2026-05-06-multi-agent-decision-tool-design.md §4.1.
+export const decisionIntakeQueue = new Queue("decision-intake", {
+  connection,
+  defaultJobOptions: {
+    removeOnComplete: { age: 3600, count: 100 },
+    removeOnFail: { age: 24 * 3600, count: 100 },
+  },
+});
+
+export const decisionOrchestratorQueue = new Queue("decision-orchestrator", {
+  connection,
+  defaultJobOptions: {
+    removeOnComplete: { age: 3600, count: 100 },
+    removeOnFail: { age: 24 * 3600, count: 100 },
+  },
+});
+
+export const decisionMechanismQueue = new Queue("decision-mechanism", {
+  connection,
+  defaultJobOptions: {
+    removeOnComplete: { age: 3600, count: 200 },
+    removeOnFail: { age: 24 * 3600, count: 200 },
+    attempts: 3,
+    backoff: { type: "exponential", delay: 5000 },
+  },
+});
+
 export function createWorker(
   processor: (job: import("bullmq").Job) => Promise<unknown>,
   concurrency = 1
