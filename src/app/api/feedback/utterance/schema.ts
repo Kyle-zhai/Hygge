@@ -26,6 +26,14 @@ export const PostBodySchema = z.discriminatedUnion("kind", [
     rating: Rating,
     comment: Comment,
   }),
+  z.object({
+    kind: z.literal("decision_mechanism"),
+    mechanismRunId: UuidLike,
+    utteranceIndex: z.number().int().min(0).max(500),
+    personaId: z.string().min(1).max(128),
+    rating: Rating,
+    comment: Comment,
+  }),
 ]);
 
 export const DeleteBodySchema = z.discriminatedUnion("kind", [
@@ -39,16 +47,25 @@ export const DeleteBodySchema = z.discriminatedUnion("kind", [
     kind: z.literal("one_v_one"),
     debateMessageId: UuidLike,
   }),
+  z.object({
+    kind: z.literal("decision_mechanism"),
+    mechanismRunId: UuidLike,
+    utteranceIndex: z.number().int().min(0).max(500),
+  }),
 ]);
 
 export const GetQuerySchema = z
   .object({
     evaluationId: UuidLike.optional(),
     debateId: UuidLike.optional(),
+    decisionBriefId: UuidLike.optional(),
   })
   .refine(
-    (q) => Boolean(q.evaluationId) !== Boolean(q.debateId),
-    { message: "exactly one of evaluationId or debateId is required" },
+    (q) => {
+      const present = [q.evaluationId, q.debateId, q.decisionBriefId].filter(Boolean).length;
+      return present === 1;
+    },
+    { message: "exactly one of evaluationId / debateId / decisionBriefId is required" },
   );
 
 export type PostBody = z.infer<typeof PostBodySchema>;

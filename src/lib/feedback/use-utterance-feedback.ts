@@ -64,24 +64,36 @@ export function useUtteranceFeedback({ address, personaId, initial }: Input) {
       const previous = { rating: state.rating, comment: state.comment };
       dispatch({ type: "vote_start", rating, comment });
       try {
-        const body =
-          address.kind === "round_table"
-            ? {
-                kind: "round_table" as const,
-                evaluationId: address.evaluationId,
-                roundNumber: address.roundNumber,
-                messageIndex: address.messageIndex,
-                personaId,
-                rating,
-                comment: comment || null,
-              }
-            : {
-                kind: "one_v_one" as const,
-                debateMessageId: address.debateMessageId,
-                personaId,
-                rating,
-                comment: comment || null,
-              };
+        const body = ((): Record<string, unknown> => {
+          if (address.kind === "round_table") {
+            return {
+              kind: "round_table" as const,
+              evaluationId: address.evaluationId,
+              roundNumber: address.roundNumber,
+              messageIndex: address.messageIndex,
+              personaId,
+              rating,
+              comment: comment || null,
+            };
+          }
+          if (address.kind === "one_v_one") {
+            return {
+              kind: "one_v_one" as const,
+              debateMessageId: address.debateMessageId,
+              personaId,
+              rating,
+              comment: comment || null,
+            };
+          }
+          return {
+            kind: "decision_mechanism" as const,
+            mechanismRunId: address.mechanismRunId,
+            utteranceIndex: address.utteranceIndex,
+            personaId,
+            rating,
+            comment: comment || null,
+          };
+        })();
         const res = await fetch("/api/feedback/utterance", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -102,18 +114,27 @@ export function useUtteranceFeedback({ address, personaId, initial }: Input) {
     const previous = { rating: state.rating, comment: state.comment };
     dispatch({ type: "unvote_start" });
     try {
-      const body =
-        address.kind === "round_table"
-          ? {
-              kind: "round_table" as const,
-              evaluationId: address.evaluationId,
-              roundNumber: address.roundNumber,
-              messageIndex: address.messageIndex,
-            }
-          : {
-              kind: "one_v_one" as const,
-              debateMessageId: address.debateMessageId,
-            };
+      const body = ((): Record<string, unknown> => {
+        if (address.kind === "round_table") {
+          return {
+            kind: "round_table" as const,
+            evaluationId: address.evaluationId,
+            roundNumber: address.roundNumber,
+            messageIndex: address.messageIndex,
+          };
+        }
+        if (address.kind === "one_v_one") {
+          return {
+            kind: "one_v_one" as const,
+            debateMessageId: address.debateMessageId,
+          };
+        }
+        return {
+          kind: "decision_mechanism" as const,
+          mechanismRunId: address.mechanismRunId,
+          utteranceIndex: address.utteranceIndex,
+        };
+      })();
       const res = await fetch("/api/feedback/utterance", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },

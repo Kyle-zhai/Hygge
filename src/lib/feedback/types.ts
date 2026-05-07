@@ -12,6 +12,11 @@ export type UtteranceAddress =
   | {
       kind: "one_v_one";
       debateMessageId: string;
+    }
+  | {
+      kind: "decision_mechanism";
+      mechanismRunId: string;
+      utteranceIndex: number; // 0-based, position within raw_transcript[]
     };
 
 export interface FeedbackVote {

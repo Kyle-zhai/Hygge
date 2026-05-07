@@ -73,3 +73,11 @@ docs/
 # worker dist
 worker/dist/
 .gstack/
+
+# investor / pitch docs — local only, never commit
+INVESTOR-MEMO.*
+INVESTOR-PITCH*.md
+PITCH_DECK*
+Intro.docx
+项目书.pdf
+direction.md
