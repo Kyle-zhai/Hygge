@@ -84,6 +84,34 @@ export async function POST(
     );
   }
 
+  // Validate user_option payloads against the most recent agent prompt's
+  // option set. Without this check, a client could POST a synthetic
+  // user_option with content like "drop_persona_review" and the intake
+  // processor would dutifully drop a mechanism the agent never offered.
+  if (body.kind === "user_option") {
+    const { data: lastAgent } = await supabase
+      .from("decision_messages")
+      .select("kind, options")
+      .eq("session_id", sessionId)
+      .in("kind", ["agent_question", "agent_confirmation"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!lastAgent) {
+      return NextResponse.json(
+        { error: "no agent prompt is awaiting an answer" },
+        { status: 409 },
+      );
+    }
+    const opts = (lastAgent.options ?? []) as Array<{ id: string }>;
+    if (!opts.some((o) => o.id === content)) {
+      return NextResponse.json(
+        { error: `option id "${content}" is not in the latest prompt` },
+        { status: 400 },
+      );
+    }
+  }
+
   const { data: msg, error } = await supabase
     .from("decision_messages")
     .insert({

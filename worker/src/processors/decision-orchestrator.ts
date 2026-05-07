@@ -82,18 +82,21 @@ async function orchestrateBrief(job: Job<OrchestrateJobData>) {
 
   for (const kind of toCreate) {
     const args = brief.mechanisms.find((m) => m.kind === kind)?.args ?? {};
+    // Upsert by (brief_id, kind) — unique index from migration 064 makes
+    // this safe under concurrent orchestrate retries. If a row exists we
+    // pick it up here without re-creating; the existing row's queued job
+    // (if any) will run normally.
     const { data: row, error } = await supabase
       .from("decision_mechanism_runs")
-      .insert({
-        brief_id: briefId,
-        kind,
-        status: "queued",
-        args,
-      })
-      .select("id")
+      .upsert(
+        { brief_id: briefId, kind, status: "queued", args },
+        { onConflict: "brief_id,kind", ignoreDuplicates: false },
+      )
+      .select("id, status")
       .single();
-    if (error) throw new Error(`mechanism_run insert failed: ${error.message}`);
+    if (error) throw new Error(`mechanism_run upsert failed: ${error.message}`);
 
+    // Job uniqueness is keyed on the run id so a re-enqueue collapses.
     await decisionMechanismQueue.add(
       kind,
       { briefId, runId: row.id, kind },
@@ -127,6 +130,8 @@ async function synthesizerTick(job: Job<SynthTickJobData>) {
   const runs = await fetchMechanismRuns(briefId);
 
   // Stage-2 dispatch: persona_review just finished, kick off cross_challenge.
+  // Upsert via the unique (brief_id, kind) index from migration 064 — a
+  // duplicate synth-tick can't double-enqueue.
   const personaReview = runs.find((r) => r.kind === "persona_review");
   if (
     personaReview?.status === "completed" &&
@@ -136,12 +141,10 @@ async function synthesizerTick(job: Job<SynthTickJobData>) {
     const args = brief.mechanisms.find((m) => m.kind === "cross_challenge")?.args ?? {};
     const { data: row, error } = await supabase
       .from("decision_mechanism_runs")
-      .insert({
-        brief_id: briefId,
-        kind: "cross_challenge",
-        status: "queued",
-        args,
-      })
+      .upsert(
+        { brief_id: briefId, kind: "cross_challenge", status: "queued", args },
+        { onConflict: "brief_id,kind", ignoreDuplicates: false },
+      )
       .select("id")
       .single();
     if (!error && row) {
@@ -200,11 +203,23 @@ async function markBriefComplete(
   status: "completed" | "partially_completed" | "failed",
   prevVersion: number,
 ): Promise<void> {
-  const { error } = await supabase
+  // Atomic transition guard: only fire when the brief is still 'finalized'
+  // and the version matches what we read. A retried synth-tick that fires
+  // after another tick already completed the brief gets 0 rows back and
+  // returns early — no duplicate artifact message, no version bump.
+  const { data: updated, error } = await supabase
     .from("decision_briefs")
     .update({ status, version: prevVersion + 1 })
-    .eq("id", briefId);
+    .eq("id", briefId)
+    .eq("status", "finalized")
+    .eq("version", prevVersion)
+    .select("session_id")
+    .maybeSingle();
   if (error) throw new Error(`brief mark complete failed: ${error.message}`);
+  if (!updated) {
+    log.info("decision_orchestrator.brief_already_terminal", { briefId, prevVersion });
+    return;
+  }
 
   // Emit the agent_artifact message and clear ephemeral thinking bubbles.
   const { error: delErr } = await supabase
@@ -216,15 +231,9 @@ async function markBriefComplete(
     log.warn("decision_orchestrator.ephemeral_cleanup_failed", { briefId, error: delErr.message });
   }
 
-  // Look up session for the artifact insertion.
-  const { data: brief } = await supabase
-    .from("decision_briefs")
-    .select("session_id")
-    .eq("id", briefId)
-    .maybeSingle();
-  if (brief?.session_id) {
+  if (updated.session_id) {
     await supabase.from("decision_messages").insert({
-      session_id: brief.session_id,
+      session_id: updated.session_id,
       kind: "agent_artifact",
       content: null,
       brief_id: briefId,
@@ -232,7 +241,7 @@ async function markBriefComplete(
     await supabase
       .from("decision_sessions")
       .update({ last_msg_at: new Date().toISOString() })
-      .eq("id", brief.session_id);
+      .eq("id", updated.session_id);
   }
 }
 

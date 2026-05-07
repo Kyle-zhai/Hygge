@@ -263,10 +263,15 @@ async function handleConfirmationReply(
   const brief = await fetchBrief(briefId);
   if (!brief) throw new Error(`brief ${briefId} not found`);
 
-  // Decide what the user said.
+  // Decide what the user said. Confirmation seal MUST come from a button
+  // click (user_option with id="start"). Free-text replies are NOT
+  // accepted as confirmations — earlier versions tried a regex match on
+  // the first token but it false-positived on phrases like "running into
+  // issues..." or "starting to think this through" and silently kicked
+  // off the analysis.
   const optionId = reply.kind === "user_option" ? optionIdFromReply(reply) : null;
 
-  if (optionId === "start" || (reply.kind === "user_text" && /^(start|开始|确认|run)\b/i.test(reply.content ?? ""))) {
+  if (optionId === "start") {
     await sealBriefAndEnqueueOrchestrator(brief, "all_required_filled", ctx);
     return;
   }
@@ -431,6 +436,29 @@ async function sealBriefAndEnqueueOrchestrator(
   sealReason: SealedBy,
   ctx: Record<string, unknown>,
 ): Promise<void> {
+  // A brief that seals with an empty persona pool would feed N mechanism
+  // jobs that each call the LLM with personas=[] and predictably produce
+  // empty findings — a "completed" but useless artifact. This usually
+  // means persona selection hit the regex fallback during an LLM outage.
+  // Surface the failure to the user instead of silently shipping garbage.
+  if (!brief.persona_ids || brief.persona_ids.length === 0) {
+    log.warn("decision_intake.seal_blocked_empty_personas", { ...ctx, briefId: brief.id });
+    await supabase
+      .from("decision_briefs")
+      .update({ status: "failed", finalized_at: new Date().toISOString(), sealed_by: sealReason })
+      .eq("id", brief.id)
+      .eq("status", "draft");
+    await insertMessage({
+      session_id: brief.session_id,
+      kind: "system",
+      content:
+        "我没能选到合适的 persona 来分析这个决策(LLM 暂时不可用)。请稍后重试或换个问题描述。",
+      brief_id: brief.id,
+    });
+    await touchSession(brief.session_id);
+    return;
+  }
+
   const { error } = await supabase
     .from("decision_briefs")
     .update({

@@ -118,6 +118,7 @@ export async function POST(
       session_id: parent.session_id,
       kind: "user_text",
       content: delta.note.trim(),
+      brief_id: child.id,
       is_ephemeral: false,
     });
   }

@@ -41,7 +41,12 @@ export async function processDecisionMechanismJob(
   const ctx = { briefId, runId, kind, jobId: job.id };
   log.info("decision_mechanism.start", ctx);
 
-  // Mark running.
+  // Mark running. The status guard prevents a stale BullMQ retry from
+  // resurrecting a row that was previously marked 'completed' by a
+  // concurrent attempt — under retry-on-failure we may legitimately see
+  // 'failed' (set by the prior attempt's catch) or 'queued' (initial
+  // dispatch); both should transition cleanly to 'running'. A 'completed'
+  // row stays put.
   await supabase
     .from("decision_mechanism_runs")
     .update({
@@ -49,7 +54,8 @@ export async function processDecisionMechanismJob(
       started_at: new Date().toISOString(),
       attempts: (job.attemptsMade ?? 0) + 1,
     })
-    .eq("id", runId);
+    .eq("id", runId)
+    .in("status", ["queued", "failed", "running"]);
 
   const startMs = Date.now();
 
@@ -171,6 +177,10 @@ async function fetchPersonasByIds(ids: string[]): Promise<Persona[]> {
   return (data ?? []) as Persona[];
 }
 
+// Hard cap on findings per mechanism — guards against an LLM that
+// hallucinates dozens of low-quality bullets and floods the artifact view.
+const MAX_FINDINGS_PER_MECHANISM = 30;
+
 function sanitizeFindings(
   raw: unknown,
   validPersonaIds: string[],
@@ -178,6 +188,7 @@ function sanitizeFindings(
   if (!Array.isArray(raw)) return [];
   const validSet = new Set(validPersonaIds);
   return raw
+    .slice(0, MAX_FINDINGS_PER_MECHANISM)
     .filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
     .map((f) => {
       const headline = typeof f.headline === "string" ? f.headline.slice(0, 200) : "";
