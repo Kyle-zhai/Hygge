@@ -306,16 +306,16 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           <span>{locale === "zh" ? "辩论" : "Debate"}</span>
         </Link>
         <Link
-          href={`/${locale}/audit`}
+          href={`/${locale}/decide`}
           onClick={() => setMobileOpen(false)}
           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            pathname.includes("/audit")
+            pathname.includes("/decide")
               ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] font-medium"
               : "text-[color:var(--text-secondary)] hover:bg-[rgb(var(--bg-tertiary-rgb)/0.60)] hover:text-[color:var(--text-primary)]"
           }`}
         >
           <ScrollText className="h-4 w-4" />
-          <span>{locale === "zh" ? "决策审计" : "Decision Audit"}</span>
+          <span>{locale === "zh" ? "决策分析" : "Decisions"}</span>
         </Link>
         <Link
           href={`/${locale}/marketplace`}

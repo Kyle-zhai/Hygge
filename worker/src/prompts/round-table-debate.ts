@@ -2,7 +2,6 @@ import type { Persona } from "../types/persona.js";
 import type { EvaluationScores, ProjectParsedData } from "../types/evaluation.js";
 import type { BeliefState } from "../types/belief-state.js";
 import type { ToMState } from "../types/theory-of-mind.js";
-import { formatProceduralExamples, type ProceduralMemoryByPersona } from "../processors/procedural-memory.js";
 import { buildPriorToMBlock, buildToMSchemaField } from "../processors/theory-of-mind.js";
 import { buildMoveSchemaField } from "../processors/rhetorical-moves.js";
 import { replyLanguageDirective, type ReplyLanguage } from "../processors/language-detect.js";
@@ -101,7 +100,10 @@ export function buildDebateRoundPrompt(
   rawInput: string,
   beliefStates?: Map<string, BeliefState>,
   reflectionLines?: string[],
-  proceduralMemory?: ProceduralMemoryByPersona,
+  // Procedural memory was an audit-era feature, removed in the 2026-05-06
+  // reverse pivot. Argument retained as `undefined`-only for callsite
+  // backward compatibility — drop it on the next refactor pass.
+  proceduralMemory?: undefined,
   tomStates?: Map<string, ToMState>,
   replyLanguage: ReplyLanguage = "en",
 ): { system: string; prompt: string } {
@@ -116,9 +118,8 @@ export function buildDebateRoundPrompt(
     const strengths = review?.strengths?.length ? review.strengths.slice(0, 3).join("; ") : "(none noted)";
     const weaknesses = review?.weaknesses?.length ? review.weaknesses.slice(0, 3).join("; ") : "(none noted)";
     const beliefLine = buildBeliefStateLine(beliefStates?.get(p.id));
-    const memory = proceduralMemory?.byPersonaId.get(p.id);
-    const memoryText = memory ? formatProceduralExamples(memory) : "";
-    const memoryBlock = memoryText ? `\n${memoryText}` : "";
+    void proceduralMemory; // removed in 2026-05-06 reverse pivot
+    const memoryBlock = "";
     const priorToM = tomStates?.get(p.id);
     const tomBlockText = priorToM
       ? buildPriorToMBlock(p.id, priorToM, personaNameOf, latestPositionByPersona)
