@@ -45,19 +45,34 @@ export default function MechanismRunPage({
   const locale = useLocale();
   const labels = locale === "zh" ? MECHANISM_LABELS_ZH : MECHANISM_LABELS_EN;
   const [run, setRun] = useState<MechanismRun | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/decisions/mechanism-runs/${runId}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`mechanism-run fetch ${r.status}`);
+        return r.json();
+      })
       .then((data: { run: MechanismRun }) => {
         if (!cancelled) setRun(data.run);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setLoadError(err instanceof Error ? err.message : "Failed to load");
       });
     return () => {
       cancelled = true;
     };
   }, [runId]);
 
+  if (loadError) {
+    return (
+      <div className="container max-w-4xl py-10">
+        <p className="text-sm text-destructive">{loadError}</p>
+      </div>
+    );
+  }
   if (!run) {
     return (
       <div className="container max-w-4xl py-10">

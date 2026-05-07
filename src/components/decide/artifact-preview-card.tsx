@@ -37,14 +37,26 @@ export function ArtifactPreviewCard({ sessionId, briefId }: Props) {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch(`/api/decisions/briefs/${briefId}`).then((r) => r.json()),
-      fetch(`/api/decisions/briefs/${briefId}/findings`).then((r) => r.json()),
-    ]).then(([b, f]: [BriefResponse, FindingsResponse]) => {
-      if (cancelled) return;
-      setBrief(b.brief);
-      setFindings(f.findings ?? []);
-      setRuns(f.mechanism_runs ?? []);
-    });
+      fetch(`/api/decisions/briefs/${briefId}`).then((r) => {
+        if (!r.ok) throw new Error(`brief preview ${r.status}`);
+        return r.json();
+      }),
+      fetch(`/api/decisions/briefs/${briefId}/findings`).then((r) => {
+        if (!r.ok) throw new Error(`findings preview ${r.status}`);
+        return r.json();
+      }),
+    ])
+      .then(([b, f]: [BriefResponse, FindingsResponse]) => {
+        if (cancelled) return;
+        setBrief(b.brief);
+        setFindings(f.findings ?? []);
+        setRuns(f.mechanism_runs ?? []);
+      })
+      .catch(() => {
+        // Preview card stays in skeleton state if fetch fails — clicking
+        // the card still routes to the full artifact page where errors
+        // are surfaced explicitly.
+      });
     return () => {
       cancelled = true;
     };

@@ -31,10 +31,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Data flywheel — debate feedback
 
-Every persona utterance in both round-table and 1v1 debates can receive a 👍/👎 + optional 1-line comment from the user who owns the evaluation. Votes are stored in `public.persona_utterance_feedback` keyed by either:
+Every persona utterance — across round-table debates, 1v1 debates, and decision-flow mechanism transcripts — can receive a 👍/👎 + optional 1-line comment from the user who owns the conversation. Votes are stored in `public.persona_utterance_feedback` keyed by one of:
 
 - Round-table: `(user_id, evaluation_id, round_number, message_index)`
 - 1v1: `(user_id, debate_message_id)`
+- Decision mechanism: `(user_id, decision_mechanism_run_id, utterance_index)` (added 2026-05-06 with the multi-agent decision flow)
 
 This data feeds Phase 3 of the debate-realism roadmap (`docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md`) — persona-specific DPO fine-tunes once we have ~5k labels per archetype.
 

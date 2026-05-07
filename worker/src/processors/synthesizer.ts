@@ -57,6 +57,13 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
   const { briefId, brief, runs, finalPass } = input;
   const ctx = { briefId, finalPass };
 
+  // Defense-in-depth: re-validate cited_persona_ids against the brief's
+  // persona_ids on the synthesizer write path. The mechanism processor
+  // already filters at insert time, but a stale or hand-edited mechanism
+  // run row (e.g., re-pass after a partial failure) shouldn't be able to
+  // smuggle persona ids that aren't part of this brief into findings.
+  const validPersonaIds = new Set(brief.persona_ids);
+
   // Pull per-mechanism bullet drafts out of completed runs.
   const allDrafts: Array<{
     runId: string;
@@ -74,6 +81,9 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
     const output = run.raw_output as MechanismOutput | null;
     if (!output || !Array.isArray(output.findings)) continue;
     output.findings.forEach((f, idx) => {
+      const sanitizedCitedIds = Array.isArray(f.cited_persona_ids)
+        ? f.cited_persona_ids.filter((id) => validPersonaIds.has(id))
+        : [];
       allDrafts.push({
         runId: run.id,
         kind: run.kind,
@@ -82,7 +92,7 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
         severity: f.severity,
         confidence: f.confidence,
         detail_summary: f.detail_summary,
-        cited_persona_ids: f.cited_persona_ids,
+        cited_persona_ids: sanitizedCitedIds,
       });
     });
   }
@@ -191,8 +201,10 @@ async function detectAndPersistConflicts(
   }
 
   log.info("synthesizer.conflicts_persisted", { ...ctx, conflictCount: conflicts.length });
-  // Mark the reflection_ranker run completed if we just created it as the
-  // conflict carrier.
+  // Mark the synthetic conflict-carrier run completed. Guarded by the
+  // synthetic flag so a real reflection_ranker run (none routed today,
+  // but the kind is in the enum) is never accidentally closed by the
+  // synthesizer.
   await supabase
     .from("decision_mechanism_runs")
     .update({
@@ -200,17 +212,42 @@ async function detectAndPersistConflicts(
       completed_at: new Date().toISOString(),
     })
     .eq("id", reflectionRunId)
+    .filter("args->>synthetic", "eq", "true")
     .neq("status", "completed");
 }
 
+// Looks up (or creates) a synthetic reflection_ranker run that exists
+// solely to anchor conflict_warning findings (decision_findings.brief_id
+// must point at a real mechanism_run row). The synthetic flag in args
+// distinguishes this from a real reflection_ranker mechanism run, so a
+// future migration could legitimately route reflection_ranker as a real
+// stage-2 mechanism without the synthesizer clobbering its raw_output.
 async function ensureConflictRun(briefId: string): Promise<string> {
-  const existing = await supabase
+  // Prefer a previously-created synthetic carrier row.
+  const existingSynthetic = await supabase
+    .from("decision_mechanism_runs")
+    .select("id, args")
+    .eq("brief_id", briefId)
+    .eq("kind", "reflection_ranker")
+    .filter("args->>synthetic", "eq", "true")
+    .maybeSingle();
+  if (existingSynthetic.data) return existingSynthetic.data.id as string;
+
+  // Upsert via the (brief_id, kind) unique index from migration 064. If a
+  // real reflection_ranker run already exists for this brief, we cannot
+  // safely repurpose it — abort and let the conflict findings be skipped
+  // for this brief (the spec §7.4 fallback).
+  const { data: real } = await supabase
     .from("decision_mechanism_runs")
     .select("id")
     .eq("brief_id", briefId)
     .eq("kind", "reflection_ranker")
     .maybeSingle();
-  if (existing.data) return existing.data.id as string;
+  if (real) {
+    throw new Error(
+      `reflection_ranker run already exists for brief ${briefId} but is not a synthetic carrier — refusing to clobber`,
+    );
+  }
 
   const { data, error } = await supabase
     .from("decision_mechanism_runs")
@@ -218,7 +255,7 @@ async function ensureConflictRun(briefId: string): Promise<string> {
       brief_id: briefId,
       kind: "reflection_ranker",
       status: "running",
-      args: {},
+      args: { synthetic: true },
       started_at: new Date().toISOString(),
     })
     .select("id")

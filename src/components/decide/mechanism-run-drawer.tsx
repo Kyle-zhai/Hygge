@@ -63,9 +63,15 @@ export function MechanismRunDrawer({ open, onOpenChange, runId }: Props) {
     if (!runId || !open) return;
     let cancelled = false;
     fetch(`/api/decisions/mechanism-runs/${runId}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`mechanism-run fetch ${r.status}`);
+        return r.json();
+      })
       .then((data: { run: MechanismRunPayload }) => {
         if (!cancelled) setRun(data.run);
+      })
+      .catch(() => {
+        // Leave run=null; the parent will render a "not loaded" state.
       });
     return () => {
       cancelled = true;

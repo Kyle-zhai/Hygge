@@ -36,27 +36,41 @@ export default function ArtifactViewPage({
   const [findings, setFindings] = useState<Finding[]>([]);
   const [runs, setRuns] = useState<MechanismRunSummary[]>([]);
   const [rerunPending, setRerunPending] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Initial load + Realtime subscription on findings.
+  // Initial load + Realtime subscription on findings. The .catch is what
+  // keeps the page recoverable when the API returns 401/403/500 — without
+  // it, brief stays null forever and the loading skeleton is permanent.
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch(`/api/decisions/briefs/${briefId}`).then((r) => r.json()),
-      fetch(`/api/decisions/briefs/${briefId}/findings`).then((r) => r.json()),
-    ]).then(
-      ([
-        b,
-        f,
-      ]: [
-        { brief: DecisionBriefSummary },
-        { findings: Finding[]; mechanism_runs: MechanismRunSummary[] },
-      ]) => {
+      fetch(`/api/decisions/briefs/${briefId}`).then((r) => {
+        if (!r.ok) throw new Error(`brief fetch ${r.status}`);
+        return r.json();
+      }),
+      fetch(`/api/decisions/briefs/${briefId}/findings`).then((r) => {
+        if (!r.ok) throw new Error(`findings fetch ${r.status}`);
+        return r.json();
+      }),
+    ])
+      .then(
+        ([
+          b,
+          f,
+        ]: [
+          { brief: DecisionBriefSummary },
+          { findings: Finding[]; mechanism_runs: MechanismRunSummary[] },
+        ]) => {
+          if (cancelled) return;
+          setBrief(b.brief);
+          setFindings(f.findings ?? []);
+          setRuns(f.mechanism_runs ?? []);
+        },
+      )
+      .catch((err: unknown) => {
         if (cancelled) return;
-        setBrief(b.brief);
-        setFindings(f.findings ?? []);
-        setRuns(f.mechanism_runs ?? []);
-      },
-    );
+        setLoadError(err instanceof Error ? err.message : "Failed to load report");
+      });
 
     const supabase = createClient();
     const channel = supabase
@@ -93,6 +107,13 @@ export default function ArtifactViewPage({
     };
   }, [briefId]);
 
+  if (loadError) {
+    return (
+      <div className="container max-w-4xl py-10">
+        <p className="text-sm text-destructive">{loadError}</p>
+      </div>
+    );
+  }
   if (!brief) {
     return (
       <div className="container max-w-4xl py-10">
