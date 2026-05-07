@@ -8,6 +8,9 @@ import { processDebateResponse } from "./processors/debate-response.js";
 import { processAuditJob } from "./processors/audit-council.js";
 import { processAuditScopingJob } from "./processors/audit-scoping.js";
 import { processAuditPipelineJob } from "./processors/audit-pipeline.js";
+import { processDecisionIntakeJob } from "./processors/decision-intake.js";
+import { processDecisionOrchestratorJob } from "./processors/decision-orchestrator.js";
+import { processDecisionMechanismJob } from "./processors/decision-mechanism.js";
 import { startHttpServer } from "./http-server.js";
 import { supabase } from "./supabase.js";
 import { log } from "./utils/logger.js";
@@ -82,6 +85,52 @@ const auditPipelineWorker = new Worker("audit-pipeline", processAuditPipelineJob
   stalledInterval: 600_000,
   lockDuration: 300_000,
 });
+
+// =====================================================================
+// Decision flow workers (multi-agent decision analysis tool).
+// Spec: docs/superpowers/specs/2026-05-06-multi-agent-decision-tool-design.md
+// =====================================================================
+
+// Intake: lightweight conversational state machine. Re-enqueued after every
+// user turn; processor short-circuits if the latest message is from the
+// agent (awaiting user). Concurrency higher than mechanism because each turn
+// is one extraction LLM call + maybe one question LLM call.
+const decisionIntakeWorker = new Worker("decision-intake", processDecisionIntakeJob, {
+  connection,
+  concurrency: Number(process.env.DECISION_INTAKE_CONCURRENCY ?? 4),
+  drainDelay: 1500,
+  stalledInterval: 600_000,
+  lockDuration: 60_000,
+});
+
+// Orchestrator: handles "orchestrate" (Brief → mechanism dispatch) and
+// "synth-tick" (debounced synthesizer). Concurrency low — bursts of
+// synth-ticks are deduped by jobId.
+const decisionOrchestratorWorker = new Worker(
+  "decision-orchestrator",
+  processDecisionOrchestratorJob,
+  {
+    connection,
+    concurrency: Number(process.env.DECISION_ORCHESTRATOR_CONCURRENCY ?? 2),
+    drainDelay: 1500,
+    stalledInterval: 600_000,
+    lockDuration: 120_000,
+  },
+);
+
+// Mechanism: each job is one LLM call producing structured findings.
+// Concurrency moderate to keep LLM provider rate-limits happy across users.
+const decisionMechanismWorker = new Worker(
+  "decision-mechanism",
+  processDecisionMechanismJob,
+  {
+    connection,
+    concurrency: Number(process.env.DECISION_MECHANISM_CONCURRENCY ?? 4),
+    drainDelay: 1500,
+    stalledInterval: 600_000,
+    lockDuration: 120_000,
+  },
+);
 
 function jobDuration(job: { processedOn?: number; finishedOn?: number }): number | undefined {
   if (!job.processedOn) return undefined;
@@ -208,6 +257,9 @@ attachLogs("debate-response", debateWorker);
 attachLogs("audit", auditWorker);
 attachLogs("audit-scoping", auditScopingWorker);
 attachLogs("audit-pipeline", auditPipelineWorker);
+attachLogs("decision-intake", decisionIntakeWorker);
+attachLogs("decision-orchestrator", decisionOrchestratorWorker);
+attachLogs("decision-mechanism", decisionMechanismWorker);
 
 // Mark the audit session as failed when the job throws after retries are exhausted,
 // so the UI can stop showing the "running" spinner forever. The "failed" event
@@ -284,6 +336,9 @@ async function shutdown(signal: string) {
     auditWorker.close(),
     auditScopingWorker.close(),
     auditPipelineWorker.close(),
+    decisionIntakeWorker.close(),
+    decisionOrchestratorWorker.close(),
+    decisionMechanismWorker.close(),
     new Promise<void>((resolve) => httpServer.close(() => resolve())),
   ]);
   process.exit(0);
