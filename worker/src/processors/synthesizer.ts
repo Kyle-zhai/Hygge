@@ -74,6 +74,7 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
     confidence: number;
     detail_summary: string;
     cited_persona_ids: string[];
+    evidence: unknown;
   }> = [];
 
   for (const run of runs) {
@@ -93,6 +94,7 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
         confidence: f.confidence,
         detail_summary: f.detail_summary,
         cited_persona_ids: sanitizedCitedIds,
+        evidence: f.evidence ?? null,
       });
     });
   }
@@ -110,6 +112,7 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
         confidence: d.confidence,
         detail_summary: d.detail_summary,
         cited_persona_ids: d.cited_persona_ids,
+        evidence: d.evidence,
         position: d.draftIndex,
         content_hash: hash,
       },

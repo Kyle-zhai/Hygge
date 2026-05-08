@@ -172,16 +172,98 @@ export interface Finding {
   created_at: string;
 }
 
+// Evidence attached to a single finding. Replaces "trust the LLM's word"
+// with explicit source provenance the UI can render as a chip. `kind`
+// tells the UI what icon to draw; `text` is the short summary; `source`
+// is a URL when web-search-grounded (Phase 3) and an empty string for
+// LLM-internal reasoning.
+export interface FindingEvidence {
+  kind: "data_point" | "comparable" | "user_research" | "principle" | "expert_view";
+  text: string;
+  source?: string;
+}
+
 export interface MechanismFindingDraft {
   headline: string;
   severity: 1 | 2 | 3 | 4 | 5;
   confidence: number;
   detail_summary: string;
   cited_persona_ids: string[];
+  evidence?: FindingEvidence[];
 }
+
+// Mechanism-specific structured view that the UI renders as the primary
+// visualization. Each kind populates its own variant; consumers should
+// branch on `kind` to render the appropriate component. This replaces
+// the wall-of-text `raw_transcript` as the user-facing default.
+export type MechanismView =
+  | {
+      kind: "persona_review";
+      persona_takes: Array<{
+        persona_id: string;
+        stance: "supports" | "neutral" | "opposes";
+        key_insight: string;
+        surprising_angle?: string;
+      }>;
+    }
+  | {
+      kind: "round_table_debate";
+      stance_matrix: Array<{
+        persona_id: string;
+        opening_stance: "supports" | "neutral" | "opposes";
+        final_stance: "supports" | "neutral" | "opposes";
+        shifted: boolean;
+        key_argument: string;
+      }>;
+      pivotal_exchanges: Array<{
+        from_persona_id: string;
+        to_persona_id: string;
+        summary: string;
+      }>;
+    }
+  | {
+      kind: "scenario_simulation";
+      scenarios: Array<{
+        name: string;
+        probability_pct: number;
+        impact: "low" | "medium" | "high" | "critical";
+        narrative: string;
+        leading_indicators: string[];
+      }>;
+    }
+  | {
+      kind: "theory_of_mind";
+      stakeholder: string;
+      what_they_optimize_for: string[];
+      fears: string[];
+      what_would_change_their_mind: string[];
+    }
+  | {
+      kind: "cross_challenge";
+      pairings: Array<{
+        proponent_id: string;
+        challenger_id: string;
+        position: string;
+        sharpest_counter: string;
+        residual_uncertainty: string;
+      }>;
+    }
+  | {
+      kind: "reflection_ranker";
+      finding_scores: Array<{
+        finding_headline: string;
+        evidence_strength: 1 | 2 | 3 | 4 | 5;
+        missing_evidence: string;
+      }>;
+    };
 
 export interface MechanismOutput {
   findings: MechanismFindingDraft[];
+  // Primary structured view (Phase 2+). Optional for backward compat
+  // with rows persisted before the structured-view migration.
+  mechanism_view?: MechanismView;
+  // Kept as fallback / debugging aid; UI hides this behind a collapsible
+  // "Original transcript" affordance instead of using it as the default.
   raw_transcript: unknown;
 }
 

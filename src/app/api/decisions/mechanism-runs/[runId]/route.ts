@@ -22,6 +22,7 @@ export async function GET(
       id, brief_id, kind, status, args, raw_output, error_message,
       attempts, started_at, completed_at, duration_ms,
       decision_briefs!inner(
+        persona_ids,
         decision_sessions!inner(user_id)
       )
     `)
@@ -32,13 +33,38 @@ export async function GET(
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const brief = data.decision_briefs as unknown as {
+    persona_ids: string[];
     decision_sessions: { user_id: string };
   } | null;
   if (brief && brief.decision_sessions.user_id !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Hydrate persona id → name + occupation so the structured view can
+  // render readable rows without a second roundtrip from the client.
+  const personaIds = brief?.persona_ids ?? [];
+  const personaInfo: Array<{ id: string; name: string; occupation: string }> = [];
+  if (personaIds.length > 0) {
+    const { data: personaRows } = await supabase
+      .from("personas")
+      .select("id, identity, demographics")
+      .in("id", personaIds);
+    if (Array.isArray(personaRows)) {
+      for (const p of personaRows as Array<{
+        id: string;
+        identity: { name?: string } | null;
+        demographics: { occupation?: string } | null;
+      }>) {
+        personaInfo.push({
+          id: p.id,
+          name: p.identity?.name ?? p.id,
+          occupation: p.demographics?.occupation ?? "",
+        });
+      }
+    }
+  }
+
   const { decision_briefs: _omit, ...run } = data as Record<string, unknown>;
   void _omit;
-  return NextResponse.json({ run });
+  return NextResponse.json({ run, personas: personaInfo });
 }

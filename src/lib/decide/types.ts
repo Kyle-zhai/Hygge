@@ -73,6 +73,15 @@ export interface DecisionBriefSummary {
   finalized_at: string | null;
 }
 
+// Mirror of worker FindingEvidence — concrete backing for a finding.
+// `source` is a URL when web-search-grounded (Phase 3); empty string for
+// LLM-internal reasoning. UI renders these as chips beneath the finding.
+export interface FindingEvidence {
+  kind: "data_point" | "comparable" | "user_research" | "principle" | "expert_view";
+  text: string;
+  source?: string;
+}
+
 export interface Finding {
   id: string;
   brief_id: string;
@@ -86,6 +95,77 @@ export interface Finding {
   position: number | null;
   content_hash: string;
   created_at: string;
+  evidence?: FindingEvidence[];
+}
+
+// Mirror of worker MechanismView — the primary structured payload that
+// replaces raw_transcript as the user-facing default visualization.
+// Branch on `kind` in the renderer.
+export type MechanismView =
+  | {
+      kind: "persona_review";
+      persona_takes: Array<{
+        persona_id: string;
+        stance: "supports" | "neutral" | "opposes";
+        key_insight: string;
+        surprising_angle?: string;
+      }>;
+    }
+  | {
+      kind: "round_table_debate";
+      stance_matrix: Array<{
+        persona_id: string;
+        opening_stance: "supports" | "neutral" | "opposes";
+        final_stance: "supports" | "neutral" | "opposes";
+        shifted: boolean;
+        key_argument: string;
+      }>;
+      pivotal_exchanges: Array<{
+        from_persona_id: string;
+        to_persona_id: string;
+        summary: string;
+      }>;
+    }
+  | {
+      kind: "scenario_simulation";
+      scenarios: Array<{
+        name: string;
+        probability_pct: number;
+        impact: "low" | "medium" | "high" | "critical";
+        narrative: string;
+        leading_indicators: string[];
+      }>;
+    }
+  | {
+      kind: "theory_of_mind";
+      stakeholder: string;
+      what_they_optimize_for: string[];
+      fears: string[];
+      what_would_change_their_mind: string[];
+    }
+  | {
+      kind: "cross_challenge";
+      pairings: Array<{
+        proponent_id: string;
+        challenger_id: string;
+        position: string;
+        sharpest_counter: string;
+        residual_uncertainty: string;
+      }>;
+    }
+  | {
+      kind: "reflection_ranker";
+      finding_scores: Array<{
+        finding_headline: string;
+        evidence_strength: 1 | 2 | 3 | 4 | 5;
+        missing_evidence: string;
+      }>;
+    };
+
+export interface MechanismPersonaInfo {
+  id: string;
+  name: string;
+  occupation: string;
 }
 
 export interface MechanismRunSummary {
