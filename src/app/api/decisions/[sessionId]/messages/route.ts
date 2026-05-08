@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueDecisionIntake } from "@/lib/queue/decision";
 
 export const maxDuration = 15;
@@ -39,7 +40,10 @@ export async function GET(
     .eq("session_id", sessionId)
     .order("created_at", { ascending: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("decisions.messages.get_failed", { sessionId, message: error.message });
+    return NextResponse.json({ error: "Failed to load messages" }, { status: 500 });
+  }
   return NextResponse.json({ messages: data });
 }
 
@@ -51,6 +55,12 @@ export async function POST(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit before any DB read — this is the LLM-trigger surface.
+  // 60/min per user is generous for a human typing answers but blocks a
+  // scripted client from draining the MiMo token budget.
+  const limitResponse = await enforceRateLimit("decisionMessages", user.id);
+  if (limitResponse) return limitResponse;
 
   const { data: session } = await supabase
     .from("decision_sessions")
@@ -123,7 +133,10 @@ export async function POST(
     .select("id, created_at")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("decisions.messages.post_failed", { sessionId, kind: body.kind, message: error.message });
+    return NextResponse.json({ error: "Failed to post message" }, { status: 500 });
+  }
 
   await supabase
     .from("decision_sessions")

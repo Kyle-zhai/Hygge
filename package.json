@@ -4,12 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:worker": "cd worker && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "test:worker": "cd worker && npm test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:worker": "cd worker && npx tsc --noEmit",
+    "typecheck:all": "npm run typecheck && npm run typecheck:worker",
+    "db:migrate": "supabase db push",
+    "db:reset": "supabase db reset"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -88,6 +89,7 @@ export function MechanismRunDrawer({ open, onOpenChange, runId }: Props) {
           <DialogTitle>
             {run ? `${MECHANISM_ICONS[run.kind]} ${labels[run.kind]}` : t("loading")}
           </DialogTitle>
+          <DialogDescription>{t("fullTranscript")}</DialogDescription>
         </DialogHeader>
         {!run ? (
           <p className="text-sm text-muted-foreground">{t("loading")}</p>

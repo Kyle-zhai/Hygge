@@ -1,48 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hygge
 
-## Getting Started
+Multi-agent decision analysis for product teams. Paste a decision, the
+system runs a panel of AI personas through up to six analysis mechanisms
+(round-table debate, scenario simulation, theory-of-mind, cross-challenge,
+reflection ranker, persona review) and returns a structured report where
+every conclusion traces back to a specific mechanism transcript.
 
-First, run the development server:
+Differentiation against ChatGPT/Claude: **transparent multi-mechanism
+provenance**. The user can always click into the source.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture
+
+Two long-running processes plus Supabase + Redis:
+
+```
+┌──────────────────────┐        ┌──────────────────────┐
+│  Next.js (Vercel)    │  HTTP  │  Worker (Railway)    │
+│  - /decide UI        │ ─────▶ │  - BullMQ consumers  │
+│  - /api/decisions/*  │        │  - LLM chain         │
+└──────────┬───────────┘        └──────────┬───────────┘
+           │                                │
+           │   Supabase (Postgres + RLS +   │
+           └───── Realtime publication) ────┘
+                          │
+                  Upstash Redis (BullMQ queues)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Three BullMQ queues** drive the decision flow:
+- `decision-intake` — conversational state machine (extract → ask or confirm → finalize)
+- `decision-orchestrator` — fans out mechanism jobs and runs the synthesizer
+- `decision-mechanism` — six job names share this queue, one per analysis mechanism
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See `docs/superpowers/specs/2026-05-06-multi-agent-decision-tool-design.md`
+for the full spec.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Local setup
 
-## Learn More
+You need three things running: Supabase (DB + auth), Upstash Redis (queues),
+and an OpenAI-compatible LLM endpoint. The current production primary is
+**MiMo-V2.5-Pro on Xiaomi's Token-Plan** — the worker code is OpenAI-compatible
+and works with any provider.
 
-To learn more about Next.js, take a look at the following resources:
+### 1. Environment variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Two `.env` files coexist, and they don't overlap perfectly:
+- **Root `.env.local`** — read by Next.js. Supabase URLs, Stripe, posthog, the LLM chain (`LLM_1_*`, `LLM_2_*`, `LLM_3_*`), `WORKER_URL`/`WORKER_SHARED_SECRET`.
+- **`worker/.env`** — read by the worker process. Same LLM chain (worker calls LLMs directly; Vercel proxies to it), plus `REDIS_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Copy `.env.example` and `worker/.env.example` and fill in the values.
 
-## Data flywheel — debate feedback
+### 2. Database
 
-Every persona utterance — across round-table debates, 1v1 debates, and decision-flow mechanism transcripts — can receive a 👍/👎 + optional 1-line comment from the user who owns the conversation. Votes are stored in `public.persona_utterance_feedback` keyed by one of:
+Apply migrations 001–065 in order:
+
+```bash
+npm run db:migrate
+```
+
+Or `npm run db:reset` for a clean slate (drops everything).
+
+### 3. Run the dev environment
+
+```bash
+# Terminal 1 — Next.js
+npm run dev
+
+# Terminal 2 — worker
+npm run dev:worker
+```
+
+The Next.js side proxies LLM calls to the worker, so the worker has to be
+running for any decision flow to work end-to-end. Without the worker the
+chat will accept messages but no intake/orchestrator job will execute.
+
+### 4. Verify
+
+```bash
+npm run typecheck:all   # next + worker tsc
+npm test                # next-side vitest
+npm run test:worker     # worker-side vitest
+```
+
+## Database conventions
+
+- **`personas.id` is `TEXT`, not `UUID`.** All FK columns to `personas(id)`
+  must use `TEXT` / `TEXT[]` — initial schema docs lie. See migration 061
+  comment on `decision_briefs.persona_ids`.
+- **Decision briefs are immutable post-finalize.** A trigger blocks any
+  mutation of routing-related columns once `status` leaves `draft`. To
+  "edit" a brief, create a child via the `/rerun` endpoint with
+  `parent_brief_id`.
+- **One draft per session.** Migration 065 enforces this with a partial
+  unique index, closing a TOCTOU window in the intake processor.
+- **`parent_brief_id` chain depth is capped at 8** by a trigger from
+  migration 065.
+
+## Data flywheel — utterance feedback
+
+Every persona utterance — across round-table debates, 1v1 debates, and
+decision-flow mechanism transcripts — can receive a 👍/👎 + optional
+1-line comment from the user who owns the conversation. Votes are stored
+in `public.persona_utterance_feedback` keyed by one of:
 
 - Round-table: `(user_id, evaluation_id, round_number, message_index)`
 - 1v1: `(user_id, debate_message_id)`
-- Decision mechanism: `(user_id, decision_mechanism_run_id, utterance_index)` (added 2026-05-06 with the multi-agent decision flow)
+- Decision mechanism: `(user_id, decision_mechanism_run_id, utterance_index)` (added 2026-05-06)
 
-This data feeds Phase 3 of the debate-realism roadmap (`docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md`) — persona-specific DPO fine-tunes once we have ~5k labels per archetype.
+This data feeds Phase 3 of the debate-realism roadmap
+(`docs/superpowers/specs/2026-04-28-debate-realism-moat-spec.md`) —
+persona-specific DPO fine-tunes once we have ~5k labels per archetype.
 
 Monitor with `docs/superpowers/queries/feedback-flywheel-stats.sql`.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Vercel auto-deploys the Next.js side from `main`. Worker deploys
+independently to Railway via its own pipeline (see `worker/railway.toml`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Routine ops:
+```bash
+vercel env pull .env.local       # sync env from Vercel
+gh pr view                        # PR status
+```

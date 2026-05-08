@@ -15,9 +15,25 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueDecisionIntake } from "@/lib/queue/decision";
 
 export const maxDuration = 15;
+
+const VALID_MECHANISM_KINDS = new Set([
+  "persona_review",
+  "round_table_debate",
+  "reflection_ranker",
+  "scenario_simulation",
+  "theory_of_mind",
+  "cross_challenge",
+]);
+
+const VALID_DIMENSIONS = new Set([
+  "technical", "business", "ux", "strategic", "people", "finance",
+]);
+
+const MAX_DELTA_NOTE_LEN = 2000;
 
 interface DeltaBody {
   delta?: {
@@ -37,6 +53,12 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Rate limit: /rerun spawns a full orchestrator run (6 LLM calls minimum).
+  // Cap at 10/h per user; deep-chain depth is enforced separately by the
+  // 065 trigger in the DB layer.
+  const limitResponse = await enforceRateLimit("decisionRerun", user.id);
+  if (limitResponse) return limitResponse;
+
   let body: DeltaBody = {};
   try {
     body = await request.json();
@@ -44,6 +66,24 @@ export async function POST(
     // empty body is fine — rerun without changes
   }
   const delta = body.delta ?? {};
+
+  // Validate delta against known enums + length caps. Anything outside
+  // the allowlists is silently dropped; this keeps a malicious client
+  // from inserting arbitrary strings into mechanism_kinds or
+  // primary_dimensions and corrupting routing.
+  const safeDelta: DeltaBody["delta"] = {
+    remove_dimensions: (delta.remove_dimensions ?? []).filter((d): d is string =>
+      typeof d === "string" && VALID_DIMENSIONS.has(d),
+    ),
+    drop_mechanisms: (delta.drop_mechanisms ?? []).filter((m): m is string =>
+      typeof m === "string" && VALID_MECHANISM_KINDS.has(m),
+    ),
+    swap_personas: Boolean(delta.swap_personas),
+    note:
+      typeof delta.note === "string"
+        ? delta.note.slice(0, MAX_DELTA_NOTE_LEN)
+        : undefined,
+  };
 
   const { data: parent, error: parentErr } = await supabase
     .from("decision_briefs")
@@ -68,10 +108,10 @@ export async function POST(
 
   const newDimensions = applyDimensionRemoval(
     inheritedExtract,
-    delta.remove_dimensions ?? [],
+    safeDelta?.remove_dimensions ?? [],
   );
   const newMechanisms = inheritedMechanisms.filter(
-    (m) => !(delta.drop_mechanisms ?? []).includes(m.kind),
+    (m) => !(safeDelta?.drop_mechanisms ?? []).includes(m.kind),
   );
 
   // Insert a child Brief in draft status. Intake processor will turn it
@@ -88,7 +128,7 @@ export async function POST(
       canonical_question: parent.canonical_question,
       routing_extract: newExtract,
       raw_user_messages: parent.raw_user_messages,
-      persona_ids: delta.swap_personas ? [] : parent.persona_ids,
+      persona_ids: safeDelta?.swap_personas ? [] : parent.persona_ids,
       mechanisms: newMechanisms,
       mechanism_kinds: newMechanisms.map((m) => m.kind),
       decision_type:
@@ -99,7 +139,16 @@ export async function POST(
     .select("id")
     .single();
 
-  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+  if (insertErr) {
+    // Surface trigger errors verbatim (e.g. parent_brief_id chain depth
+    // exceeded from migration 065) but log to server. Generic message for
+    // anything else so we don't leak Postgres internals.
+    if (/chain exceeds max depth/i.test(insertErr.message)) {
+      return NextResponse.json({ error: insertErr.message }, { status: 422 });
+    }
+    console.error("decisions.rerun.insert_failed", { briefId, message: insertErr.message });
+    return NextResponse.json({ error: "Failed to create rerun" }, { status: 500 });
+  }
 
   // Post a system note describing the rerun, then a user_text recording the
   // user's stated change so intake can re-run extraction over the cumulative
@@ -108,16 +157,16 @@ export async function POST(
   await supabase.from("decision_messages").insert({
     session_id: parent.session_id,
     kind: "system",
-    content: buildSystemNote(delta),
+    content: buildSystemNote(safeDelta),
     brief_id: child.id,
     is_ephemeral: false,
   });
 
-  if (delta.note && delta.note.trim()) {
+  if (safeDelta?.note && safeDelta.note.trim()) {
     await supabase.from("decision_messages").insert({
       session_id: parent.session_id,
       kind: "user_text",
-      content: delta.note.trim(),
+      content: safeDelta.note.trim(),
       brief_id: child.id,
       is_ephemeral: false,
     });

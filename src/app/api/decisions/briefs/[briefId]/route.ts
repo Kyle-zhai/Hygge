@@ -29,7 +29,10 @@ export async function GET(
     .eq("id", briefId)
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("decisions.brief.get_failed", { briefId, message: error.message });
+    return NextResponse.json({ error: "Failed to load brief" }, { status: 500 });
+  }
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   // RLS already gates by session ownership; this is defense-in-depth.
   const sess = data.decision_sessions as unknown as { user_id: string } | null;

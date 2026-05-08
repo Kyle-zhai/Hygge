@@ -91,8 +91,16 @@ export async function processDecisionIntakeJob(
   // Identify whether we're in the initial-intake phase or the
   // post-confirmation phase (user replied to agent_confirmation).
   const lastConfirmation = findLastConfirmation(messages);
+  // Use Date for the comparison; raw ISO strings collate correctly today
+  // but a driver config that drops sub-second precision could put two
+  // messages in the same second out of order.
+  const lastConfirmationAt = lastConfirmation
+    ? new Date(lastConfirmation.created_at).getTime()
+    : 0;
   const userMessagesAfterLastConfirmation = lastConfirmation
-    ? messages.filter((m) => m.created_at > lastConfirmation.created_at && isUserKind(m.kind))
+    ? messages.filter(
+        (m) => isUserKind(m.kind) && new Date(m.created_at).getTime() > lastConfirmationAt,
+      )
     : [];
 
   // Case A: user just replied to a confirmation.
@@ -230,7 +238,9 @@ async function handleIntakeTurn(
     session_id: session.id,
     kind: "agent_question",
     content: questionPayload.question_text,
-    options: questionPayload.options,
+    // Tag which field this question resolves so collectAskedFields can
+    // skip it next turn (info-gain enforcement of the ≤3-question budget).
+    options: addQuestionFieldTag(questionPayload.options, nextField.field),
     brief_id: briefId,
   });
   await touchSession(session.id);
@@ -630,12 +640,39 @@ async function upsertDraftBrief(
     return existingDraft.data.id;
   }
 
+  // Concurrency guard: migration 065 enforces "at most one draft brief
+  // per session" via a partial unique index. If two intake jobs race past
+  // the existingDraft.maybeSingle() above, the second INSERT will violate
+  // that index — we catch that case and re-fetch the winning draft so
+  // both jobs return a consistent briefId. Without this, BullMQ's retry
+  // would surface the unique-violation as a thrown error and resurrect
+  // the race on every retry.
   const { data, error } = await supabase
     .from("decision_briefs")
     .insert(payload)
     .select("id")
     .single();
-  if (error) throw new Error(`brief insert failed: ${error.message}`);
+  if (error) {
+    if ((error as { code?: string }).code === "23505") {
+      const recovered = await supabase
+        .from("decision_briefs")
+        .select("id")
+        .eq("session_id", session.id)
+        .eq("status", "draft")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (recovered.data) {
+        const { error: updErr } = await supabase
+          .from("decision_briefs")
+          .update(payload)
+          .eq("id", recovered.data.id);
+        if (updErr) throw new Error(`brief update after race failed: ${updErr.message}`);
+        return recovered.data.id;
+      }
+    }
+    throw new Error(`brief insert failed: ${error.message}`);
+  }
   return data.id as string;
 }
 
@@ -658,13 +695,31 @@ function countAgentQuestions(messages: DecisionMessage[]): number {
 }
 
 function collectAskedFields(messages: DecisionMessage[]): Set<string> {
-  // Each agent_question stored its options. The corresponding answer in the
-  // following user message tells us which field was being resolved. For the
-  // MVP we record the field as a tag on the options[0] payload via the
-  // intake-question prompt — but since we don't currently round-trip that,
-  // an empty set just means "we'll let info-gain re-decide". Safe.
-  void messages;
-  return new Set();
+  // Walk agent_question messages in order; their options array carries
+  // a `__field` tag we set when emitting (see addQuestionFieldTag below).
+  // Older messages without the tag are tolerated (returns null) — the
+  // info-gain scorer just doesn't get to skip those, which is the same
+  // behavior as before this fix.
+  const asked = new Set<string>();
+  for (const m of messages) {
+    if (m.kind !== "agent_question") continue;
+    const opts = m.options as Array<{ id: string; __field?: string }> | null;
+    if (!opts) continue;
+    const tagged = opts.find((o) => typeof o.__field === "string");
+    if (tagged?.__field) asked.add(tagged.__field);
+  }
+  return asked;
+}
+
+// Stamps the field-being-asked into the first option's metadata so a
+// future intake turn can read it back via collectAskedFields. The tag
+// rides on the options jsonb column without a schema change.
+function addQuestionFieldTag(
+  options: Array<{ id: string; label: string; is_recommended: boolean }>,
+  field: string,
+): Array<{ id: string; label: string; is_recommended: boolean; __field?: string }> {
+  if (options.length === 0) return options;
+  return options.map((o, i) => (i === 0 ? { ...o, __field: field } : o));
 }
 
 function optionIdFromReply(reply: DecisionMessage): string | null {

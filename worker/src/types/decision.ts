@@ -225,6 +225,7 @@ export const MAX_INTAKE_QUESTIONS = 3;
 export const SYNTHESIZER_DEBOUNCE_MS = 10_000;
 export const MECHANISM_TIMEOUT_MS = 90_000;
 export const BRIEF_TOTAL_TIMEOUT_MS = 5 * 60_000;
+export const MAX_FINDINGS_PER_MECHANISM = 30;
 
 // Required fields for finalization (must reach KNOWN_CONFIDENCE_THRESHOLD)
 export const REQUIRED_FIELDS = ["decision_type", "primary_dimensions"] as const;

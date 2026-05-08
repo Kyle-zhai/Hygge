@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import type { DecisionMessage } from "@/lib/decide/types";
 import { UserBubble } from "./user-bubble";
 import { QuestionCard } from "./question-card";
@@ -18,6 +19,8 @@ interface Props {
   onSkipRunNow: () => void;
 }
 
+const STICK_TO_BOTTOM_THRESHOLD_PX = 96;
+
 export function ChatThread({
   sessionId,
   messages,
@@ -26,28 +29,45 @@ export function ChatThread({
   onAnswerText,
   onSkipRunNow,
 }: Props) {
+  const t = useTranslations("decide");
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Track whether the user is parked near the bottom; if they scrolled up
+  // to read older messages, don't yank them back when streaming arrives.
+  const stickToBottomRef = useRef(true);
+
+  function handleScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < STICK_TO_BOTTOM_THRESHOLD_PX;
+  }
 
   useEffect(() => {
+    if (!stickToBottomRef.current) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading conversation...
+        {t("loading")}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 overflow-y-auto p-6">
+    <div
+      ref={scrollRef}
+      onScroll={handleScroll}
+      className="flex flex-col gap-4 overflow-y-auto p-6 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-3xl"
+    >
       {messages.map((m) => {
         switch (m.kind) {
           case "user_text":
           case "user_option":
           case "user_skip_run":
-            return <UserBubble key={m.id} message={m} />;
+            return <UserBubble key={m.id} message={m} allMessages={messages} />;
           case "agent_question":
             return (
               <QuestionCard
