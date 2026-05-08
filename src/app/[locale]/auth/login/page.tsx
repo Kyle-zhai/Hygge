@@ -3,24 +3,39 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Default landing for newly-authenticated users post-2026-05-06 reverse pivot.
+// /evaluate/new is now the retire interstitial; /decide/new is the live flow.
+const DEFAULT_POST_LOGIN = "/decide/new";
+
 export default function LoginPage() {
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Honour ?next= when present (set by proxy.ts when an unauth user hit a
+  // protected route). Same-origin guard against open redirect.
+  function resolveNextPath(): string {
+    const nextParam = searchParams.get("next");
+    if (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")) {
+      return nextParam;
+    }
+    return `/${locale}${DEFAULT_POST_LOGIN}`;
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -32,7 +47,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push(`/${locale}/evaluate/new`);
+      router.push(resolveNextPath());
       router.refresh();
     }
   }

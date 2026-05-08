@@ -100,7 +100,7 @@ async function orchestrateBrief(job: Job<OrchestrateJobData>) {
     await decisionMechanismQueue.add(
       kind,
       { briefId, runId: row.id, kind },
-      { jobId: `mech:${row.id}` },
+      { jobId: `mech-${row.id}` },
     );
   }
 
@@ -151,20 +151,33 @@ async function synthesizerTick(job: Job<SynthTickJobData>) {
       await decisionMechanismQueue.add(
         "cross_challenge",
         { briefId, runId: row.id, kind: "cross_challenge" },
-        { jobId: `mech:${row.id}` },
+        { jobId: `mech-${row.id}` },
       );
       log.info("decision_orchestrator.stage2_dispatched", { ...ctx, runId: row.id });
     }
   }
 
-  const allDispatched = brief.mechanisms.every((m) =>
+  // reflection_ranker is the synthesizer's synthetic conflict-warning
+  // carrier — not a real dispatched mechanism. Older briefs (pre-fix)
+  // may have it in brief.mechanisms; ignore it here so allDispatched
+  // can reach true once the real mechanisms terminate.
+  const dispatchedKinds = brief.mechanisms.filter(
+    (m) => m.kind !== "reflection_ranker",
+  );
+  const allDispatched = dispatchedKinds.every((m) =>
     runs.some((r) => r.kind === m.kind),
   );
-  const allTerminal = runs.every(
+  // Only count non-synthetic runs toward terminal-state evaluation.
+  const realRuns = runs.filter((r) => {
+    if (r.kind !== "reflection_ranker") return true;
+    const args = (r.args ?? {}) as Record<string, unknown>;
+    return args.synthetic !== true;
+  });
+  const allTerminal = realRuns.every(
     (r) => r.status === "completed" || r.status === "failed" || r.status === "skipped",
   );
-  const failedCount = runs.filter((r) => r.status === "failed").length;
-  const total = brief.mechanisms.length;
+  const failedCount = realRuns.filter((r) => r.status === "failed").length;
+  const total = dispatchedKinds.length;
   const ageMs = Date.now() - new Date(brief.finalized_at ?? brief.created_at).getTime();
   const exceededTotalTimeout = ageMs > BRIEF_TOTAL_TIMEOUT_MS;
 

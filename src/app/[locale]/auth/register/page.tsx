@@ -3,24 +3,35 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+const DEFAULT_POST_REGISTER = "/decide/new";
+
 export default function RegisterPage() {
   const t = useTranslations("auth");
   const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function resolveNextPath(): string {
+    const nextParam = searchParams.get("next");
+    if (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")) {
+      return nextParam;
+    }
+    return `/${locale}${DEFAULT_POST_REGISTER}`;
+  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +49,7 @@ export default function RegisterPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push(`/${locale}/evaluate/new`);
+      router.push(resolveNextPath());
       router.refresh();
     }
   }

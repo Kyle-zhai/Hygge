@@ -38,11 +38,13 @@ export async function enqueueDecisionIntake(
   payload: DecisionIntakeJobPayload,
 ): Promise<void> {
   const queue = getDecisionIntakeQueue();
-  // jobId scopes to the session so a flurry of user clicks collapses into
-  // one in-flight intake at a time. The processor itself short-circuits if
-  // it sees the latest message is already an agent question.
+  // No custom jobId here — the intake processor itself short-circuits if
+  // the latest message in the session is an unanswered agent prompt
+  // (idempotent re-entry). A jobId-based dedup would silently drop
+  // legitimate retries after the first job's `removeOnComplete: { age }`
+  // window, since BullMQ rejects duplicate custom ids even after job
+  // completion (verified by /qa pass on 2026-05-08).
   await queue.add("intake", payload, {
-    jobId: `intake:${payload.sessionId}`,
     removeOnComplete: { age: 3600, count: 100 },
     removeOnFail: { age: 24 * 3600, count: 100 },
   });
@@ -53,6 +55,6 @@ export async function enqueueDecisionOrchestrate(briefId: string): Promise<void>
   await queue.add(
     "orchestrate",
     { briefId },
-    { jobId: `orch:${briefId}`, removeOnComplete: true },
+    { jobId: `orch-${briefId}`, removeOnComplete: true },
   );
 }
