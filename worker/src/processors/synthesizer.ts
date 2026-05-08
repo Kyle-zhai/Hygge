@@ -219,16 +219,17 @@ async function detectAndPersistConflicts(
 // Looks up (or creates) a synthetic reflection_ranker run that exists
 // solely to anchor conflict_warning findings (decision_findings.brief_id
 // must point at a real mechanism_run row). The synthetic flag in args
-// distinguishes this from a real reflection_ranker mechanism run, so a
-// future migration could legitimately route reflection_ranker as a real
-// stage-2 mechanism without the synthesizer clobbering its raw_output.
+// distinguishes this from a real reflection_ranker mechanism run.
 //
-// Atomic via upsert on the unique (brief_id, kind) index from migration
-// 064 — concurrent final-pass synth-ticks (rare but possible) cannot
-// produce two carrier rows nor crash trying.
+// Atomicity strategy: SELECT-first, then plain INSERT, then catch the
+// 23505 unique-violation from migration 064's index and re-SELECT.
+// We deliberately do NOT use upsert here — upsert with
+// `ignoreDuplicates: false` would overwrite the args column of a real
+// (non-synthetic) reflection_ranker row, silently mutating someone
+// else's data and then post-check would read back our just-written
+// {synthetic: true} and falsely conclude we own the row.
 async function ensureConflictRun(briefId: string): Promise<string> {
-  // First, look up: if a row already exists, we either reuse the
-  // synthetic carrier OR refuse to clobber a real reflection_ranker run.
+  // Fast path: if a row already exists, decide based on its real args.
   const existing = await supabase
     .from("decision_mechanism_runs")
     .select("id, args")
@@ -245,33 +246,46 @@ async function ensureConflictRun(briefId: string): Promise<string> {
     );
   }
 
-  // No row yet → upsert. If two ticks race here, the second's INSERT is
-  // converted to a no-op SELECT-back-to-existing by the unique index +
-  // ignoreDuplicates=false; the .select() returns the winning row.
-  const { data, error } = await supabase
+  // No row yet → plain INSERT. If a real reflection_ranker run lands
+  // between our SELECT and our INSERT, the unique index will reject this
+  // with code 23505 — we then re-SELECT and decide based on the winner's
+  // real args. Crucially, this NEVER mutates the existing row.
+  const insert = await supabase
     .from("decision_mechanism_runs")
-    .upsert(
-      {
-        brief_id: briefId,
-        kind: "reflection_ranker",
-        status: "running",
-        args: { synthetic: true },
-        started_at: new Date().toISOString(),
-      },
-      { onConflict: "brief_id,kind", ignoreDuplicates: false },
-    )
+    .insert({
+      brief_id: briefId,
+      kind: "reflection_ranker",
+      status: "running",
+      args: { synthetic: true },
+      started_at: new Date().toISOString(),
+    })
     .select("id, args")
     .single();
-  if (error) throw new Error(`reflection_ranker run upsert failed: ${error.message}`);
-  // After upsert, verify we own a synthetic row (someone could have
-  // raced us to insert a real run between our SELECT and the upsert).
-  const args = data.args as Record<string, unknown> | null;
-  if (!args || args.synthetic !== true) {
-    throw new Error(
-      `lost ensureConflictRun race for brief ${briefId} — real reflection_ranker exists`,
-    );
+
+  if (!insert.error) {
+    return insert.data.id as string;
   }
-  return data.id as string;
+
+  // Lost the race. Re-fetch the winning row and re-validate.
+  if ((insert.error as { code?: string }).code === "23505") {
+    const recovered = await supabase
+      .from("decision_mechanism_runs")
+      .select("id, args")
+      .eq("brief_id", briefId)
+      .eq("kind", "reflection_ranker")
+      .maybeSingle();
+    if (recovered.data) {
+      const args = recovered.data.args as Record<string, unknown> | null;
+      if (args && args.synthetic === true) {
+        return recovered.data.id as string;
+      }
+      throw new Error(
+        `lost ensureConflictRun race for brief ${briefId} — real reflection_ranker exists`,
+      );
+    }
+  }
+
+  throw new Error(`reflection_ranker run insert failed: ${insert.error.message}`);
 }
 
 function contentHash(briefId: string, kind: string, headline: string): string {
