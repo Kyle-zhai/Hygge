@@ -78,42 +78,53 @@ export function useRealtimeMessages(sessionId: string | null) {
     const pollHandle = window.setInterval(fetchAll, POLL_INTERVAL_MS);
 
     const supabase = createClient();
-    const channel = supabase
-      .channel(`decision-messages-${sessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "decision_messages",
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          const m = payload.new as DecisionMessage;
-          ingest([m]);
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "decision_messages",
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          const old = payload.old as { id?: string };
-          if (!old.id) return;
-          seenIds.current.delete(old.id);
-          setMessages((prev) => prev.filter((x) => x.id !== old.id));
-        },
-      )
-      .subscribe();
+
+    // Wait for the session to hydrate before subscribing — channel
+    // handshakes done with only the anon key fail RLS and never recover,
+    // so subscribing too early is worse than subscribing not-at-all.
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session?.access_token) {
+        supabase.realtime.setAuth(data.session.access_token);
+      }
+      channel = supabase
+        .channel(`decision-messages-${sessionId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "decision_messages",
+            filter: `session_id=eq.${sessionId}`,
+          },
+          (payload) => {
+            const m = payload.new as DecisionMessage;
+            ingest([m]);
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "DELETE",
+            schema: "public",
+            table: "decision_messages",
+            filter: `session_id=eq.${sessionId}`,
+          },
+          (payload) => {
+            const old = payload.old as { id?: string };
+            if (!old.id) return;
+            seenIds.current.delete(old.id);
+            setMessages((prev) => prev.filter((x) => x.id !== old.id));
+          },
+        )
+        .subscribe();
+    });
 
     return () => {
       cancelled = true;
       window.clearInterval(pollHandle);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [sessionId, ingest]);
 
