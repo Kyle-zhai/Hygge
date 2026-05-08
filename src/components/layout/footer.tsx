@@ -72,8 +72,8 @@ export async function Footer() {
           </p>
           <p className="text-xs text-[color:var(--text-tertiary)]">
             {isZh
-              ? "为高风险决策设计 · 哈希链审计 · 双签合规归档"
-              : "Built for high-stakes decisions · Hash-chain trail · Dual-sign archive"}
+              ? "Multi-agent 决策分析 · 六种机制 · 每条结论可追溯"
+              : "Multi-agent decision analysis · Six mechanisms · Every conclusion traceable"}
           </p>
         </div>
       </div>

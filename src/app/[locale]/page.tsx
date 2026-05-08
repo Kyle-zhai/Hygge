@@ -263,7 +263,7 @@ export default async function LandingPage() {
             "摘要报告 + 共识分析",
           ],
           ctaText: "免费开始",
-          ctaHref: `/${locale}/auth/register`,
+          ctaHref: `/${locale}/auth/register?next=/decide/new`,
         },
         {
           key: "pro",
@@ -282,7 +282,7 @@ export default async function LandingPage() {
             "对比评估",
           ],
           ctaText: "升级到 Pro",
-          ctaHref: `/${locale}/auth/register`,
+          ctaHref: `/${locale}/auth/register?next=/decide/new`,
           highlight: true,
           badge: "最受欢迎",
           footnote: "7 天无理由退款",
@@ -303,7 +303,7 @@ export default async function LandingPage() {
             "市场推荐位",
           ],
           ctaText: "立即升级",
-          ctaHref: `/${locale}/auth/register`,
+          ctaHref: `/${locale}/auth/register?next=/decide/new`,
         },
       ]
     : [
@@ -319,7 +319,7 @@ export default async function LandingPage() {
             "Summary report with consensus analysis",
           ],
           ctaText: "Get started free",
-          ctaHref: `/${locale}/auth/register`,
+          ctaHref: `/${locale}/auth/register?next=/decide/new`,
         },
         {
           key: "pro",
@@ -338,7 +338,7 @@ export default async function LandingPage() {
             "Compare evaluations",
           ],
           ctaText: "Upgrade to Pro",
-          ctaHref: `/${locale}/auth/register`,
+          ctaHref: `/${locale}/auth/register?next=/decide/new`,
           highlight: true,
           badge: "Most Popular",
           footnote: "7-day no-questions refund",
@@ -359,7 +359,7 @@ export default async function LandingPage() {
             "Marketplace featured placement",
           ],
           ctaText: "Go Max",
-          ctaHref: `/${locale}/auth/register`,
+          ctaHref: `/${locale}/auth/register?next=/decide/new`,
         },
       ];
 
@@ -550,23 +550,23 @@ export default async function LandingPage() {
           headline={t("hero")}
           subtitle={t("subtitle")}
           ctaText={t("cta")}
-          ctaHref={`/${locale}/auth/register`}
+          ctaHref={`/${locale}/auth/register?next=/decide/new`}
           secondaryText={isZh ? "看实时演示" : "See it live"}
           secondaryHref="#live-demo"
           trustRow={{
-            label: isZh ? "为高风险决策而生" : "Built for high-stakes decisions",
+            label: isZh ? "Multi-agent 决策分析" : "Multi-agent decision analysis",
             items: isZh
               ? [
-                  "EU AI Act Art.14 模板",
-                  "GDPR Art.22 自动化决策",
-                  "SHA-256 哈希链审计",
-                  "可双签合规归档",
+                  "六种分析机制",
+                  "对话式 intake",
+                  "每条结论可追溯",
+                  "为 PM、开发者、团队设计",
                 ]
               : [
-                  "EU AI Act Art.14 templates",
-                  "GDPR Art.22 automated-decision review",
-                  "SHA-256 hash-chain trail",
-                  "Dual-sign compliance archive",
+                  "Six analysis mechanisms",
+                  "Conversational intake",
+                  "Every conclusion traceable",
+                  "Built for PMs, engineers, founding teams",
                 ],
           }}
         />
@@ -634,7 +634,7 @@ export default async function LandingPage() {
               : "Convene twelve distinct AI voices in minutes. See what a real round table makes of your decision."
           }
           ctaText={t("cta")}
-          ctaHref={`/${locale}/auth/register`}
+          ctaHref={`/${locale}/auth/register?next=/decide/new`}
           secondaryText={isZh ? "查看定价" : "See pricing"}
           secondaryHref="#pricing"
           footnote={isZh ? "不需要信用卡 · 立即使用" : "No credit card required · Start in seconds"}
