@@ -36,10 +36,11 @@ end$$;
 
 -- audit_search_cache held arbitrary cached web responses; safe to drop now
 -- since nothing references it any more.
-drop table if exists public.deprecated_audit_search_cache;
+drop table if exists public.deprecated_audit_search_cache cascade;
 -- audit_persona_pool was a join table whose definition shifted across
--- iterations; not worth rescuing.
-drop table if exists public.deprecated_audit_persona_pool;
+-- iterations; not worth rescuing. CASCADE because deprecated_audit_findings
+-- still has a FK constraint pointing at it that's also being dropped.
+drop table if exists public.deprecated_audit_persona_pool cascade;
 
 comment on schema public is
   'Audit tables prefixed deprecated_* as of 2026-05-06 reverse pivot. To be dropped after 30-day observation window.';
