@@ -19,10 +19,15 @@ let cached: SupabaseClient | null = null;
 export function createClient(): SupabaseClient {
   if (cached) return cached;
 
-  const client = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  // Trim env values defensively — a trailing newline (common when an
+  // env was pasted into Vercel from a multi-line copy) survives the URL
+  // path because the HTTP server tolerates it, but encodes as %0A in
+  // the realtime WebSocket URL and gets rejected at WS upgrade with
+  // "HTTP Authentication failed; no valid credentials available".
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+
+  const client = createBrowserClient(url, anonKey);
 
   void client.auth.getSession().then(({ data }) => {
     if (data.session?.access_token) {
