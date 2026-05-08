@@ -36,6 +36,7 @@ import { routeMechanisms } from "../lib/route-mechanisms.js";
 import { pickPersonasForBrief } from "../lib/recommend-personas-from-brief.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import { log } from "../utils/logger.js";
+import { buildBriefWebEvidence } from "../lib/pre-search.js";
 import {
   INTAKE_QUESTION_SYSTEM,
   INTAKE_QUESTION_PROMPT_VERSION,
@@ -484,6 +485,29 @@ async function sealBriefAndEnqueueOrchestrator(
     return;
   }
 
+  // Pre-search: pick web queries grounded in the canonical question +
+  // routing context, run them through Tavily, persist results onto the
+  // brief. Mechanism processors will read from there instead of
+  // re-searching per mechanism. Failure here (timeout, missing API key,
+  // bad LLM JSON) is non-blocking — we land web_evidence={ok: false}
+  // and the mechanisms fall back to training-data evidence.
+  let webEvidence;
+  try {
+    const auxLlm = buildAuxLLM();
+    webEvidence = await buildBriefWebEvidence(
+      auxLlm,
+      brief.canonical_question,
+      brief.routing_extract,
+    );
+  } catch (err) {
+    log.warn("decision_intake.pre_search_failed", {
+      ...ctx,
+      briefId: brief.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    webEvidence = null;
+  }
+
   const { error } = await supabase
     .from("decision_briefs")
     .update({
@@ -491,6 +515,7 @@ async function sealBriefAndEnqueueOrchestrator(
       sealed_by: sealReason,
       finalized_at: new Date().toISOString(),
       version: brief.version + 1,
+      ...(webEvidence ? { web_evidence: webEvidence } : {}),
     })
     .eq("id", brief.id)
     .eq("status", "draft"); // optimistic — only finalize a still-draft Brief
