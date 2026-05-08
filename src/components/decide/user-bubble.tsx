@@ -46,6 +46,10 @@ function resolveOptionLabel(
   allMessages: DecisionMessage[],
 ): string | null {
   const pickAt = new Date(pickMessage.created_at).getTime();
+  // Walk back through prior agent prompts. The most-recent question is
+  // not always the one being answered (a user can answer an earlier
+  // question after time has passed) — keep looking until we find a
+  // matching option id, or run out of candidates.
   for (let i = allMessages.length - 1; i >= 0; i--) {
     const m = allMessages[i];
     if (m.kind !== "agent_question" && m.kind !== "agent_confirmation") continue;
@@ -53,7 +57,7 @@ function resolveOptionLabel(
     const opts = (m.options ?? []) as QuestionOption[];
     const found = opts.find((o) => o.id === optionId);
     if (found) return found.label;
-    return null;
+    // No match in this candidate — keep searching older ones.
   }
   return null;
 }

@@ -128,29 +128,26 @@ export async function processDecisionMechanismJob(
     const message = err instanceof Error ? err.message : String(err);
     log.warn("decision_mechanism.failed_attempt", { ...ctx, error: message });
 
-    // BullMQ retries on throw. On the final attempt, BullMQ calls 'failed'
-    // listener; we mark the row failed proactively here so a synth-tick
-    // racing the retry sees a terminal state. On a successful retry the
-    // status will be flipped back to 'running' at the top of the next run.
-    await supabase
-      .from("decision_mechanism_runs")
-      .update({
-        status: "failed",
-        error_message: message.slice(0, 1000),
-        completed_at: new Date().toISOString(),
-        duration_ms: Date.now() - startMs,
-      })
-      .eq("id", runId);
-
-    // Only kick a synth-tick on the FINAL attempt — otherwise a retry
-    // racing the debounced tick can promote 'failed' to terminal,
-    // emit the artifact, then have the retry succeed and emit a second
-    // artifact. The orchestrator's allTerminal check sees this run as
-    // 'failed' which is fine; if a later retry succeeds it will tick on
-    // its own success path.
+    // BullMQ retries on throw. We only mark the row 'failed' (a TERMINAL
+    // status that allTerminal counts toward brief completion) on the
+    // FINAL attempt — earlier attempts leave the row as 'running' so a
+    // peer-mechanism's success-tick can't see this row as terminal and
+    // finalize the brief while a retry is still in flight, producing a
+    // "completed" artifact that misses the eventually-succeeding mechanism.
+    // On retry, the top-of-handler UPDATE flips status back to 'running'.
     const totalAttempts = job.opts.attempts ?? 1;
     const isFinalAttempt = (job.attemptsMade ?? 0) + 1 >= totalAttempts;
     if (isFinalAttempt) {
+      await supabase
+        .from("decision_mechanism_runs")
+        .update({
+          status: "failed",
+          error_message: message.slice(0, 1000),
+          completed_at: new Date().toISOString(),
+          duration_ms: Date.now() - startMs,
+        })
+        .eq("id", runId);
+
       await decisionOrchestratorQueue.add(
         "synth-tick",
         { briefId },
@@ -160,6 +157,15 @@ export async function processDecisionMechanismJob(
           removeOnComplete: true,
         },
       );
+    } else {
+      // Non-final attempt: capture error context but leave the row in
+      // a non-terminal state so peer ticks don't finalize prematurely.
+      await supabase
+        .from("decision_mechanism_runs")
+        .update({
+          error_message: message.slice(0, 1000),
+        })
+        .eq("id", runId);
     }
 
     throw err;
