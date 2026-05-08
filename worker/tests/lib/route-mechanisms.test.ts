@@ -32,12 +32,20 @@ function buildExtract(opts: {
 }
 
 describe("routeMechanisms", () => {
-  it("always includes the baseline triad", () => {
+  it("always includes the baseline pair (persona_review + round_table_debate)", () => {
     const route = routeMechanisms(buildExtract({ timeline: "weeks" }));
     const kinds = route.mechanisms.map((m) => m.kind);
     expect(kinds).toContain("persona_review");
-    expect(kinds).toContain("reflection_ranker");
     expect(kinds).toContain("round_table_debate");
+  });
+
+  it("never routes reflection_ranker as a real mechanism", () => {
+    // reflection_ranker is the synthetic conflict-warning carrier created
+    // by the synthesizer on the final pass — never dispatched as a job
+    // by the orchestrator. Including it in routed mechanisms would leave
+    // briefs stuck at status='finalized' forever (allDispatched fails).
+    const route = routeMechanisms(buildExtract({}));
+    expect(route.mechanisms.map((m) => m.kind)).not.toContain("reflection_ranker");
   });
 
   it("adds scenario_simulation when timeline is months/years", () => {

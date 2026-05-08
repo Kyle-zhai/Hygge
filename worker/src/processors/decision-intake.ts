@@ -496,10 +496,13 @@ async function sealBriefAndEnqueueOrchestrator(
   // Enqueue the orchestrator. We do a dynamic import to avoid a circular
   // dependency at module-load time.
   const { decisionOrchestratorQueue } = await import("../queue.js");
+  // jobId scopes one in-flight orchestrate per brief; removeOnComplete:true
+  // lets a subsequent rerun (e.g., parent brief failure → user retries) reuse
+  // the id without colliding with the cached completion.
   await decisionOrchestratorQueue.add(
     "orchestrate",
     { briefId: brief.id },
-    { jobId: `orch:${brief.id}` },
+    { jobId: `orch-${brief.id}`, removeOnComplete: true },
   );
 
   log.info("decision_intake.sealed", {

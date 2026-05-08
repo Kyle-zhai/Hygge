@@ -120,13 +120,12 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
     }
   }
 
-  // Final pass: run conflict detection if we have ≥2 completed mechanisms
-  // and the route includes reflection_ranker.
-  if (
-    finalPass &&
-    allDrafts.length >= 2 &&
-    brief.mechanisms.some((m) => m.kind === "reflection_ranker")
-  ) {
+  // Final pass: run conflict detection whenever we have ≥2 completed
+  // mechanisms. reflection_ranker is no longer a routed mechanism — the
+  // conflict-detection LLM call IS the reflection-ranker role, run once
+  // at brief completion, with findings anchored to a synthetic
+  // mechanism_run row created by ensureConflictRun.
+  if (finalPass && allDrafts.length >= 2) {
     await detectAndPersistConflicts(briefId, allDrafts, ctx);
   }
 }

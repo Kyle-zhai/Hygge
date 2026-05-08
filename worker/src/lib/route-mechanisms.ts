@@ -20,9 +20,12 @@ export function routeMechanisms(extract: RoutingExtract): RouteResult {
   const reasons: string[] = [];
   const selected = new Set<MechanismKind>();
 
-  // Always include the baseline triad — these are cheap and broadly useful.
+  // Always include the baseline pair — these are cheap and broadly useful.
+  // reflection_ranker is intentionally NOT a routed mechanism: the
+  // synthesizer creates a synthetic carrier on the final pass when there
+  // are conflicts to flag (see ensureConflictRun).
   for (const m of DEFAULT_MECHANISMS) selected.add(m);
-  reasons.push("baseline: persona_review + reflection_ranker + round_table_debate");
+  reasons.push("baseline: persona_review + round_table_debate");
 
   // scenario_simulation kicks in when timeline is months/years OR stakes are high.
   const timeline = extract.timeline.value;

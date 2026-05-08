@@ -205,9 +205,12 @@ export interface DecisionMessage {
   created_at: string;
 }
 
+// Default mechanisms routed when nothing more specific kicks in. Note:
+// reflection_ranker is intentionally NOT here — it's the synthetic
+// conflict-carrier the synthesizer creates internally on the final pass,
+// not a real mechanism the orchestrator dispatches as a job.
 export const DEFAULT_MECHANISMS: MechanismKind[] = [
   "persona_review",
-  "reflection_ranker",
   "round_table_debate",
 ];
 

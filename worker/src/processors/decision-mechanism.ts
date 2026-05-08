@@ -119,7 +119,7 @@ export async function processDecisionMechanismJob(
       "synth-tick",
       { briefId },
       {
-        jobId: `synth:${briefId}`,
+        jobId: `synth-${briefId}`,
         delay: SYNTHESIZER_DEBOUNCE_MS,
         removeOnComplete: true,
       },
@@ -152,7 +152,7 @@ export async function processDecisionMechanismJob(
         "synth-tick",
         { briefId },
         {
-          jobId: `synth:${briefId}`,
+          jobId: `synth-${briefId}`,
           delay: SYNTHESIZER_DEBOUNCE_MS,
           removeOnComplete: true,
         },
