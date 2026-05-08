@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,6 +34,7 @@ export function ArtifactPreviewCard({ sessionId, briefId }: Props) {
   const [brief, setBrief] = useState<DecisionBriefSummary | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [runs, setRuns] = useState<MechanismRunSummary[]>([]);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,14 +55,32 @@ export function ArtifactPreviewCard({ sessionId, briefId }: Props) {
         setRuns(f.mechanism_runs ?? []);
       })
       .catch(() => {
-        // Preview card stays in skeleton state if fetch fails — clicking
-        // the card still routes to the full artifact page where errors
-        // are surfaced explicitly.
+        if (cancelled) return;
+        setLoadFailed(true);
       });
     return () => {
       cancelled = true;
     };
   }, [briefId]);
+
+  // On fetch failure, show a clickable error card — clicking still routes
+  // to the full artifact page where the actual error is surfaced and the
+  // user can retry. Better than a permanent skeleton.
+  if (loadFailed) {
+    return (
+      <Link
+        href={`/${locale}/decide/${sessionId}/artifacts/${briefId}`}
+        className="max-w-[85%] self-start"
+      >
+        <Card className="cursor-pointer border-destructive/40 transition-shadow hover:shadow-md">
+          <CardContent className="flex items-center justify-between gap-2 py-3">
+            <p className="text-xs text-destructive">{t("loadFailed")}</p>
+            <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
+          </CardContent>
+        </Card>
+      </Link>
+    );
+  }
 
   if (!brief) {
     return (
@@ -103,7 +123,7 @@ export function ArtifactPreviewCard({ sessionId, briefId }: Props) {
         <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              📋 {t("artifactCardLabel")}
+              {t("artifactCardLabel")}
             </p>
             <p className="mt-1 text-sm font-medium line-clamp-2">
               {brief.canonical_question}

@@ -122,3 +122,13 @@ export const MECHANISM_ICONS: Record<MechanismKind, string> = {
   cross_challenge: "⚔️",
   reflection_ranker: "📊",
 };
+
+// Canonical display order for previews (no DB roundtrip needed).
+export const ALL_MECHANISMS_LIST: MechanismKind[] = [
+  "persona_review",
+  "round_table_debate",
+  "scenario_simulation",
+  "theory_of_mind",
+  "cross_challenge",
+  "reflection_ranker",
+];

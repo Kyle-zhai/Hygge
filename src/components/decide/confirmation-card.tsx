@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { DecisionMessage, QuestionOption } from "@/lib/decide/types";
@@ -34,9 +35,9 @@ export function ConfirmationCard({ message, onAnswerOption }: Props) {
             size="sm"
             onClick={() => pick(opt.id)}
             disabled={submitted}
-            className={cn(submitted && "opacity-50")}
+            className={cn("gap-1", submitted && "opacity-50")}
           >
-            {opt.is_recommended && <span className="mr-1">✨</span>}
+            {opt.is_recommended && <Sparkles className="size-3.5" aria-hidden="true" />}
             {opt.label}
           </Button>
         ))}

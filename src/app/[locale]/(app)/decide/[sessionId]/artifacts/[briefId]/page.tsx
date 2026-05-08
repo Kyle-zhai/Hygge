@@ -10,7 +10,6 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   type DecisionBriefSummary,
@@ -20,6 +19,7 @@ import {
 } from "@/lib/decide/types";
 import { MechanismSection } from "@/components/decide/mechanism-section";
 import { ConflictWarningBlock } from "@/components/decide/conflict-warning-block";
+import { SynthesisCard } from "@/components/decide/synthesis-card";
 import { rerunBrief } from "@/lib/decide/use-decision-session";
 
 export default function ArtifactViewPage({
@@ -162,32 +162,40 @@ export default function ArtifactViewPage({
         </Link>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <h1 className="text-lg font-semibold">{brief.canonical_question}</h1>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{brief.decision_type ?? "—"}</Badge>
-            {brief.primary_dimensions.map((d) => (
-              <Badge key={d} variant="secondary">
-                {d}
-              </Badge>
-            ))}
-            <Badge variant={brief.status === "completed" ? "default" : "outline"}>
-              {brief.status}
+      {/* Brief header — bare layout (no Card wrapper) so the SynthesisCard
+          below carries the only "important" elevation in the report. */}
+      <header className="mb-6">
+        <h1 className="text-lg font-semibold">{brief.canonical_question}</h1>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {brief.decision_type ? (
+            <Badge variant="outline">
+              {t(`decisionTypeLabel.${brief.decision_type}` as const)}
             </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="text-xs text-muted-foreground">
-          {brief.finalized_at ? (
-            <p>
-              {t("generatedAt")}:{" "}
-              {new Date(brief.finalized_at).toLocaleString()}
-            </p>
           ) : null}
-        </CardContent>
-      </Card>
+          {brief.primary_dimensions.map((d) => (
+            <Badge key={d} variant="secondary">
+              {t(`dimensionLabel.${d}` as const)}
+            </Badge>
+          ))}
+          <Badge variant={brief.status === "completed" ? "default" : "outline"}>
+            {t(`briefStatusLabel.${brief.status}` as const)}
+          </Badge>
+        </div>
+        {brief.finalized_at ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("generatedAt")}: {new Date(brief.finalized_at).toLocaleString()}
+          </p>
+        ) : null}
+      </header>
 
-      <div className="space-y-4">
+      <div className="mb-6">
+        <SynthesisCard
+          findings={findings}
+          isComplete={brief.status === "completed" || brief.status === "partially_completed"}
+        />
+      </div>
+
+      <div className="space-y-2">
         {mechanisms.map((k) => (
           <MechanismSection
             key={k}
@@ -199,7 +207,11 @@ export default function ArtifactViewPage({
           />
         ))}
 
-        <ConflictWarningBlock findings={conflicts} />
+        {conflicts.length > 0 && (
+          <div className="pt-4">
+            <ConflictWarningBlock findings={conflicts} />
+          </div>
+        )}
       </div>
 
       <div className="mt-8 flex flex-wrap gap-2">

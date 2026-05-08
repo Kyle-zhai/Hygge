@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 10;
 
+const MAX_TITLE_LEN = 200;
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -41,18 +43,23 @@ export async function POST(request: Request) {
     workspaceId = body.workspace_id;
   }
 
+  const safeTitle = typeof body.title === "string"
+    ? body.title.trim().slice(0, MAX_TITLE_LEN) || null
+    : null;
+
   const { data, error } = await supabase
     .from("decision_sessions")
     .insert({
       user_id: user.id,
       workspace_id: workspaceId,
-      title: body.title ?? null,
+      title: safeTitle,
     })
     .select("id, created_at")
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("decisions.create.insert_failed", { userId: user.id, message: error.message });
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }
 
   return NextResponse.json({ session: data }, { status: 201 });
@@ -71,7 +78,8 @@ export async function GET() {
     .limit(50);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("decisions.list.failed", { userId: user.id, message: error.message });
+    return NextResponse.json({ error: "Failed to list sessions" }, { status: 500 });
   }
 
   return NextResponse.json({ sessions: data });

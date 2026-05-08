@@ -24,7 +24,10 @@ export async function GET(
     .order("source_mechanism", { ascending: true })
     .order("position", { ascending: true, nullsFirst: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("decisions.findings.get_failed", { briefId, message: error.message });
+    return NextResponse.json({ error: "Failed to load findings" }, { status: 500 });
+  }
 
   // Mechanism runs piggyback so the UI can show status (running/completed/failed)
   // for each section even before findings arrive.

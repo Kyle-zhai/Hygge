@@ -17,6 +17,7 @@ import { decisionOrchestratorQueue } from "../queue.js";
 import { buildLLM, type LLMOverrides } from "../llm/factory.js";
 import { robustJsonParse } from "../utils/json-parse.js";
 import {
+  MAX_FINDINGS_PER_MECHANISM,
   SYNTHESIZER_DEBOUNCE_MS,
   type DecisionBrief,
   type MechanismFindingDraft,
@@ -141,17 +142,25 @@ export async function processDecisionMechanismJob(
       })
       .eq("id", runId);
 
-    // Even on failure, kick a synth-tick so the orchestrator can continue
-    // (failed mechanisms count toward the partial-completion threshold).
-    await decisionOrchestratorQueue.add(
-      "synth-tick",
-      { briefId },
-      {
-        jobId: `synth:${briefId}`,
-        delay: SYNTHESIZER_DEBOUNCE_MS,
-        removeOnComplete: true,
-      },
-    );
+    // Only kick a synth-tick on the FINAL attempt — otherwise a retry
+    // racing the debounced tick can promote 'failed' to terminal,
+    // emit the artifact, then have the retry succeed and emit a second
+    // artifact. The orchestrator's allTerminal check sees this run as
+    // 'failed' which is fine; if a later retry succeeds it will tick on
+    // its own success path.
+    const totalAttempts = job.opts.attempts ?? 1;
+    const isFinalAttempt = (job.attemptsMade ?? 0) + 1 >= totalAttempts;
+    if (isFinalAttempt) {
+      await decisionOrchestratorQueue.add(
+        "synth-tick",
+        { briefId },
+        {
+          jobId: `synth:${briefId}`,
+          delay: SYNTHESIZER_DEBOUNCE_MS,
+          removeOnComplete: true,
+        },
+      );
+    }
 
     throw err;
   }
@@ -176,10 +185,6 @@ async function fetchPersonasByIds(ids: string[]): Promise<Persona[]> {
   if (error) throw new Error(`personas fetch failed: ${error.message}`);
   return (data ?? []) as Persona[];
 }
-
-// Hard cap on findings per mechanism — guards against an LLM that
-// hallucinates dozens of low-quality bullets and floods the artifact view.
-const MAX_FINDINGS_PER_MECHANISM = 30;
 
 function sanitizeFindings(
   raw: unknown,

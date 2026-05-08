@@ -51,16 +51,68 @@ function field<T>(
   raw: RawExtractedField<T> | undefined,
   fallback: T,
   wasAsked: boolean,
+  validator?: (v: unknown) => T | null,
 ): ExtractedField<T> {
   if (!raw || raw.value === undefined || raw.value === null) {
     return { value: fallback, confidence: 0, source_quote: null, was_asked: wasAsked };
   }
+  // LLM trust boundary: validate the value if a validator is provided
+  // (used for enums and bounded arrays). On mismatch, fall back to the
+  // safe default with confidence 0 — the intake will then ask about it.
+  let value: T = raw.value;
+  let confidence = clampConfidence(raw.confidence);
+  if (validator) {
+    const validated = validator(raw.value);
+    if (validated === null) {
+      value = fallback;
+      confidence = 0;
+    } else {
+      value = validated;
+    }
+  }
   return {
-    value: raw.value,
-    confidence: clampConfidence(raw.confidence),
-    source_quote: raw.source_quote ?? null,
+    value,
+    confidence,
+    source_quote: typeof raw.source_quote === "string" ? raw.source_quote.slice(0, 600) : null,
     was_asked: wasAsked,
   };
+}
+
+// ── LLM-output validators (zod-style hand-rolled) ────────────────────
+const DECISION_TYPES: DecisionType[] = [
+  "tradeoff", "build_or_kill", "hire", "pivot",
+  "feature_design", "vendor_selection", "other",
+];
+const DIMENSIONS: Dimension[] = [
+  "technical", "business", "ux", "strategic", "people", "finance",
+];
+const TIMELINES: Timeline[] = ["immediate", "weeks", "months", "years"];
+const REVERSIBILITIES: Reversibility[] = ["one_way_door", "two_way_door", "unknown"];
+const STAKES_VALUES: Stakes[] = ["low", "medium", "high", "unknown"];
+
+const MAX_ARRAY_ITEMS = 10;
+const MAX_STRING_ITEM_LEN = 200;
+const MAX_CANONICAL_QUESTION_LEN = 1000;
+
+function inEnum<T extends string>(allowed: readonly T[]) {
+  return (v: unknown): T | null => (typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : null);
+}
+
+function arrayOfEnum<T extends string>(allowed: readonly T[]) {
+  return (v: unknown): T[] | null => {
+    if (!Array.isArray(v)) return null;
+    return v
+      .filter((x): x is T => typeof x === "string" && (allowed as readonly string[]).includes(x))
+      .slice(0, MAX_ARRAY_ITEMS);
+  };
+}
+
+function arrayOfString(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null;
+  return v
+    .filter((x): x is string => typeof x === "string")
+    .map((x) => x.slice(0, MAX_STRING_ITEM_LEN))
+    .slice(0, MAX_ARRAY_ITEMS);
 }
 
 function clampConfidence(c: unknown): number {
@@ -87,18 +139,23 @@ export async function extractRoutingFields(
     const f = parsed.fields ?? ({} as RawExtractionResponse["fields"]);
     const tokens = response.usage.inputTokens + response.usage.outputTokens;
 
+    const canonical = (parsed.canonical_question || rawUserMessages[0] || "").slice(
+      0,
+      MAX_CANONICAL_QUESTION_LEN,
+    );
+
     return {
-      canonical_question: parsed.canonical_question || rawUserMessages[0] || "",
+      canonical_question: canonical,
       routing_extract: {
-        decision_type: field<DecisionType>(f.decision_type, "other", priorAskedFields.has("decision_type")),
-        primary_dimensions: field<Dimension[]>(f.primary_dimensions, [], priorAskedFields.has("primary_dimensions")),
-        timeline: field<Timeline>(f.timeline, "weeks", priorAskedFields.has("timeline")),
-        reversibility: field<Reversibility>(f.reversibility, "unknown", priorAskedFields.has("reversibility")),
-        stakes: field<Stakes>(f.stakes, "unknown", priorAskedFields.has("stakes")),
-        stakeholders: field<string[]>(f.stakeholders, [], priorAskedFields.has("stakeholders")),
-        persona_hints: field<string[]>(f.persona_hints, [], priorAskedFields.has("persona_hints")),
-        alternatives: field<string[]>(f.alternatives, [], priorAskedFields.has("alternatives")),
-        constraints: field<string[]>(f.constraints, [], priorAskedFields.has("constraints")),
+        decision_type: field<DecisionType>(f.decision_type, "other", priorAskedFields.has("decision_type"), inEnum(DECISION_TYPES)),
+        primary_dimensions: field<Dimension[]>(f.primary_dimensions, [], priorAskedFields.has("primary_dimensions"), arrayOfEnum(DIMENSIONS)),
+        timeline: field<Timeline>(f.timeline, "weeks", priorAskedFields.has("timeline"), inEnum(TIMELINES)),
+        reversibility: field<Reversibility>(f.reversibility, "unknown", priorAskedFields.has("reversibility"), inEnum(REVERSIBILITIES)),
+        stakes: field<Stakes>(f.stakes, "unknown", priorAskedFields.has("stakes"), inEnum(STAKES_VALUES)),
+        stakeholders: field<string[]>(f.stakeholders, [], priorAskedFields.has("stakeholders"), arrayOfString),
+        persona_hints: field<string[]>(f.persona_hints, [], priorAskedFields.has("persona_hints"), arrayOfString),
+        alternatives: field<string[]>(f.alternatives, [], priorAskedFields.has("alternatives"), arrayOfString),
+        constraints: field<string[]>(f.constraints, [], priorAskedFields.has("constraints"), arrayOfString),
       },
       tokens_used: tokens,
       used_fallback: false,

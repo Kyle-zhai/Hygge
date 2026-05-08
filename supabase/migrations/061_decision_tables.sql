@@ -5,6 +5,17 @@
 -- Five new tables (decision_sessions, _briefs, _messages, _mechanism_runs,
 -- _findings), plus immutability trigger, RLS, and Realtime publication.
 -- Audit tables stay in place; migration 062 will rename them deprecated_*.
+--
+-- IMPORTANT — DB conventions for this domain:
+--   * `personas.id` is TEXT in production. All FK columns to personas
+--     here (`persona_ids`, `cited_persona_ids`) MUST be TEXT[], not
+--     UUID[]. Initial schema docs lie; check the migrations.
+--   * Decision briefs become immutable post-finalize via the
+--     `decision_briefs_immutable` trigger below. To "edit" a brief,
+--     create a child via /rerun with parent_brief_id pointing back.
+--   * One draft per session is enforced in migration 065 by a partial
+--     unique index — keeps concurrent intake jobs from creating
+--     duplicate drafts.
 
 -- =====================================================================
 -- decision_sessions: container for one decision conversation

@@ -1,19 +1,29 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { DecisionMessage } from "@/lib/decide/types";
+import type { DecisionMessage, QuestionOption } from "@/lib/decide/types";
 import { cn } from "@/lib/utils";
 
-export function UserBubble({ message }: { message: DecisionMessage }) {
+interface Props {
+  message: DecisionMessage;
+  /**
+   * The full session message list so we can resolve a user_option payload
+   * (which stores only the option id) back to its human-readable label by
+   * walking back to the most recent agent_question/agent_confirmation.
+   */
+  allMessages: DecisionMessage[];
+}
+
+export function UserBubble({ message, allMessages }: Props) {
   const t = useTranslations("decide");
 
   let body: string = message.content ?? "";
   if (message.kind === "user_skip_run") {
     body = t("userSkipRun");
   } else if (message.kind === "user_option") {
-    // content is the option id by convention; the label was shown in the
-    // QuestionCard at click time. Render a compact "you picked X".
-    body = `${t("youPicked")} ${message.content ?? ""}`;
+    const optionId = message.content ?? "";
+    const label = resolveOptionLabel(message, optionId, allMessages);
+    body = label ? `${t("youPicked")} ${label}` : `${t("youPicked")} ${optionId}`;
   }
 
   return (
@@ -28,4 +38,22 @@ export function UserBubble({ message }: { message: DecisionMessage }) {
       </div>
     </div>
   );
+}
+
+function resolveOptionLabel(
+  pickMessage: DecisionMessage,
+  optionId: string,
+  allMessages: DecisionMessage[],
+): string | null {
+  const pickAt = new Date(pickMessage.created_at).getTime();
+  for (let i = allMessages.length - 1; i >= 0; i--) {
+    const m = allMessages[i];
+    if (m.kind !== "agent_question" && m.kind !== "agent_confirmation") continue;
+    if (new Date(m.created_at).getTime() >= pickAt) continue;
+    const opts = (m.options ?? []) as QuestionOption[];
+    const found = opts.find((o) => o.id === optionId);
+    if (found) return found.label;
+    return null;
+  }
+  return null;
 }

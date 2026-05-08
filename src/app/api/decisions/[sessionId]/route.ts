@@ -22,7 +22,10 @@ export async function GET(
     .eq("id", sessionId)
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("decisions.session.get_failed", { sessionId, message: error.message });
+    return NextResponse.json({ error: "Failed to load session" }, { status: 500 });
+  }
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (data.user_id !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

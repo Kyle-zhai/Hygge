@@ -99,7 +99,7 @@ export async function runSynthesizer(input: SynthesizerInput): Promise<void> {
 
   // Upsert per-mechanism findings (idempotent via content_hash dedupe index).
   for (const d of allDrafts) {
-    const hash = contentHash(d.kind, d.headline);
+    const hash = contentHash(briefId, d.kind, d.headline);
     const { error } = await supabase.from("decision_findings").upsert(
       {
         brief_id: briefId,
@@ -182,7 +182,7 @@ async function detectAndPersistConflicts(
   const reflectionRunId = await ensureConflictRun(briefId);
 
   for (const c of conflicts.slice(0, 6)) {
-    const hash = contentHash("conflict_warning", c.headline);
+    const hash = contentHash(briefId, "conflict_warning", c.headline);
     await supabase.from("decision_findings").upsert(
       {
         brief_id: briefId,
@@ -222,50 +222,66 @@ async function detectAndPersistConflicts(
 // distinguishes this from a real reflection_ranker mechanism run, so a
 // future migration could legitimately route reflection_ranker as a real
 // stage-2 mechanism without the synthesizer clobbering its raw_output.
+//
+// Atomic via upsert on the unique (brief_id, kind) index from migration
+// 064 — concurrent final-pass synth-ticks (rare but possible) cannot
+// produce two carrier rows nor crash trying.
 async function ensureConflictRun(briefId: string): Promise<string> {
-  // Prefer a previously-created synthetic carrier row.
-  const existingSynthetic = await supabase
+  // First, look up: if a row already exists, we either reuse the
+  // synthetic carrier OR refuse to clobber a real reflection_ranker run.
+  const existing = await supabase
     .from("decision_mechanism_runs")
     .select("id, args")
     .eq("brief_id", briefId)
     .eq("kind", "reflection_ranker")
-    .filter("args->>synthetic", "eq", "true")
     .maybeSingle();
-  if (existingSynthetic.data) return existingSynthetic.data.id as string;
-
-  // Upsert via the (brief_id, kind) unique index from migration 064. If a
-  // real reflection_ranker run already exists for this brief, we cannot
-  // safely repurpose it — abort and let the conflict findings be skipped
-  // for this brief (the spec §7.4 fallback).
-  const { data: real } = await supabase
-    .from("decision_mechanism_runs")
-    .select("id")
-    .eq("brief_id", briefId)
-    .eq("kind", "reflection_ranker")
-    .maybeSingle();
-  if (real) {
+  if (existing.data) {
+    const args = existing.data.args as Record<string, unknown> | null;
+    if (args && args.synthetic === true) {
+      return existing.data.id as string;
+    }
     throw new Error(
       `reflection_ranker run already exists for brief ${briefId} but is not a synthetic carrier — refusing to clobber`,
     );
   }
 
+  // No row yet → upsert. If two ticks race here, the second's INSERT is
+  // converted to a no-op SELECT-back-to-existing by the unique index +
+  // ignoreDuplicates=false; the .select() returns the winning row.
   const { data, error } = await supabase
     .from("decision_mechanism_runs")
-    .insert({
-      brief_id: briefId,
-      kind: "reflection_ranker",
-      status: "running",
-      args: { synthetic: true },
-      started_at: new Date().toISOString(),
-    })
-    .select("id")
+    .upsert(
+      {
+        brief_id: briefId,
+        kind: "reflection_ranker",
+        status: "running",
+        args: { synthetic: true },
+        started_at: new Date().toISOString(),
+      },
+      { onConflict: "brief_id,kind", ignoreDuplicates: false },
+    )
+    .select("id, args")
     .single();
-  if (error) throw new Error(`reflection_ranker run insert failed: ${error.message}`);
+  if (error) throw new Error(`reflection_ranker run upsert failed: ${error.message}`);
+  // After upsert, verify we own a synthetic row (someone could have
+  // raced us to insert a real run between our SELECT and the upsert).
+  const args = data.args as Record<string, unknown> | null;
+  if (!args || args.synthetic !== true) {
+    throw new Error(
+      `lost ensureConflictRun race for brief ${briefId} — real reflection_ranker exists`,
+    );
+  }
   return data.id as string;
 }
 
-function contentHash(kind: string, headline: string): string {
-  return createHash("sha1").update(`${kind}::${headline.trim().toLowerCase()}`).digest("hex");
+function contentHash(briefId: string, kind: string, headline: string): string {
+  // briefId is in the hash so a retried mechanism run with the same
+  // headline doesn't collide across briefs (the dedup index is on
+  // mechanism_run_id+content_hash, but two different runs of the same
+  // mechanism within one brief would otherwise produce two rows with the
+  // same headline — both would get inserted and the artifact would
+  // double-show identical bullets).
+  return createHash("sha1").update(`${briefId}::${kind}::${headline.trim().toLowerCase()}`).digest("hex");
 }
 
 function clamp01(n: unknown): number {

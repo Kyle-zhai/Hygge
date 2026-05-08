@@ -31,7 +31,7 @@ export default function DecisionThreadPage({
   );
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-[calc(100dvh-4rem)] flex-col" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="flex-1 overflow-hidden">
         <ChatThread
           sessionId={sessionId}

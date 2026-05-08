@@ -174,8 +174,20 @@ async function synthesizerTick(job: Job<SynthTickJobData>) {
   if ((allDispatched && allTerminal) || exceededTotalTimeout) {
     // Final pass: run reflection_ranker (LLM call) if it's part of the
     // route AND we have enough material; otherwise skip and finalize.
+    // markBriefComplete MUST run even if the final synthesizer LLM call
+    // throws — otherwise the brief stays 'finalized' forever and the
+    // next synth-tick re-enters this branch, double-emitting findings
+    // and the artifact message. The version-locked update inside
+    // markBriefComplete idempotently dedupes if a retry races us.
     const finalStatus = decideFinalStatus(total, failedCount, exceededTotalTimeout);
-    await runSynthesizer({ briefId, brief, runs, finalPass: true });
+    try {
+      await runSynthesizer({ briefId, brief, runs, finalPass: true });
+    } catch (err) {
+      log.warn("decision_orchestrator.final_synth_failed_continuing", {
+        ...ctx,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     await markBriefComplete(briefId, finalStatus, brief.version);
     log.info("decision_orchestrator.brief_complete", {
       ...ctx,
