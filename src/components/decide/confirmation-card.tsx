@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "next-intl";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { DecisionMessage, QuestionOption } from "@/lib/decide/types";
+import {
+  resolveOptionLabel,
+  type DecisionMessage,
+  type QuestionOption,
+} from "@/lib/decide/types";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,6 +19,7 @@ interface Props {
 
 export function ConfirmationCard({ message, onAnswerOption }: Props) {
   const [submitted, setSubmitted] = useState(false);
+  const locale = useLocale() === "zh" ? "zh" : "en";
   const options = (message.options ?? []) as QuestionOption[];
 
   function pick(optionId: string) {
@@ -38,7 +44,7 @@ export function ConfirmationCard({ message, onAnswerOption }: Props) {
             className={cn("gap-1", submitted && "opacity-50")}
           >
             {opt.is_recommended && <Sparkles className="size-3.5" aria-hidden="true" />}
-            {opt.label}
+            {resolveOptionLabel(opt.id, opt.label, locale)}
           </Button>
         ))}
       </CardContent>

@@ -114,6 +114,35 @@ export const MECHANISM_LABELS_ZH: Record<MechanismKind, string> = {
   reflection_ranker: "反思排序",
 };
 
+// Resolve a confirmation-card option's display label from its stable `id`.
+// The worker writes locale-specific text into options[].label at the time
+// the row was created, so a row written when the session was zh stays zh
+// even if the user's UI locale flipped to en (or the worker's locale
+// detection mis-fired). Map well-known ids to current-locale strings on
+// the frontend so the chrome stays in sync with the page.
+//
+// `fallback` is the DB-stored label, used verbatim if the id isn't a
+// well-known one (e.g., a future addition the frontend doesn't know yet).
+export function resolveOptionLabel(
+  id: string,
+  fallback: string,
+  locale: "en" | "zh",
+): string {
+  const labels = locale === "zh" ? MECHANISM_LABELS_ZH : MECHANISM_LABELS_EN;
+
+  if (id === "start") return locale === "zh" ? "开始分析" : "Start analysis";
+  if (id === "swap_personas") return locale === "zh" ? "换一组 personas" : "Swap personas";
+
+  if (id.startsWith("drop_")) {
+    const kind = id.slice("drop_".length) as MechanismKind;
+    if (kind in labels) {
+      return locale === "zh" ? `跳过 ${labels[kind]}` : `Skip ${labels[kind]}`;
+    }
+  }
+
+  return fallback;
+}
+
 export const MECHANISM_ICONS: Record<MechanismKind, string> = {
   persona_review: "👥",
   round_table_debate: "📐",

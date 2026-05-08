@@ -1,7 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import type { DecisionMessage, QuestionOption } from "@/lib/decide/types";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  resolveOptionLabel,
+  type DecisionMessage,
+  type QuestionOption,
+} from "@/lib/decide/types";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -16,14 +20,16 @@ interface Props {
 
 export function UserBubble({ message, allMessages }: Props) {
   const t = useTranslations("decide");
+  const locale = useLocale() === "zh" ? "zh" : "en";
 
   let body: string = message.content ?? "";
   if (message.kind === "user_skip_run") {
     body = t("userSkipRun");
   } else if (message.kind === "user_option") {
     const optionId = message.content ?? "";
-    const label = resolveOptionLabel(message, optionId, allMessages);
-    body = label ? `${t("youPicked")} ${label}` : `${t("youPicked")} ${optionId}`;
+    const dbLabel = lookupOptionLabel(message, optionId, allMessages);
+    const finalLabel = resolveOptionLabel(optionId, dbLabel ?? optionId, locale);
+    body = `${t("youPicked")} ${finalLabel}`;
   }
 
   return (
@@ -40,7 +46,7 @@ export function UserBubble({ message, allMessages }: Props) {
   );
 }
 
-function resolveOptionLabel(
+function lookupOptionLabel(
   pickMessage: DecisionMessage,
   optionId: string,
   allMessages: DecisionMessage[],

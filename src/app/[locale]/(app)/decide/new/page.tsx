@@ -66,7 +66,7 @@ export default function NewDecisionPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const session = await createDecisionSession();
+      const session = await createDecisionSession(locale === "zh" ? "zh" : "en");
       let res: Response;
       if (files.length > 0) {
         const fd = new FormData();

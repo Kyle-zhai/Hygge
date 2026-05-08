@@ -68,14 +68,14 @@ export default function MechanismRunPage({
 
   if (loadError) {
     return (
-      <div className="container max-w-4xl py-10">
+      <div className="mx-auto w-full max-w-4xl px-6 py-10">
         <p className="text-sm text-destructive">{loadError}</p>
       </div>
     );
   }
   if (!run) {
     return (
-      <div className="container max-w-4xl py-10">
+      <div className="mx-auto w-full max-w-4xl px-6 py-10">
         <p className="text-sm text-muted-foreground">{t("loading")}</p>
       </div>
     );
@@ -84,7 +84,7 @@ export default function MechanismRunPage({
   const transcript = run.raw_output?.raw_transcript;
 
   return (
-    <div className="container max-w-4xl py-10">
+    <div className="mx-auto w-full max-w-4xl px-6 py-10">
       <div className="mb-6">
         <Link
           href={`/${locale}/decide/${sessionId}/artifacts/${briefId}`}
