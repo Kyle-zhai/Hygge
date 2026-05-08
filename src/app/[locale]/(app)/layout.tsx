@@ -47,7 +47,7 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean; isDebate?: boolean; debateId?: string; createdAt?: string }[] = [];
+  const history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean; isDebate?: boolean; debateId?: string; isDecision?: boolean; decisionSessionId?: string; createdAt?: string }[] = [];
   let plan = "free";
   let evaluationsUsed = 0;
   let evaluationsLimit = PLANS.free.evaluationsLimit;
@@ -57,7 +57,7 @@ export default async function AppLayout({
     // Note: legacy evaluations + projects (the /evaluate flow) are no
     // longer surfaced in the sidebar — those routes were removed in the
     // 2026-05-08 cleanup. Only debate history is included here.
-    const [{ data: subscription }, { data: debates }, { data: llm }] = await Promise.all([
+    const [{ data: subscription }, { data: debates }, { data: llm }, { data: decisionSessions }] = await Promise.all([
       supabase
         .from("subscriptions")
         .select("plan, evaluations_used, evaluations_limit")
@@ -75,6 +75,16 @@ export default async function AppLayout({
         .eq("user_id", user.id)
         .eq("enabled", true)
         .limit(1),
+      // Decision sessions surface in the same "My Discussions" list as
+      // debates so users can navigate back. Title falls back to the
+      // canonical_question of the latest brief or the first user_text
+      // message if no brief was sealed yet.
+      supabase
+        .from("decision_sessions")
+        .select("id, title, last_msg_at, created_at")
+        .eq("user_id", user.id)
+        .order("last_msg_at", { ascending: false })
+        .limit(15),
     ]);
     isBYOK = Array.isArray(llm) && llm.length > 0;
 
@@ -124,6 +134,81 @@ export default async function AppLayout({
           isDebate: true,
           debateId: d.id,
           createdAt: d.updated_at,
+        });
+      }
+    }
+
+    // Decision sessions: derive a label when title is empty by looking
+    // up the brief's canonical_question, or the first user_text message.
+    // Single round-trip per kind, scoped to the session ids we're
+    // surfacing — no N+1 spread.
+    const decisionRows = (decisionSessions ?? []) as Array<{
+      id: string;
+      title: string | null;
+      last_msg_at: string;
+      created_at: string;
+    }>;
+    if (decisionRows.length > 0) {
+      const sessionIds = decisionRows.map((s) => s.id);
+
+      const [{ data: briefRows }, { data: firstMessages }] = await Promise.all([
+        supabase
+          .from("decision_briefs")
+          .select("session_id, canonical_question, status, created_at")
+          .in("session_id", sessionIds)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("decision_messages")
+          .select("session_id, content, created_at, kind")
+          .in("session_id", sessionIds)
+          .eq("kind", "user_text")
+          .order("created_at", { ascending: true }),
+      ]);
+
+      // Pick the most recent brief per session — it carries the most
+      // up-to-date canonical_question.
+      const briefBySession = new Map<string, { question: string | null; status: string | null }>();
+      for (const b of (briefRows ?? []) as Array<{
+        session_id: string;
+        canonical_question: string | null;
+        status: string | null;
+      }>) {
+        if (briefBySession.has(b.session_id)) continue;
+        briefBySession.set(b.session_id, {
+          question: b.canonical_question,
+          status: b.status,
+        });
+      }
+
+      const firstUserTextBySession = new Map<string, string>();
+      for (const m of (firstMessages ?? []) as Array<{ session_id: string; content: string | null }>) {
+        if (firstUserTextBySession.has(m.session_id)) continue;
+        if (m.content && m.content.trim()) {
+          firstUserTextBySession.set(m.session_id, m.content.trim().slice(0, 80));
+        }
+      }
+
+      for (const s of decisionRows) {
+        const brief = briefBySession.get(s.id);
+        const fallbackQuestion = firstUserTextBySession.get(s.id);
+        const name =
+          (s.title && s.title.trim()) ||
+          (brief?.question && brief.question.trim()) ||
+          fallbackQuestion ||
+          (locale === "zh" ? "新讨论" : "New discussion");
+        const status = brief?.status === "completed" ? "completed"
+          : brief?.status === "draft" || brief?.status === "finalized" ? "processing"
+          : null;
+        history.push({
+          id: `decision-${s.id}`,
+          name,
+          evaluationId: null,
+          status,
+          mode: "decision",
+          isCompare: false,
+          isDecision: true,
+          decisionSessionId: s.id,
+          createdAt: s.last_msg_at || s.created_at,
         });
       }
     }

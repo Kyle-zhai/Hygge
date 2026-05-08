@@ -106,8 +106,23 @@ export async function processDecisionIntakeJob(
       )
     : [];
 
-  // Case A: user just replied to a confirmation.
-  if (lastConfirmation && userMessagesAfterLastConfirmation.length > 0) {
+  // The confirmation has already been answered if there's a
+  // user_option / user_skip_run between it and now. In that case the
+  // brief either started analysis (status leaving 'draft') or the user
+  // chose another option, and any further user_text is a NEW round of
+  // conversation — route it to standard intake so the user gets an
+  // agent response instead of a silent "treat as cancel" log.
+  const confirmationAlreadyAnswered = userMessagesAfterLastConfirmation.some(
+    (m) => m.kind === "user_option" || m.kind === "user_skip_run",
+  );
+
+  // Case A: user just replied to a STILL-OPEN confirmation by clicking
+  // a button or typing free-text into the awaiting card.
+  if (
+    lastConfirmation &&
+    userMessagesAfterLastConfirmation.length > 0 &&
+    !confirmationAlreadyAnswered
+  ) {
     await handleConfirmationReply(
       session,
       lastConfirmation,
@@ -119,7 +134,8 @@ export async function processDecisionIntakeJob(
   }
 
   // Case B: Standard intake — extract, then either ask next question or emit
-  // confirmation or finalize directly.
+  // confirmation or finalize directly. This path also handles "user came
+  // back from the report and typed a follow-up" (confirmationAlreadyAnswered).
   await handleIntakeTurn(session, messages, llm, ctx);
 }
 
