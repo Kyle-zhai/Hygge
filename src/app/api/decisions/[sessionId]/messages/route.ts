@@ -6,10 +6,16 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueDecisionIntake } from "@/lib/queue/decision";
+import { parseAttachment, composeUserContent } from "@/lib/decide/parse-attachment";
 
-export const maxDuration = 15;
+// Bumped from 15 to 60 because the multipart-with-attachments path
+// runs server-side parse for each file (officeparser can take several
+// seconds on large PDFs).
+export const maxDuration = 60;
 
 const MAX_MESSAGE_BYTES = 16 * 1024;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB per file (matches client cap)
+const MAX_ATTACHMENTS_PER_MESSAGE = 5;
 const ALLOWED_USER_KINDS = ["user_text", "user_option", "user_skip_run"] as const;
 type UserMessageKind = (typeof ALLOWED_USER_KINDS)[number];
 
@@ -72,24 +78,72 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Two body shapes accepted:
+  //   - JSON: { kind, content }                         (no attachments)
+  //   - multipart/form-data: kind=user_text, content=…, files=[…]
+  // Multipart is used by the chat composer when the user attaches
+  // PDFs/DOCX/etc. Files get parsed server-side and their text appended
+  // to the user_text content so the intake LLM sees one coherent message.
   let body: { kind: UserMessageKind; content: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  let parsedAttachmentMeta: Array<{ name: string; ok: boolean; bytes: number }> = [];
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData();
+    const rawKind = String(form.get("kind") ?? "user_text");
+    if (!ALLOWED_USER_KINDS.includes(rawKind as UserMessageKind)) {
+      return NextResponse.json(
+        { error: `kind must be one of ${ALLOWED_USER_KINDS.join(", ")}` },
+        { status: 400 },
+      );
+    }
+    body = { kind: rawKind as UserMessageKind, content: String(form.get("content") ?? "") };
+
+    const fileEntries = form
+      .getAll("files")
+      .filter((f): f is File => f instanceof File && f.size > 0);
+
+    if (fileEntries.length > MAX_ATTACHMENTS_PER_MESSAGE) {
+      return NextResponse.json(
+        { error: `at most ${MAX_ATTACHMENTS_PER_MESSAGE} attachments per message` },
+        { status: 400 },
+      );
+    }
+    for (const f of fileEntries) {
+      if (f.size > MAX_ATTACHMENT_BYTES) {
+        return NextResponse.json(
+          { error: `attachment "${f.name}" exceeds ${MAX_ATTACHMENT_BYTES} bytes` },
+          { status: 413 },
+        );
+      }
+    }
+
+    const parsed = await Promise.all(fileEntries.map(parseAttachment));
+    parsedAttachmentMeta = parsed.map((p) => ({ name: p.name, ok: p.ok, bytes: p.bytes }));
+    body.content = composeUserContent(body.content, parsed);
+  } else {
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    if (!ALLOWED_USER_KINDS.includes(body.kind)) {
+      return NextResponse.json(
+        { error: `kind must be one of ${ALLOWED_USER_KINDS.join(", ")}` },
+        { status: 400 },
+      );
+    }
   }
 
-  if (!ALLOWED_USER_KINDS.includes(body.kind)) {
-    return NextResponse.json(
-      { error: `kind must be one of ${ALLOWED_USER_KINDS.join(", ")}` },
-      { status: 400 },
-    );
-  }
-
+  // After attachment-merge the content can be larger than the typed-text
+  // cap. We allow ~5x for parsed text (still bounded by MAX_PARSED_CHARS_
+  // PER_FILE × MAX_ATTACHMENTS in parse-attachment.ts) but reject anything
+  // truly out-of-bounds to keep the row size sane.
   const content = body.kind === "user_skip_run" ? "" : (body.content ?? "");
-  if (Buffer.byteLength(content, "utf8") > MAX_MESSAGE_BYTES) {
+  const contentLimit = parsedAttachmentMeta.length > 0 ? MAX_MESSAGE_BYTES * 8 : MAX_MESSAGE_BYTES;
+  if (Buffer.byteLength(content, "utf8") > contentLimit) {
     return NextResponse.json(
-      { error: `content exceeds ${MAX_MESSAGE_BYTES} bytes` },
+      { error: `content exceeds ${contentLimit} bytes` },
       { status: 413 },
     );
   }

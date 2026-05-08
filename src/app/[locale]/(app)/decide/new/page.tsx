@@ -6,10 +6,10 @@
 // chip buttons. Mechanism panel sits as a thin metadata footer that says
 // "this isn't ChatGPT" without overpowering the input.
 
-import { useState, type KeyboardEvent } from "react";
+import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { ArrowUp, Loader2, Paperclip, X } from "lucide-react";
 import {
   ALL_MECHANISMS_LIST,
   MECHANISM_LABELS_EN,
@@ -17,13 +17,19 @@ import {
 } from "@/lib/decide/types";
 import { createDecisionSession } from "@/lib/decide/use-decision-session";
 
+const ACCEPT_TYPES =
+  ".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.txt,.md,.markdown,.csv";
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 export default function NewDecisionPage() {
   const t = useTranslations("decide");
   const locale = useLocale();
   const router = useRouter();
   const [text, setText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const labels = locale === "zh" ? MECHANISM_LABELS_ZH : MECHANISM_LABELS_EN;
   const examples = [
@@ -33,17 +39,51 @@ export default function NewDecisionPage() {
     t("examplePromptBuildBuy"),
   ];
 
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const incoming = Array.from(e.target.files ?? []);
+    if (incoming.length === 0) return;
+    const oversized = incoming.find((f) => f.size > MAX_FILE_BYTES);
+    if (oversized) {
+      setError(t("fileTooLarge", { name: oversized.name }));
+      e.target.value = "";
+      return;
+    }
+    setFiles((prev) => {
+      const byKey = new Map(prev.map((f) => [`${f.name}:${f.size}`, f]));
+      for (const f of incoming) byKey.set(`${f.name}:${f.size}`, f);
+      return Array.from(byKey.values());
+    });
+    setError(null);
+    e.target.value = "";
+  }
+
+  function removeFile(idx: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   async function submit() {
-    if (!text.trim() || submitting) return;
+    if ((!text.trim() && files.length === 0) || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       const session = await createDecisionSession();
-      const res = await fetch(`/api/decisions/${session.id}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "user_text", content: text.trim() }),
-      });
+      let res: Response;
+      if (files.length > 0) {
+        const fd = new FormData();
+        fd.set("kind", "user_text");
+        fd.set("content", text.trim());
+        for (const f of files) fd.append("files", f);
+        res = await fetch(`/api/decisions/${session.id}/messages`, {
+          method: "POST",
+          body: fd,
+        });
+      } else {
+        res = await fetch(`/api/decisions/${session.id}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "user_text", content: text.trim() }),
+        });
+      }
       if (!res.ok) throw new Error(await res.text());
       router.push(`/${locale}/decide/${session.id}`);
     } catch (err) {
@@ -63,7 +103,7 @@ export default function NewDecisionPage() {
     void submit();
   }
 
-  const canSend = !!text.trim() && !submitting;
+  const canSend = (!!text.trim() || files.length > 0) && !submitting;
 
   return (
     <main className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-2xl flex-col px-6 pt-20 pb-12">
@@ -76,7 +116,31 @@ export default function NewDecisionPage() {
         </p>
       </header>
 
-      <div className="relative">
+      {/* Attached files chip row */}
+      {files.length > 0 && (
+        <ul className="mb-3 flex flex-wrap gap-2">
+          {files.map((f, i) => (
+            <li
+              key={`${f.name}:${f.size}:${i}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-foreground"
+            >
+              <Paperclip className="size-3" aria-hidden="true" />
+              <span className="max-w-[220px] truncate">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => removeFile(i)}
+                disabled={submitting}
+                aria-label={t("removeAttachment")}
+                className="ml-1 inline-flex size-3.5 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-2.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="relative rounded-2xl border border-border bg-background shadow-sm transition-colors focus-within:border-foreground/40">
         <textarea
           autoFocus
           value={text}
@@ -85,21 +149,43 @@ export default function NewDecisionPage() {
           placeholder={t("newDecisionPlaceholder")}
           disabled={submitting}
           rows={6}
-          className="block w-full resize-none rounded-2xl border border-border bg-background px-5 py-4 pr-14 text-base leading-relaxed text-foreground shadow-sm transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40 focus:outline-none focus:ring-0 disabled:opacity-60"
+          className="block w-full resize-none rounded-2xl border-0 bg-transparent px-5 py-4 pb-14 text-base leading-relaxed text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0 disabled:opacity-60"
         />
-        <button
-          type="button"
-          onClick={() => void submit()}
-          disabled={!canSend}
-          aria-label={t("startAnalysis")}
-          className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:opacity-25 disabled:cursor-not-allowed"
-        >
-          {submitting ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ArrowUp className="size-4" />
-          )}
-        </button>
+        {/* Bottom action row inside the textarea container — paperclip
+            on the left, send button on the right (ChatGPT pattern). */}
+        <div className="absolute inset-x-3 bottom-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={submitting}
+            aria-label={t("attachFile")}
+            title={t("attachFile")}
+            className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Paperclip className="size-4" />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ACCEPT_TYPES}
+            onChange={onFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!canSend}
+            aria-label={t("startAnalysis")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:opacity-25 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {error && <p className="mt-3 text-xs text-destructive">{error}</p>}

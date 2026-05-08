@@ -549,6 +549,12 @@
     "confidenceTooltip": "支持这条结论的 persona/分析次数占比。",
     "elapsedSeconds": "{n} 秒",
     "loadFailed": "加载失败 —— 点这里重试",
-    "openReportShort": "打开报告"
+    "openReportShort": "打开报告",
+    "attachFile": "添加附件",
+    "removeAttachment": "移除附件",
+    "fileTooLarge": "文件太大：{name}（上限 10 MB）",
+    "uploadingFiles": "上传中...",
+    "fileParseFailed": "无法读取 {name} —— 仅作引用发送",
+    "attachedFilesIntro": "附件"
   }
 }

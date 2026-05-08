@@ -549,6 +549,12 @@
     "confidenceTooltip": "Share of personas/runs that supported this conclusion.",
     "elapsedSeconds": "{n}s",
     "loadFailed": "Couldn't load — tap to retry",
-    "openReportShort": "Open report"
+    "openReportShort": "Open report",
+    "attachFile": "Attach a file",
+    "removeAttachment": "Remove attachment",
+    "fileTooLarge": "File too large: {name} (max 10 MB)",
+    "uploadingFiles": "Uploading...",
+    "fileParseFailed": "Couldn't read {name} — sending as plain reference",
+    "attachedFilesIntro": "Attached"
   }
 }
