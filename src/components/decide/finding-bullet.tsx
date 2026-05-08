@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import type { Finding } from "@/lib/decide/types";
 import { cn } from "@/lib/utils";
+import { EvidenceChips } from "./evidence-chips";
 
 const SEVERITY_CLASS: Record<number, string> = {
   // Designed to keep contrast adequate in both light and dark modes and
@@ -38,6 +39,7 @@ export function FindingBullet({ finding }: { finding: Finding }) {
         {finding.detail_summary && (
           <p className="text-xs text-muted-foreground">{finding.detail_summary}</p>
         )}
+        <EvidenceChips evidence={finding.evidence} />
         <p className="text-xs text-muted-foreground" title={t("confidenceTooltip")}>
           {t("confidence")}: {confidencePct}%
         </p>

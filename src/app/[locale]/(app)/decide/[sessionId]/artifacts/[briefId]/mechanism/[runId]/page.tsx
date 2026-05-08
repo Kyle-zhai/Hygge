@@ -1,8 +1,10 @@
 "use client";
 
-// Single-mechanism details page. The drawer (MechanismRunDrawer) is the
-// preferred entry-point inside the artifact view, but a permanent route
-// makes "view details" deep-linkable and shareable.
+// Single-mechanism details page. Shows the structured mechanism_view
+// (table / scenario cards / mental model / etc.) as the primary content,
+// plus findings with their evidence chips. The raw_transcript is kept
+// as a collapsible "Original transcript" affordance for power users —
+// it's no longer the headline content.
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
@@ -14,7 +16,12 @@ import {
   MECHANISM_LABELS_EN,
   MECHANISM_LABELS_ZH,
   type MechanismKind,
+  type MechanismView,
+  type FindingEvidence,
+  type MechanismPersonaInfo,
 } from "@/lib/decide/types";
+import { MechanismViewBlock } from "@/components/decide/mechanism-view-block";
+import { EvidenceChips } from "@/components/decide/evidence-chips";
 
 interface MechanismRun {
   id: string;
@@ -23,7 +30,13 @@ interface MechanismRun {
   status: string;
   raw_output:
     | {
-        findings?: Array<{ headline: string; detail_summary: string; severity: number }>;
+        findings?: Array<{
+          headline: string;
+          detail_summary: string;
+          severity: number;
+          evidence?: FindingEvidence[];
+        }>;
+        mechanism_view?: MechanismView;
         raw_transcript?: unknown;
       }
     | null;
@@ -45,6 +58,7 @@ export default function MechanismRunPage({
   const locale = useLocale();
   const labels = locale === "zh" ? MECHANISM_LABELS_ZH : MECHANISM_LABELS_EN;
   const [run, setRun] = useState<MechanismRun | null>(null);
+  const [personas, setPersonas] = useState<MechanismPersonaInfo[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,9 +68,13 @@ export default function MechanismRunPage({
         if (!r.ok) throw new Error(`mechanism-run fetch ${r.status}`);
         return r.json();
       })
-      .then((data: { run: MechanismRun }) => {
-        if (!cancelled) setRun(data.run);
-      })
+      .then(
+        (data: { run: MechanismRun; personas?: MechanismPersonaInfo[] }) => {
+          if (cancelled) return;
+          setRun(data.run);
+          setPersonas(data.personas ?? []);
+        },
+      )
       .catch((err: unknown) => {
         if (cancelled) return;
         setLoadError(err instanceof Error ? err.message : "Failed to load");
@@ -81,6 +99,8 @@ export default function MechanismRunPage({
     );
   }
 
+  const view = run.raw_output?.mechanism_view;
+  const findings = run.raw_output?.findings ?? [];
   const transcript = run.raw_output?.raw_transcript;
 
   return (
@@ -94,35 +114,59 @@ export default function MechanismRunPage({
         </Link>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <h1 className="text-lg font-semibold">
-            {MECHANISM_ICONS[run.kind]} {labels[run.kind]}
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            {t("statusLabel")}: {run.status}
-          </p>
-        </CardHeader>
-        {run.raw_output?.findings && run.raw_output.findings.length > 0 && (
+      <header className="mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          {MECHANISM_ICONS[run.kind]} {labels[run.kind]}
+        </h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("statusLabel")}: {run.status}
+        </p>
+      </header>
+
+      {/* Primary structured view — the new replacement for the wall-of-text
+          transcript. Falls back gracefully when the LLM didn't produce a
+          structured payload (legacy rows, or sanitization rejected it). */}
+      {view ? (
+        <section className="mb-6">
+          <MechanismViewBlock view={view} personas={personas} />
+        </section>
+      ) : null}
+
+      {findings.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <h2 className="text-sm font-semibold">{t("findingsRecap")}</h2>
+          </CardHeader>
           <CardContent>
-            <h2 className="mb-2 text-sm font-medium">{t("findingsRecap")}</h2>
-            <ul className="space-y-1 text-sm">
-              {run.raw_output.findings.map((f, i) => (
-                <li key={i}>• {f.headline}</li>
+            <ul className="space-y-4">
+              {findings.map((f, i) => (
+                <li key={i} className="border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+                  <p className="text-sm font-medium text-foreground">{f.headline}</p>
+                  {f.detail_summary && (
+                    <p className="mt-1 text-sm text-muted-foreground">{f.detail_summary}</p>
+                  )}
+                  <EvidenceChips evidence={f.evidence} />
+                </li>
               ))}
             </ul>
           </CardContent>
-        )}
-      </Card>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-sm font-medium">{t("fullTranscript")}</h2>
-        </CardHeader>
-        <CardContent>
-          <TranscriptBlock transcript={transcript} runId={runId} />
-        </CardContent>
-      </Card>
+      {/* Raw transcript demoted to a power-user collapsible. The structured
+          view above is the default — this is here for transparency and
+          for sessions whose transcript is the actual round-table output
+          worth showing line-by-line. */}
+      {transcript ? (
+        <details className="rounded-md border border-border bg-card">
+          <summary className="cursor-pointer select-none px-4 py-3 text-xs font-medium text-muted-foreground hover:text-foreground">
+            {t("originalTranscriptToggle")}
+          </summary>
+          <div className="border-t border-border/60 p-4">
+            <TranscriptBlock transcript={transcript} runId={runId} />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }
