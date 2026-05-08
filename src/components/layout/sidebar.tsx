@@ -179,7 +179,27 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
       const res = await fetch(url, { method: "DELETE" });
       if (res.ok) {
         setMenu(null);
-        router.push(`/${locale}/evaluate/new?mode=topic`);
+        // Post-delete redirect target. The legacy /evaluate/new path
+        // 404s since the 2026-05-08 evaluate flow decommission. Route
+        // by item type:
+        //   - decision  → /decide/new   (the live decision flow)
+        //   - debate    → /debates      (debate list)
+        //   - other     → /decide       (sessions list — sane home for
+        //                                 anyone whose history we cleaned)
+        // Also: if the user was viewing the very item they just deleted,
+        // redirect; otherwise just refresh in place so their current
+        // surface (e.g. /decide/<some other session>) doesn't jump.
+        const wasViewingDeleted =
+          (item.isDecision && item.decisionSessionId && pathname.includes(item.decisionSessionId)) ||
+          (item.isDebate && item.debateId && pathname.includes(item.debateId));
+        if (wasViewingDeleted) {
+          const nextHref = item.isDecision
+            ? `/${locale}/decide/new`
+            : item.isDebate
+              ? `/${locale}/debates`
+              : `/${locale}/decide`;
+          router.push(nextHref);
+        }
         router.refresh();
       }
     } finally {
