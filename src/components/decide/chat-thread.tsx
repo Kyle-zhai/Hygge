@@ -60,8 +60,13 @@ export function ChatThread({
     <div
       ref={scrollRef}
       onScroll={handleScroll}
-      className="flex flex-col gap-4 overflow-y-auto p-6 [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-3xl"
+      className="h-full overflow-y-auto"
     >
+      {/* Single centered column — wider than the old 3xl so user
+          bubbles don't sit at an awkward middle-of-page right edge.
+          Matches the conversation widths Claude.ai / ChatGPT settle on
+          for the read flow. */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 px-6 py-8">
       {messages.map((m) => {
         switch (m.kind) {
           case "user_text":
@@ -102,7 +107,8 @@ export function ChatThread({
             return null;
         }
       })}
-      <div ref={bottomRef} />
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }

@@ -31,7 +31,10 @@ export default function DecisionThreadPage({
   );
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div
+      className="flex h-[calc(100dvh-4rem)] flex-col bg-background"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       <div className="flex-1 overflow-hidden">
         <ChatThread
           sessionId={sessionId}
@@ -42,10 +45,17 @@ export default function DecisionThreadPage({
           onSkipRunNow={() => void skipRunNow()}
         />
       </div>
-      <ChatComposer
-        disabled={composerDisabled}
-        onSend={(text) => sendUserText(text)}
-      />
+      {/* Composer sits in the same centered column as the thread above
+          so the input feels visually anchored to the conversation
+          column rather than to the page chrome. */}
+      <div className="border-t bg-background">
+        <div className="mx-auto w-full max-w-[760px] px-6">
+          <ChatComposer
+            disabled={composerDisabled}
+            onSend={(text, files) => sendUserText(text, files)}
+          />
+        </div>
+      </div>
     </div>
   );
 }

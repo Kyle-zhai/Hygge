@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { DecisionMessage } from "./types";
 
-// Subscribes to decision_messages for a session. Reconciles by id and
-// keeps a single ephemeral (agent_thinking) message at most — newer
-// ephemeral arrivals replace older ones, so the chat doesn't fill up
-// with progress text.
+// Subscribes to decision_messages for a session and ALSO polls every
+// few seconds as a fallback — Supabase Realtime can silently drop
+// inserts when the publication's RLS check is mis-configured or when
+// the WS link has hiccups, so we don't trust it as the only source.
+// Reconciles by id, dedupes naturally, keeps one ephemeral message
+// (agent_thinking) at most so progress text doesn't pile up.
+
+const POLL_INTERVAL_MS = 4_000;
 
 export function useRealtimeMessages(sessionId: string | null) {
   const [messages, setMessages] = useState<DecisionMessage[]>([]);
@@ -17,13 +21,35 @@ export function useRealtimeMessages(sessionId: string | null) {
 
   // Reset state during render when sessionId changes — React 19 pattern.
   // Doing this in useEffect would trigger the set-state-in-effect lint
-  // rule and cause an extra render pass. Refs get reset inside the
-  // effect (project rule forbids ref mutation during render).
+  // rule. Refs get reset inside the effect (project rule forbids ref
+  // mutation during render).
   if (prevSessionId !== sessionId) {
     setPrevSessionId(sessionId);
     setMessages([]);
     setLoading(sessionId !== null);
   }
+
+  // Stable function to merge new fetch results into state. Skips already-
+  // seen ids and collapses old ephemerals.
+  const ingest = useCallback((list: DecisionMessage[]) => {
+    let added = false;
+    for (const m of list) {
+      if (!seenIds.current.has(m.id)) {
+        seenIds.current.add(m.id);
+        added = true;
+      }
+    }
+    if (!added) return;
+    setMessages((prev) => {
+      const byId = new Map<string, DecisionMessage>();
+      for (const m of prev) byId.set(m.id, m);
+      for (const m of list) byId.set(m.id, m);
+      const merged = Array.from(byId.values()).sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+      return stripStaleEphemerals(merged);
+    });
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -31,19 +57,25 @@ export function useRealtimeMessages(sessionId: string | null) {
     let cancelled = false;
     seenIds.current = new Set();
 
-    // Initial fetch through the API (handles auth + RLS via cookie)
-    fetch(`/api/decisions/${sessionId}/messages`)
-      .then((r) => r.json())
-      .then((data: { messages: DecisionMessage[] }) => {
+    async function fetchAll() {
+      try {
+        const r = await fetch(`/api/decisions/${sessionId}/messages`);
+        if (!r.ok) return;
+        const data = (await r.json()) as { messages: DecisionMessage[] };
         if (cancelled) return;
-        const list = data.messages ?? [];
-        for (const m of list) seenIds.current.add(m.id);
-        setMessages(stripStaleEphemerals(list));
+        ingest(data.messages ?? []);
         setLoading(false);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setLoading(false);
-      });
+      }
+    }
+
+    // Initial fetch; surfaces existing history immediately.
+    void fetchAll();
+
+    // Poll loop as Realtime fallback. Guarantees the user sees agent
+    // replies even if the WS subscription drops silently.
+    const pollHandle = window.setInterval(fetchAll, POLL_INTERVAL_MS);
 
     const supabase = createClient();
     const channel = supabase
@@ -58,9 +90,7 @@ export function useRealtimeMessages(sessionId: string | null) {
         },
         (payload) => {
           const m = payload.new as DecisionMessage;
-          if (seenIds.current.has(m.id)) return;
-          seenIds.current.add(m.id);
-          setMessages((prev) => stripStaleEphemerals([...prev, m]));
+          ingest([m]);
         },
       )
       .on(
@@ -82,9 +112,10 @@ export function useRealtimeMessages(sessionId: string | null) {
 
     return () => {
       cancelled = true;
+      window.clearInterval(pollHandle);
       void supabase.removeChannel(channel);
     };
-  }, [sessionId]);
+  }, [sessionId, ingest]);
 
   return { messages, loading };
 }

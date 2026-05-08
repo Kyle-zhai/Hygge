@@ -6,12 +6,12 @@ import type { MessageKind } from "./types";
 // Mutation helpers for the chat thread. Posting a message creates the
 // decision_messages row server-side AND enqueues an intake job. The
 // useRealtimeMessages hook on the page renders the new message via
-// Supabase Realtime; nothing here calls setState.
+// Supabase Realtime + a polling fallback; nothing here calls setState.
 
 export function useDecisionSession(sessionId: string) {
   const sendUserText = useCallback(
-    async (text: string) => {
-      await postMessage(sessionId, "user_text", text);
+    async (text: string, files: File[] = []) => {
+      await postMessage(sessionId, "user_text", text, files);
     },
     [sessionId],
   );
@@ -34,12 +34,28 @@ async function postMessage(
   sessionId: string,
   kind: Extract<MessageKind, "user_text" | "user_option" | "user_skip_run">,
   content: string,
+  files: File[] = [],
 ): Promise<void> {
-  const res = await fetch(`/api/decisions/${sessionId}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind, content }),
-  });
+  // Multipart when files are attached so the API can parse them
+  // server-side; JSON otherwise (cheaper and matches the existing
+  // option-pick + skip-run paths).
+  let res: Response;
+  if (files.length > 0) {
+    const fd = new FormData();
+    fd.set("kind", kind);
+    fd.set("content", content);
+    for (const f of files) fd.append("files", f);
+    res = await fetch(`/api/decisions/${sessionId}/messages`, {
+      method: "POST",
+      body: fd,
+    });
+  } else {
+    res = await fetch(`/api/decisions/${sessionId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, content }),
+    });
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `POST /api/decisions/${sessionId}/messages failed: ${res.status}`);
