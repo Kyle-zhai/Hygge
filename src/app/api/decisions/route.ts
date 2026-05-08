@@ -15,12 +15,17 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { workspace_id?: string; title?: string } = {};
+  let body: { workspace_id?: string; title?: string; locale?: string } = {};
   try {
     body = await request.json();
   } catch {
     // empty body is fine
   }
+
+  // Validate locale rather than echoing whatever the client sent — the
+  // worker reads this column and an unexpected value would fall through
+  // its locale switch.
+  const locale: "en" | "zh" = body.locale === "zh" ? "zh" : "en";
 
   // Verify workspace membership before pinning the session to a workspace.
   // Without this check, a malicious client could attach a session to any
@@ -53,6 +58,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       workspace_id: workspaceId,
       title: safeTitle,
+      locale,
     })
     .select("id, created_at")
     .single();

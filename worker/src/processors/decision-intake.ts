@@ -52,6 +52,7 @@ interface SessionRow {
   id: string;
   user_id: string;
   workspace_id: string | null;
+  locale: "en" | "zh";
 }
 
 const PROMPT_VERSION_TAG = `${INTAKE_EXTRACT_PROMPT_VERSION}+${INTAKE_QUESTION_PROMPT_VERSION}`;
@@ -339,7 +340,10 @@ async function emitConfirmation(
     mechanisms: route.mechanisms,
   });
 
-  const language = detectLanguage(messages.map((m) => m.content ?? ""));
+  const language = pickReplyLanguage(
+    session,
+    messages.filter((m) => m.kind === "user_text").map((m) => m.content ?? ""),
+  );
   const summary = buildConfirmationSummary(
     route.mechanisms.map((m) => m.kind),
     picked.persona_ids,
@@ -392,7 +396,10 @@ async function emitNewConfirmationFromBrief(
     .eq("id", brief.id)
     .eq("status", "draft");
 
-  const language = detectLanguage(allMessages.map((m) => m.content ?? ""));
+  const language = pickReplyLanguage(
+    session,
+    allMessages.filter((m) => m.kind === "user_text").map((m) => m.content ?? ""),
+  );
   const summary = buildConfirmationSummary(
     brief.mechanisms.map((m) => m.kind),
     newPersonaIds,
@@ -458,11 +465,15 @@ async function sealBriefAndEnqueueOrchestrator(
       .update({ status: "failed", finalized_at: new Date().toISOString(), sealed_by: sealReason })
       .eq("id", brief.id)
       .eq("status", "draft");
+    const session = await fetchSession(brief.session_id);
+    const locale = session?.locale ?? "en";
     await insertMessage({
       session_id: brief.session_id,
       kind: "system",
       content:
-        "我没能选到合适的 persona 来分析这个决策(LLM 暂时不可用)。请稍后重试或换个问题描述。",
+        locale === "zh"
+          ? "我没能选到合适的 persona 来分析这个决策(LLM 暂时不可用)。请稍后重试或换个问题描述。"
+          : "Couldn't select personas for this decision (LLM is temporarily unavailable). Please retry or rephrase the question.",
       brief_id: brief.id,
     });
     await touchSession(brief.session_id);
@@ -482,12 +493,15 @@ async function sealBriefAndEnqueueOrchestrator(
 
   if (error) throw new Error(`brief seal failed: ${error.message}`);
 
-  // Emit a transient agent_thinking message so the UI immediately has
-  // feedback that analysis has started.
+  // Emit a transient agent_thinking ping. Content stays empty on purpose —
+  // the UI's ThinkingBubble component falls back to the locale-aware
+  // t("thinking") string when content is empty, which keeps the chrome
+  // text in the user's page locale without the worker having to thread
+  // the locale (or scan messages for explicit overrides) here.
   await insertMessage({
     session_id: brief.session_id,
     kind: "agent_thinking",
-    content: "正在编排分析...",
+    content: "",
     is_ephemeral: true,
     brief_id: brief.id,
   });
@@ -520,11 +534,18 @@ async function sealBriefAndEnqueueOrchestrator(
 async function fetchSession(sessionId: string): Promise<SessionRow | null> {
   const { data, error } = await supabase
     .from("decision_sessions")
-    .select("id, user_id, workspace_id")
+    .select("id, user_id, workspace_id, locale")
     .eq("id", sessionId)
     .maybeSingle();
   if (error) throw new Error(`session fetch failed: ${error.message}`);
-  return data;
+  if (!data) return null;
+  // Defensive: rows that pre-date migration 066 won't have a locale, even
+  // though the DEFAULT runs on new rows. Coerce to 'en' so the locale
+  // switch downstream never sees `undefined`.
+  return {
+    ...data,
+    locale: data.locale === "zh" ? "zh" : "en",
+  } as SessionRow;
 }
 
 async function fetchMessages(sessionId: string): Promise<DecisionMessage[]> {
@@ -775,6 +796,58 @@ function detectLanguage(messages: string[]): "en" | "zh" {
   const sample = messages.join(" ").slice(0, 400);
   // Crude but sufficient: any CJK character implies zh.
   return /[㐀-鿿]/.test(sample) ? "zh" : "en";
+}
+
+// Scan recent user messages for an explicit reply-language instruction.
+// We look at the LAST few user_text messages because the user can change
+// their mind ("actually answer in English"). Returns null if no explicit
+// instruction is found.
+//
+// Patterns covered:
+//   ZH: "用中文回复", "用中文回答", "回复用中文", "请说中文"
+//       "用英文回复", "用英文回答", "回复用英文", "请说英文"
+//   EN: "respond in english", "answer in english", "reply in english"
+//       "in english please", "please use english"
+//       (same with chinese / mandarin)
+function detectExplicitLanguageOverride(
+  userMessages: string[],
+): "en" | "zh" | null {
+  const recent = userMessages.slice(-5).join(" ").toLowerCase();
+
+  // English-instruction patterns (these resolve to "en")
+  const enExplicit =
+    /\b(respond|answer|reply|write)\b[^.!?]*\b(in|using)\s+english\b/i.test(recent) ||
+    /\b(in|using)\s+english\b[^.!?]*\b(please|thanks)\b/i.test(recent) ||
+    /\bplease\s+(use|reply|respond|answer)\s+(in\s+)?english\b/i.test(recent) ||
+    /(用|使用)\s*英(文|语)\s*(回复|回答|答|写)/.test(recent) ||
+    /(回复|回答|答)\s*用\s*英(文|语)/.test(recent);
+  if (enExplicit) return "en";
+
+  // Chinese-instruction patterns (resolve to "zh")
+  const zhExplicit =
+    /\b(respond|answer|reply|write)\b[^.!?]*\b(in|using)\s+(chinese|mandarin)\b/i.test(recent) ||
+    /\b(in|using)\s+(chinese|mandarin)\b[^.!?]*\b(please|thanks)\b/i.test(recent) ||
+    /\bplease\s+(use|reply|respond|answer)\s+(in\s+)?(chinese|mandarin)\b/i.test(recent) ||
+    /(用|使用)\s*中(文|文回复|文回答)/.test(recent) ||
+    /(回复|回答|答)\s*用\s*中文/.test(recent);
+  if (zhExplicit) return "zh";
+
+  return null;
+}
+
+// Picks the language for UI-chrome prose (ephemeral status, confirmation
+// summary, button labels). Priority:
+//   1. Explicit instruction in user messages ("respond in English") wins
+//      everything — the user's words are the most authoritative signal.
+//   2. Otherwise, fall back to the page locale captured at session
+//      creation. UI chrome should match the page the user is reading.
+function pickReplyLanguage(
+  session: SessionRow,
+  userMessages: string[],
+): "en" | "zh" {
+  const explicit = detectExplicitLanguageOverride(userMessages);
+  if (explicit) return explicit;
+  return session.locale;
 }
 
 function buildConfirmationSummary(
