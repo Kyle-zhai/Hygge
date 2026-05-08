@@ -1,14 +1,11 @@
-// Sessions list — the "history" landing for /decide. Renders past
-// decisions and a primary CTA to start a new one.
+// Sessions list — bare list, no Card stacking. Tight typography, single
+// status pill per row, hover state tints the row instead of a shadow.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Plus } from "lucide-react";
+import { ArrowUpRight, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export default async function DecideHomePage({
   params,
@@ -21,9 +18,6 @@ export default async function DecideHomePage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/${locale}/auth/login`);
 
-  // Pull a one-line preview of the latest brief in each session so the
-  // list isn't anemic — title + timestamp alone make every row look the
-  // same. Fall back to the session title or "untitled" when no brief yet.
   const { data: sessions } = await supabase
     .from("decision_sessions")
     .select(`
@@ -35,34 +29,38 @@ export default async function DecideHomePage({
     .limit(50);
 
   return (
-    <div className="container max-w-3xl py-10">
-      <header className="mb-8 flex items-start justify-between gap-4">
+    <main className="mx-auto w-full max-w-3xl px-6 pt-20 pb-16">
+      <header className="mb-10 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{t("homeTitleSharper")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("homeSubtitleSharper")}</p>
+          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
+            {t("homeTitleSharper")}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("homeSubtitleSharper")}
+          </p>
         </div>
-        <Link href={`/${locale}/decide/new`}>
-          <Button className="gap-1">
-            <Plus className="size-4" aria-hidden="true" />
-            {t("newDecision")}
-          </Button>
+        <Link
+          href={`/${locale}/decide/new`}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-foreground/40"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t("newDecision")}
         </Link>
       </header>
 
       {!sessions || sessions.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">{t("homeEmpty")}</p>
-            <Link href={`/${locale}/decide/new`} className="mt-4 inline-block">
-              <Button className="gap-1">
-                <Plus className="size-4" aria-hidden="true" />
-                {t("newDecision")}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-dashed border-border py-16 text-center">
+          <p className="text-sm text-muted-foreground">{t("homeEmpty")}</p>
+          <Link
+            href={`/${locale}/decide/new`}
+            className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-foreground/40"
+          >
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t("newDecision")}
+          </Link>
+        </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-border/60 border-y border-border/60">
           {sessions.map((s) => {
             const briefs = (s.decision_briefs ?? []) as Array<{
               canonical_question: string;
@@ -78,30 +76,34 @@ export default async function DecideHomePage({
               <li key={s.id}>
                 <Link
                   href={`/${locale}/decide/${s.id}`}
-                  className="block rounded-lg border bg-card p-4 transition-shadow hover:shadow-md"
+                  className="group flex items-start justify-between gap-4 px-1 py-5 transition-colors hover:bg-muted/40"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="line-clamp-2 flex-1 text-sm font-medium">
+                  <div className="flex-1 min-w-0">
+                    <p className="line-clamp-2 text-[15px] font-medium leading-snug text-foreground">
                       {preview}
                     </p>
-                    {status && (
-                      <Badge
-                        variant={status === "completed" ? "default" : "outline"}
-                        className="shrink-0"
-                      >
-                        {t(`briefStatusLabel.${status}` as const)}
-                      </Badge>
-                    )}
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      {new Date(s.last_msg_at).toLocaleString()}
+                      {status ? (
+                        <>
+                          <span className="mx-1.5 text-muted-foreground/40">·</span>
+                          <span className="text-muted-foreground">
+                            {t(`briefStatusLabel.${status}` as const)}
+                          </span>
+                        </>
+                      ) : null}
+                    </p>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {new Date(s.last_msg_at).toLocaleString()}
-                  </p>
+                  <ArrowUpRight
+                    className="mt-1 size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground"
+                    aria-hidden="true"
+                  />
                 </Link>
               </li>
             );
           })}
         </ul>
       )}
-    </div>
+    </main>
   );
 }

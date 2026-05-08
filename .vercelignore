@@ -1,0 +1,12 @@
+# Investor / pitch materials — local only, never deploy
+INVESTOR-MEMO.*
+INVESTOR-PITCH*.md
+Intro.docx
+项目书.pdf
+PITCH_DECK*.pdf
+
+# Worker code lives on Railway, not Vercel
+worker/
+
+# Test fixtures and pdf-test scripts
+pdf-test*.mjs

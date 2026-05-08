@@ -1,17 +1,20 @@
 "use client";
 
-// New decision: minimal page that takes the user's first question, creates
-// a session, posts the user_text message, then redirects to /decide/[id]
-// where the chat thread takes over. Includes a static panel preview so
-// users see the "this is not ChatGPT" wedge before they submit, plus
-// example-prompt chips so they have a starting point.
+// New decision — minimal, centered, ChatGPT/Claude-style entry surface.
+// One textarea owns the page; submit is a small icon button anchored to
+// the textarea's bottom-right. Example prompts are quiet text links, not
+// chip buttons. Mechanism panel sits as a thin metadata footer that says
+// "this isn't ChatGPT" without overpowering the input.
 
-import { useState, type FormEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { PanelPreview } from "@/components/decide/panel-preview";
+import { ArrowUp, Loader2 } from "lucide-react";
+import {
+  ALL_MECHANISMS_LIST,
+  MECHANISM_LABELS_EN,
+  MECHANISM_LABELS_ZH,
+} from "@/lib/decide/types";
 import { createDecisionSession } from "@/lib/decide/use-decision-session";
 
 export default function NewDecisionPage() {
@@ -22,15 +25,15 @@ export default function NewDecisionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const examplePrompts = [
+  const labels = locale === "zh" ? MECHANISM_LABELS_ZH : MECHANISM_LABELS_EN;
+  const examples = [
     t("examplePromptShipFeature"),
     t("examplePromptHire"),
     t("examplePromptPivot"),
     t("examplePromptBuildBuy"),
   ];
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function submit() {
     if (!text.trim() || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -49,56 +52,96 @@ export default function NewDecisionPage() {
     }
   }
 
+  // Cmd/Ctrl + Enter sends; plain Enter inserts a newline (matches the
+  // ChatGPT convention for multi-line decision questions). IME guard
+  // keeps pinyin candidates from auto-submitting.
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Enter") return;
+    if (e.nativeEvent.isComposing) return;
+    if (!(e.metaKey || e.ctrlKey)) return;
+    e.preventDefault();
+    void submit();
+  }
+
+  const canSend = !!text.trim() && !submitting;
+
   return (
-    <div className="container max-w-2xl py-12 space-y-6">
-      <Card>
-        <CardHeader>
-          <h1 className="text-xl font-semibold">{t("newDecisionTitle")}</h1>
-          <p className="text-sm text-muted-foreground">{t("newDecisionSubtitle")}</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-3">
-            <textarea
-              autoFocus
-              className="min-h-[180px] w-full resize-none rounded-md border border-input bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={t("newDecisionPlaceholder")}
-              disabled={submitting}
-            />
+    <main className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-2xl flex-col px-6 pt-20 pb-12">
+      <header className="mb-10">
+        <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
+          {t("newDecisionTitle")}
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {t("newDecisionSubtitle")}
+        </p>
+      </header>
 
-            {/* Example prompts as clickable chips. First-run users have a
-                concrete starting point; existing users can ignore them. */}
-            <div>
-              <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
-                {t("tryThis")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {examplePrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => setText(prompt)}
-                    disabled={submitting}
-                    className="rounded-md border bg-background px-3 py-1.5 text-left text-xs hover:bg-accent disabled:opacity-50"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
+      <div className="relative">
+        <textarea
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={t("newDecisionPlaceholder")}
+          disabled={submitting}
+          rows={6}
+          className="block w-full resize-none rounded-2xl border border-border bg-background px-5 py-4 pr-14 text-base leading-relaxed text-foreground shadow-sm transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40 focus:outline-none focus:ring-0 disabled:opacity-60"
+        />
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={!canSend}
+          aria-label={t("startAnalysis")}
+          className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition-opacity hover:opacity-90 disabled:opacity-25 disabled:cursor-not-allowed"
+        >
+          {submitting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <ArrowUp className="size-4" />
+          )}
+        </button>
+      </div>
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex justify-end">
-              <Button type="submit" disabled={!text.trim() || submitting}>
-                {submitting ? t("submitting") : t("startAnalysis")}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
 
-      <PanelPreview />
-    </div>
+      {/* Quiet example-prompt list — no chip buttons, just text links */}
+      <section className="mt-8">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
+          {t("tryThis")}
+        </p>
+        <ul className="space-y-1.5">
+          {examples.map((example) => (
+            <li key={example}>
+              <button
+                type="button"
+                onClick={() => setText(example)}
+                disabled={submitting}
+                className="text-left text-sm leading-relaxed text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed"
+              >
+                {example}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Bottom metadata: minimalist mechanism preview as a single
+          subtle row. No icons, no chips — just text the way OpenAI's
+          model picker reads as "what's running" without commanding
+          attention. */}
+      <footer className="mt-auto pt-12">
+        <div className="border-t border-border/60 pt-6">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground/60">
+            {t("panelPreviewLabel")}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {ALL_MECHANISMS_LIST.map((k) => labels[k]).join(" · ")}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground/70">
+            {t("panelPreviewMechanisms")} · {t("panelPreviewPersonas")}
+          </p>
+        </div>
+      </footer>
+    </main>
   );
 }
