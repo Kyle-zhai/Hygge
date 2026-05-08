@@ -2,14 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PLANS } from "@/lib/stripe/plans";
 
-interface ProjectRow {
-  id: string;
-  parsed_data: { name?: string } | null;
-  raw_input: string;
-  created_at: string;
-  evaluations: { id: string; status: string; mode: string; comparison_base_id: string | null }[];
-}
-
 interface DebateRow {
   id: string;
   evaluation_id: string | null;
@@ -55,20 +47,17 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  let history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean; isDebate?: boolean; debateId?: string; createdAt?: string }[] = [];
+  const history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean; isDebate?: boolean; debateId?: string; createdAt?: string }[] = [];
   let plan = "free";
   let evaluationsUsed = 0;
   let evaluationsLimit = PLANS.free.evaluationsLimit;
 
   let isBYOK = false;
   if (user) {
-    const [{ data: projects }, { data: subscription }, { data: debates }, { data: llm }] = await Promise.all([
-      supabase
-        .from("projects")
-        .select("id, raw_input, parsed_data, created_at, evaluations (id, status, mode, comparison_base_id)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20),
+    // Note: legacy evaluations + projects (the /evaluate flow) are no
+    // longer surfaced in the sidebar — those routes were removed in the
+    // 2026-05-08 cleanup. Only debate history is included here.
+    const [{ data: subscription }, { data: debates }, { data: llm }] = await Promise.all([
       supabase
         .from("subscriptions")
         .select("plan, evaluations_used, evaluations_limit")
@@ -88,21 +77,6 @@ export default async function AppLayout({
         .limit(1),
     ]);
     isBYOK = Array.isArray(llm) && llm.length > 0;
-
-    if (projects) {
-      history = (projects as unknown as ProjectRow[]).map((p) => {
-        const eval0 = Array.isArray(p.evaluations) ? p.evaluations[0] : p.evaluations;
-        return {
-          id: p.id,
-          name: p.parsed_data?.name || p.raw_input.slice(0, 40),
-          evaluationId: eval0?.id ?? null,
-          status: eval0?.status ?? null,
-          mode: eval0?.mode ?? "topic",
-          isCompare: !!eval0?.comparison_base_id,
-          createdAt: p.created_at,
-        };
-      });
-    }
 
     const debateRows = (debates || []) as DebateRow[];
     if (debateRows.length > 0) {

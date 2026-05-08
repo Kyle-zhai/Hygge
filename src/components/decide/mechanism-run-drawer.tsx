@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { UtteranceFeedbackButtons } from "@/components/evaluation/utterance-feedback-buttons";
+import { UtteranceFeedbackButtons } from "@/components/feedback/utterance-feedback-buttons";
 import {
   MECHANISM_ICONS,
   MECHANISM_LABELS_EN,

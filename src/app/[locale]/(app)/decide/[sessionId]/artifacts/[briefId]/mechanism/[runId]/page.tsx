@@ -8,7 +8,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { UtteranceFeedbackButtons } from "@/components/evaluation/utterance-feedback-buttons";
+import { UtteranceFeedbackButtons } from "@/components/feedback/utterance-feedback-buttons";
 import {
   MECHANISM_ICONS,
   MECHANISM_LABELS_EN,

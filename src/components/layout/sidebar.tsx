@@ -68,8 +68,6 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
   const [menu, setMenu] = useState<{ itemId: string; top: number; left: number } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const isNewPage = pathname.includes("/evaluate/new");
-  const currentMode = searchParams.get("mode") || "topic";
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsed, setCollapsed] = useState(false);
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
@@ -243,7 +241,10 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
         </div>
       </div>
 
-      {/* General Discussion + Product Evaluation */}
+      {/* Primary nav — post-2026-05-08 cleanup: General Discussion +
+          Product Evaluation + Compare entries removed (legacy /evaluate
+          flow retired, /compare depended on it). Decisions is the live
+          analysis surface. */}
       <div className="shrink-0 space-y-1 px-3 pt-2 pb-3">
         <Link
           href={`/${locale}/dashboard`}
@@ -256,42 +257,6 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
         >
           <LayoutDashboard className="h-4 w-4" />
           <span>{locale === "zh" ? "总览" : "Overview"}</span>
-        </Link>
-        <Link
-          href={`/${locale}/evaluate/new?mode=topic`}
-          onClick={() => setMobileOpen(false)}
-          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            isNewPage && currentMode === "topic"
-              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] font-medium"
-              : "text-[color:var(--text-secondary)] hover:bg-[rgb(var(--bg-tertiary-rgb)/0.60)] hover:text-[color:var(--text-primary)]"
-          }`}
-        >
-          <MessageCircle className="h-4 w-4" />
-          <span>{locale === "zh" ? "通用讨论" : "General Discussion"}</span>
-        </Link>
-        <Link
-          href={`/${locale}/evaluate/new?mode=product`}
-          onClick={() => setMobileOpen(false)}
-          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            isNewPage && currentMode === "product"
-              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] font-medium"
-              : "text-[color:var(--text-secondary)] hover:bg-[rgb(var(--bg-tertiary-rgb)/0.60)] hover:text-[color:var(--text-primary)]"
-          }`}
-        >
-          <Package className="h-4 w-4" />
-          <span>{locale === "zh" ? "产品评估" : "Product Evaluation"}</span>
-        </Link>
-        <Link
-          href={`/${locale}/compare`}
-          onClick={() => setMobileOpen(false)}
-          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-            pathname.includes("/compare")
-              ? "bg-[color:var(--bg-tertiary)] text-[color:var(--text-primary)] font-medium"
-              : "text-[color:var(--text-secondary)] hover:bg-[rgb(var(--bg-tertiary-rgb)/0.60)] hover:text-[color:var(--text-primary)]"
-          }`}
-        >
-          <Scale className="h-4 w-4" />
-          <span>{locale === "zh" ? "对比" : "Compare"}</span>
         </Link>
         <Link
           href={`/${locale}/debates`}
