@@ -24,6 +24,7 @@ import {
   BarChart3,
   ListFilter,
   Swords,
+  Sparkles,
   LayoutDashboard,
   Settings,
   Users,
@@ -47,6 +48,8 @@ interface HistoryItem {
   isCompare: boolean;
   isDebate?: boolean;
   debateId?: string;
+  isDecision?: boolean;
+  decisionSessionId?: string;
   createdAt?: string;
 }
 
@@ -170,7 +173,9 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
     try {
       const url = item.isDebate && item.debateId
         ? `/api/debates/${item.debateId}`
-        : `/api/projects/${itemId}`;
+        : item.isDecision && item.decisionSessionId
+          ? `/api/decisions/${item.decisionSessionId}`
+          : `/api/projects/${itemId}`;
       const res = await fetch(url, { method: "DELETE" });
       if (res.ok) {
         setMenu(null);
@@ -194,6 +199,7 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
     if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (typeFilter.size === 0) return true;
     if (h.isDebate) return typeFilter.has("debate");
+    if (h.isDecision) return typeFilter.has("decision");
     if (h.isCompare) return typeFilter.has("compare");
     if (h.mode === "product") return typeFilter.has("product");
     return typeFilter.has("topic");
@@ -376,12 +382,12 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
                     transition={{ duration: 0.12, ease: "easeOut" }}
                     className="absolute right-0 top-full mt-1 z-[60] w-[130px] rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-secondary)] p-1 shadow-xl shadow-black/50"
                   >
-                    {(["topic", "product", "compare", "debate"] as const).map((type) => {
+                    {(["topic", "product", "compare", "debate", "decision"] as const).map((type) => {
                       const active = typeFilter.has(type);
                       const labels: Record<string, string> = locale === "zh"
-                        ? { topic: "话题", product: "产品", compare: "对比", debate: "辩论" }
-                        : { topic: "Topic", product: "Product", compare: "Compare", debate: "Debate" };
-                      const Icons: Record<string, typeof MessageCircle> = { topic: MessageCircle, product: Package, compare: Scale, debate: Swords };
+                        ? { topic: "话题", product: "产品", compare: "对比", debate: "辩论", decision: "决策" }
+                        : { topic: "Topic", product: "Product", compare: "Compare", debate: "Debate", decision: "Decision" };
+                      const Icons: Record<string, typeof MessageCircle> = { topic: MessageCircle, product: Package, compare: Scale, debate: Swords, decision: Sparkles };
                       const Icon = Icons[type];
                       return (
                         <button
@@ -431,15 +437,19 @@ export function Sidebar({ userEmail, history, plan, evaluationsUsed, evaluations
           {filteredHistory.map((item) => {
             const href = item.isDebate && item.debateId
               ? `/${locale}/debates/${item.debateId}`
-              : item.evaluationId
-                ? item.status === "completed"
-                  ? `/${locale}/evaluate/${item.evaluationId}/result`
-                  : `/${locale}/evaluate/${item.evaluationId}/progress`
-                : "#";
+              : item.isDecision && item.decisionSessionId
+                ? `/${locale}/decide/${item.decisionSessionId}`
+                : item.evaluationId
+                  ? item.status === "completed"
+                    ? `/${locale}/evaluate/${item.evaluationId}/result`
+                    : `/${locale}/evaluate/${item.evaluationId}/progress`
+                  : "#";
             const active = item.isDebate
               ? item.debateId && pathname.includes(item.debateId)
-              : item.evaluationId && pathname.includes(item.evaluationId);
-            const ModeIcon = item.isDebate ? Swords : item.isCompare ? Scale : item.mode === "product" ? Package : MessageCircle;
+              : item.isDecision
+                ? item.decisionSessionId && pathname.includes(item.decisionSessionId)
+                : item.evaluationId && pathname.includes(item.evaluationId);
+            const ModeIcon = item.isDebate ? Swords : item.isDecision ? Sparkles : item.isCompare ? Scale : item.mode === "product" ? Package : MessageCircle;
             const menuOpen = menu?.itemId === item.id;
             return (
               <div key={item.id} className="group relative">
