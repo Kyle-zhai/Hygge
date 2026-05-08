@@ -27,6 +27,7 @@ import {
 import type { Persona } from "../types/persona.js";
 import { buildMechanismPrompt } from "../prompts/mechanism-prompts.js";
 import { log } from "../utils/logger.js";
+import type { BriefWebEvidence } from "../lib/pre-search.js";
 
 export interface DecisionMechanismJobData {
   briefId: string;
@@ -67,6 +68,19 @@ export async function processDecisionMechanismJob(
 
     const args = brief.mechanisms.find((m) => m.kind === kind)?.args ?? {};
 
+    // Web evidence is per-brief and shared across mechanisms. We pass it
+    // only to mechanisms that benefit from external data — theory of
+    // mind and reflection ranker are reasoning-about-reasoning and use
+    // empty evidence so the prompt stays tight.
+    const wantsWebEvidence =
+      kind === "persona_review" ||
+      kind === "round_table_debate" ||
+      kind === "scenario_simulation" ||
+      kind === "cross_challenge";
+    const webEvidence = wantsWebEvidence
+      ? ((brief as unknown as { web_evidence?: BriefWebEvidence | null }).web_evidence ?? null)
+      : null;
+
     const { system, prompt } = buildMechanismPrompt(kind, {
       question: brief.canonical_question,
       routing: brief.routing_extract,
@@ -74,6 +88,7 @@ export async function processDecisionMechanismJob(
       time_horizon_months: args.time_horizon_months,
       stakeholder_to_simulate: args.stakeholder_to_simulate,
       debate_rounds: args.debate_rounds,
+      web_evidence: webEvidence,
     });
 
     const llm = buildLLM(llmOverrides);
