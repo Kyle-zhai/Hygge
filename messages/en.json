@@ -23,7 +23,7 @@
   },
   "landing": {
     "hero": "Don't ask an AI. Convene one.",
-    "subtitle": "Convene a round table of AI advisors with sharply different stances. Watch them argue your decision out, then walk away with a signed, tamper-evident audit trail.",
+    "subtitle": "Paste a product decision. A panel of AI personas runs it through six analysis mechanisms — debate, scenario simulation, theory-of-mind, cross-challenge, reflection ranking, persona review — and returns a structured report where every conclusion traces back to a specific transcript.",
     "cta": "Start a Discussion",
     "featurePersonas": "Diverse Perspectives",
     "featurePersonasDesc": "AI personas from different backgrounds offer unique viewpoints and multi-dimensional insights",

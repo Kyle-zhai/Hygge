@@ -19,36 +19,36 @@ const STEPS: Step[] = [
     titleZh: "欢迎使用 Hygge",
     titleEn: "Welcome to Hygge",
     bodyZh:
-      "把一个高风险决策放到桌上，召集一组立场各异的 AI 顾问真的吵一遍。结果不是一段聊天记录，而是一份能签字、能拿去给法务和董事会的审计报告。",
+      "贴上你正在面对的产品决策，让一组 AI persona 通过六种分析机制把它拆开看。你拿到的不是一段对话，而是一份每条结论都能追溯到具体机制和 persona 的结构化报告。",
     bodyEn:
-      "Put a high-stakes decision on the table. A group of AI advisors with sharply different stances actually argue it out. You walk away not with a chat log, but with a signed audit report you can hand to legal or your board.",
+      "Paste a product decision you're facing. A panel of AI personas runs it through six analysis mechanisms and returns a structured report where every conclusion traces back to the specific mechanism and persona that produced it.",
   },
   {
     icon: MessageCircle,
-    titleZh: "开始一次圆桌讨论",
-    titleEn: "Convene the round table",
+    titleZh: "对话式 intake",
+    titleEn: "Conversational intake",
     bodyZh:
-      "用一段话描述你要决定什么——招聘、上线、政策变更、AI 功能发布都可以。系统自动选 3–8 位最相关的顾问,他们先单独表态,再当面交锋,最后给你共识、分歧和具体行动项。",
+      "你说一句你要决定什么。系统不会抽冷子开跑——它先抽取你已经说过的信息，最多再问 3 个真正能改变路由的问题，然后给你一份 panel 预览（用哪些 persona、哪些机制），你确认后再花算力。",
     bodyEn:
-      "Describe the decision in one paragraph — a hire, a launch, a policy change, an AI feature ship. The system picks 3–8 relevant advisors. Each speaks alone first, then they confront each other on disagreement. You get consensus, conflict, and concrete action items.",
+      "You describe the decision once. The system extracts what you've already said, asks at most 3 high-info-gain follow-ups, then shows you a panel preview (which personas, which mechanisms) before spending any compute. You confirm, then it runs.",
   },
   {
     icon: ScrollText,
-    titleZh: "选一份审计模板",
-    titleEn: "Pick an audit template",
+    titleZh: "六种分析机制并行",
+    titleEn: "Six mechanisms run in parallel",
     bodyZh:
-      "针对合规、上线 Pre-Mortem、招聘决策这些场景,Hygge 内置 5 套模板——包含 EU AI Act 第14条、GDPR 第22条、EEOC 这些监管参照。模板带 Compliance Officer + Adversarial Red Team 角色。",
+      "圆桌辩论、场景模拟、心智理论、交叉挑战、独立评审、反思排序——按你的决策类型自动选 3–6 种跑。流式出结论，机制之间打架的地方系统会单独标出来。",
     bodyEn:
-      "For compliance, launch pre-mortem, or hiring decisions, Hygge ships 5 templates — referencing EU AI Act Art.14, GDPR Art.22, EEOC. Each template includes a Compliance Officer and an Adversarial Red Team persona by default.",
+      "Round-table debate, scenario simulation, theory-of-mind, cross-challenge, independent persona review, reflection ranker — 3–6 of these run in parallel based on your decision type. Conclusions stream in. Where mechanisms disagree, the system flags it as a conflict.",
   },
   {
     icon: FileSignature,
-    titleZh: "签字、归档、可追溯",
-    titleEn: "Sign, archive, defend",
+    titleZh: "Show your work",
+    titleEn: "Show your work",
     bodyZh:
-      "每个发现都要明确处置——接受缓解、接受残余风险、驳回或延期。决策者和合规官各签一次,IP 哈希留痕。整个过程 SHA-256 哈希链串联,数据库 insert-only:任一行被改,整条链就断。这就是合规可信。",
+      "报告顶部是结论先行：建议 + 三大风险。下面按机制分块——每条结论都能点开看是哪个 persona、在哪一轮辩论、从哪个场景推出来的。改条件再问一轮也只是一键的事，旧报告依然在那。",
     bodyEn:
-      "Every finding gets an explicit disposition — accept-mitigation, accept-residual, reject, or defer. The decision owner and compliance signer each attest, with hashed IP. Everything is SHA-256 chained and insert-only at the database level. Tamper one row, the chain breaks. That's how it stays defensible.",
+      "The report opens with the bottom line: a recommendation plus the top three risks. Below that, every conclusion is grouped by mechanism — click any of them to drill into the persona, the debate round, the scenario it came from. Re-running with new conditions is one click, and the prior report stays in the chat.",
   },
 ];
 
