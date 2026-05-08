@@ -19,7 +19,8 @@ Respond ONLY with valid JSON:
 export async function recommendPersonas(
   llm: LLMAdapter,
   projectDescription: string,
-  availablePersonas: Persona[]
+  availablePersonas: Persona[],
+  targetCount: number = 10,
 ): Promise<{ recommended_ids: string[]; reasoning: string }> {
   const personaList = availablePersonas
     .map(
@@ -30,8 +31,13 @@ export async function recommendPersonas(
 
   const response = await llm.complete({
     system: RECOMMEND_SYSTEM,
-    prompt: `Topic: ${projectDescription}\n\nAvailable personas:\n${personaList}`,
-    maxTokens: 1024,
+    prompt: `Topic: ${projectDescription}
+
+Aim for ${targetCount} personas — pick the ${targetCount} most relevant covering distinct viewpoints, not the safest ${targetCount}. Prefer breadth (technical + business + design + end-user + finance + skeptic) over redundancy.
+
+Available personas:
+${personaList}`,
+    maxTokens: 2048,
   });
 
   return robustJsonParse(response.text);

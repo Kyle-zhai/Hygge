@@ -27,6 +27,7 @@ export default function NewDecisionPage() {
   const router = useRouter();
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [personaCount, setPersonaCount] = useState(10);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,7 +67,10 @@ export default function NewDecisionPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const session = await createDecisionSession(locale === "zh" ? "zh" : "en");
+      const session = await createDecisionSession(
+        locale === "zh" ? "zh" : "en",
+        personaCount,
+      );
       let res: Response;
       if (files.length > 0) {
         const fd = new FormData();
@@ -223,9 +227,39 @@ export default function NewDecisionPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {ALL_MECHANISMS_LIST.map((k) => labels[k]).join(" · ")}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground/70">
-            {t("panelPreviewMechanisms")} · {t("panelPreviewPersonas")}
-          </p>
+          <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground/70">
+            <span>{t("panelPreviewMechanisms")}</span>
+            <span aria-hidden="true">·</span>
+            {/* Persona count stepper. Inline with the "six mechanisms"
+                meta row so it reads as one configuration line, not a
+                shouty form field. */}
+            <span className="inline-flex items-center gap-1.5">
+              <span>{t("personaCountLabel")}</span>
+              <span className="inline-flex items-center rounded-full border border-border bg-background">
+                <button
+                  type="button"
+                  onClick={() => setPersonaCount((n) => Math.max(3, n - 1))}
+                  disabled={submitting || personaCount <= 3}
+                  aria-label={t("personaCountDecrement")}
+                  className="inline-flex size-6 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  −
+                </button>
+                <span className="min-w-[1.5rem] text-center text-xs font-medium text-foreground tabular-nums">
+                  {personaCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPersonaCount((n) => Math.min(25, n + 1))}
+                  disabled={submitting || personaCount >= 25}
+                  aria-label={t("personaCountIncrement")}
+                  className="inline-flex size-6 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  +
+                </button>
+              </span>
+            </span>
+          </div>
         </div>
       </footer>
     </main>

@@ -15,7 +15,12 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { workspace_id?: string; title?: string; locale?: string } = {};
+  let body: {
+    workspace_id?: string;
+    title?: string;
+    locale?: string;
+    persona_count?: number;
+  } = {};
   try {
     body = await request.json();
   } catch {
@@ -26,6 +31,15 @@ export async function POST(request: Request) {
   // worker reads this column and an unexpected value would fall through
   // its locale switch.
   const locale: "en" | "zh" = body.locale === "zh" ? "zh" : "en";
+
+  // Persona count: clamp to the migration's CHECK constraint (3–25). An
+  // out-of-range value would 500 the insert and the user would see a
+  // generic error, so coerce silently to a safe default + range.
+  const requestedCount =
+    typeof body.persona_count === "number" && Number.isFinite(body.persona_count)
+      ? Math.round(body.persona_count)
+      : 10;
+  const personaCount = Math.max(3, Math.min(25, requestedCount));
 
   // Verify workspace membership before pinning the session to a workspace.
   // Without this check, a malicious client could attach a session to any
@@ -59,6 +73,7 @@ export async function POST(request: Request) {
       workspace_id: workspaceId,
       title: safeTitle,
       locale,
+      persona_count: personaCount,
     })
     .select("id, created_at")
     .single();

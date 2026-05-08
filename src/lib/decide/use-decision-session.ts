@@ -64,11 +64,12 @@ async function postMessage(
 
 export async function createDecisionSession(
   locale: "en" | "zh" = "en",
+  personaCount: number = 10,
 ): Promise<{ id: string }> {
   const res = await fetch("/api/decisions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ locale }),
+    body: JSON.stringify({ locale, persona_count: personaCount }),
   });
   if (!res.ok) throw new Error(`Failed to create session: ${res.status}`);
   const data = (await res.json()) as { session: { id: string } };
