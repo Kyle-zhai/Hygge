@@ -53,6 +53,7 @@ interface SessionRow {
   user_id: string;
   workspace_id: string | null;
   locale: "en" | "zh";
+  persona_count: number;
 }
 
 const PROMPT_VERSION_TAG = `${INTAKE_EXTRACT_PROMPT_VERSION}+${INTAKE_QUESTION_PROMPT_VERSION}`;
@@ -333,6 +334,7 @@ async function emitConfirmation(
     extraction.routing_extract,
     extraction.canonical_question,
     personas,
+    session.persona_count,
   );
 
   const briefId = await upsertDraftBrief(session, messages, extraction, {
@@ -385,6 +387,7 @@ async function emitNewConfirmationFromBrief(
     brief.routing_extract,
     brief.canonical_question,
     personas.filter((p) => !brief.persona_ids.includes(p.id)),
+    session.persona_count,
   );
   const newPersonaIds = picked.persona_ids.length
     ? picked.persona_ids
@@ -437,6 +440,7 @@ async function finalizeAndConfirm(
     extraction.routing_extract,
     extraction.canonical_question,
     personas,
+    session.persona_count,
   );
   const briefId = await upsertDraftBrief(session, messages, extraction, {
     persona_ids: picked.persona_ids,
@@ -534,17 +538,22 @@ async function sealBriefAndEnqueueOrchestrator(
 async function fetchSession(sessionId: string): Promise<SessionRow | null> {
   const { data, error } = await supabase
     .from("decision_sessions")
-    .select("id, user_id, workspace_id, locale")
+    .select("id, user_id, workspace_id, locale, persona_count")
     .eq("id", sessionId)
     .maybeSingle();
   if (error) throw new Error(`session fetch failed: ${error.message}`);
   if (!data) return null;
-  // Defensive: rows that pre-date migration 066 won't have a locale, even
-  // though the DEFAULT runs on new rows. Coerce to 'en' so the locale
-  // switch downstream never sees `undefined`.
+  // Defensive: rows pre-dating migrations 066/067 won't have these
+  // columns. Coerce so the downstream switches never see undefined.
+  const rawCount = (data as { persona_count?: number }).persona_count;
+  const count =
+    typeof rawCount === "number" && Number.isFinite(rawCount)
+      ? Math.max(3, Math.min(25, Math.round(rawCount)))
+      : 10;
   return {
     ...data,
     locale: data.locale === "zh" ? "zh" : "en",
+    persona_count: count,
   } as SessionRow;
 }
 

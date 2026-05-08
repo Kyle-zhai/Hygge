@@ -8,15 +8,25 @@ import type { RoutingExtract } from "../types/decision.js";
 import { recommendPersonas } from "../processors/recommend-personas.js";
 import { log } from "../utils/logger.js";
 
+// Hard floor / ceiling for the picker. The user-facing UI lets users pick
+// inside [3, 25]; this enforces the same range when called server-side
+// without an explicit count, and acts as a safety net when the count
+// passed in is malformed.
 const MIN_PERSONAS = 3;
-const MAX_PERSONAS = 6;
+const MAX_PERSONAS = 25;
+const DEFAULT_TARGET = 10;
 
 export async function pickPersonasForBrief(
   llm: LLMAdapter,
   extract: RoutingExtract,
   canonicalQuestion: string,
   available: Persona[],
+  targetCount: number = DEFAULT_TARGET,
 ): Promise<{ persona_ids: string[]; reasoning: string }> {
+  const target = Math.max(
+    MIN_PERSONAS,
+    Math.min(MAX_PERSONAS, Math.round(targetCount)),
+  );
   if (available.length === 0) {
     return { persona_ids: [], reasoning: "no personas available" };
   }
@@ -47,12 +57,12 @@ Stakes: ${extract.stakes.value}
 Stakeholders: ${stakeholders}`;
 
   try {
-    const result = await recommendPersonas(llm, topic, available);
+    const result = await recommendPersonas(llm, topic, available, target);
     const recommended = result.recommended_ids.filter((id) =>
       available.some((p) => p.id === id),
     );
     const merged = dedupe([...hinted.map((p) => p.id), ...recommended]);
-    const clamped = clampSize(merged, available);
+    const clamped = clampToTarget(merged, available, target);
     return {
       persona_ids: clamped,
       reasoning: result.reasoning || "LLM selection",
@@ -63,10 +73,10 @@ Stakeholders: ${stakeholders}`;
     });
     const fallback = dedupe([
       ...hinted.map((p) => p.id),
-      ...available.slice(0, MIN_PERSONAS).map((p) => p.id),
+      ...available.slice(0, target).map((p) => p.id),
     ]);
     return {
-      persona_ids: clampSize(fallback, available),
+      persona_ids: clampToTarget(fallback, available, target),
       reasoning: "fallback: hinted personas + first N available",
     };
   }
@@ -76,15 +86,27 @@ function dedupe(ids: string[]): string[] {
   return Array.from(new Set(ids));
 }
 
-function clampSize(ids: string[], available: Persona[]): string[] {
-  if (ids.length >= MIN_PERSONAS) return ids.slice(0, MAX_PERSONAS);
-  // Top up with available personas not already included.
-  const have = new Set(ids);
-  for (const p of available) {
-    if (have.has(p.id)) continue;
-    ids.push(p.id);
-    have.add(p.id);
-    if (ids.length >= MIN_PERSONAS) break;
+function clampToTarget(
+  ids: string[],
+  available: Persona[],
+  target: number,
+): string[] {
+  // Top up with un-picked available personas if we're short of the target.
+  // Truncates to target if the LLM over-picked. Falls back to MIN if even
+  // topping up can't reach target (small pools).
+  if (ids.length < target) {
+    const have = new Set(ids);
+    for (const p of available) {
+      if (have.has(p.id)) continue;
+      ids.push(p.id);
+      have.add(p.id);
+      if (ids.length >= target) break;
+    }
   }
-  return ids.slice(0, MAX_PERSONAS);
+  if (ids.length > target) return ids.slice(0, target);
+  // If pool was too small to even hit MIN, return what we have rather
+  // than an empty list — the seal step will catch and surface the
+  // empty-personas error if it's truly zero.
+  if (ids.length < MIN_PERSONAS) return ids;
+  return ids;
 }
