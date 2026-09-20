@@ -1,7 +1,8 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
 /node_modules
+worker/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,74 +11,55 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
 /.next/
 /out/
-
-# production
 /build
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+worker/dist/
+worker/test-output/
 
-# misc
+# ---------------------------------------------------------------------------
+# Environment — never commit real values; .env.example files are the contract
+# ---------------------------------------------------------------------------
+.env*
+!.env.example
+!worker/.env.example
+
+# ---------------------------------------------------------------------------
+# Local-only working directory: business docs, pitch decks, raw screenshots,
+# one-off scripts. Nothing in here is ever committed or deployed.
+# ---------------------------------------------------------------------------
+/.local/
+
+# ---------------------------------------------------------------------------
+# Internal docs (design specs, plans, SQL queries). Kept out of the public
+# repo; the README is the public entry point.
+# ---------------------------------------------------------------------------
+docs/
+
+# ---------------------------------------------------------------------------
+# Images — only the README assets and app-served public assets are tracked
+# ---------------------------------------------------------------------------
+*.png
+!public/**/*.png
+!.github/assets/*.png
+
+# ---------------------------------------------------------------------------
+# Tooling / editor / agent scratch
+# ---------------------------------------------------------------------------
 .DS_Store
 *.pem
-
-# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
-
-# vercel
 .vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-.env.local
-.env*.local
-.superpowers/
-
-# worker
-worker/.env
-worker/node_modules
-worker/test-output/
-
-# persona pictures (originals too large)
-/persona_picture
-
-# scripts
-/scripts
-
-# claude
 .claude/
-
-# playwright mcp
-.playwright-mcp/
-
-# screenshots
-screenshots/
-*.png
-!public/**/*.png
-
-# docs (generated)
-docs/
-
-# worker dist
-worker/dist/
 .gstack/
-
-# investor / pitch docs — local only, never commit
-INVESTOR-MEMO.*
-INVESTOR-PITCH*.md
-PITCH_DECK*
-Intro.docx
-项目书.pdf
-direction.md
+.superpowers/
+.playwright-mcp/
