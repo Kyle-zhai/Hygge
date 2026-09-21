@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo";
 import type { DecisionMessage } from "./types";
 
 // Subscribes to decision_messages for a session and ALSO polls every
@@ -72,6 +73,14 @@ export function useRealtimeMessages(sessionId: string | null) {
 
     // Initial fetch; surfaces existing history immediately.
     void fetchAll();
+
+    // Demo mode is a fixed transcript — no worker is appending to it, so
+    // neither the poll loop nor the subscription has anything to observe.
+    if (isDemoMode()) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     // Poll loop as Realtime fallback. Guarantees the user sees agent
     // replies even if the WS subscription drops silently.

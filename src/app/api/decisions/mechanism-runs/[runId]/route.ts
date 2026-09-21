@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getDemoRun, isDemoId, isDemoMode } from "@/lib/demo";
 
 export const maxDuration = 10;
 
@@ -12,6 +13,13 @@ export async function GET(
   context: { params: Promise<{ runId: string }> },
 ) {
   const { runId } = await context.params;
+
+  if (isDemoMode() && isDemoId(runId)) {
+    const run = getDemoRun(runId);
+    if (!run) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(run);
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

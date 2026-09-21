@@ -9,6 +9,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -71,6 +72,15 @@ export default function ArtifactViewPage({
         if (cancelled) return;
         setLoadError(err instanceof Error ? err.message : "Failed to load report");
       });
+
+    // Demo mode serves static fixtures — there is nothing to stream, and
+    // subscribing would retry a WebSocket against a placeholder Supabase
+    // host forever.
+    if (isDemoMode()) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const supabase = createClient();
     const channel = supabase

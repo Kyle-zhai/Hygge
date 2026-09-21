@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Compiled worker output — linting it re-flags every `any` the compiler
     // emitted for untyped JSON responses.
     "worker/dist/**",
+    // Local-only scratch directory (business docs, screenshots, one-off
+    // scripts). Never committed, so never linted.
+    ".local/**",
   ]),
 ]);
 

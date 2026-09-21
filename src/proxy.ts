@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { routing } from "@/i18n/routing";
+import { isDemoMode } from "@/lib/demo";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -37,7 +38,10 @@ export async function proxy(request: NextRequest) {
   const isProtected = protectedRoutes.some((route) =>
     pathnameWithoutLocale.startsWith(route)
   );
-  if (isProtected && !user) {
+  // Demo mode serves a static pre-built decision with no database behind
+  // it, so there is no user-owned data to gate. Off unless explicitly
+  // enabled; see src/lib/demo.
+  if (isProtected && !user && !isDemoMode()) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/auth/login`;
     url.searchParams.set("next", pathname);

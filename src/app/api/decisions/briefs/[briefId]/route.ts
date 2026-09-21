@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_BRIEF, DEMO_BRIEF_ID, isDemoMode } from "@/lib/demo";
 
 export const maxDuration = 10;
 
@@ -12,6 +13,11 @@ export async function GET(
   context: { params: Promise<{ briefId: string }> },
 ) {
   const { briefId } = await context.params;
+
+  if (isDemoMode() && briefId === DEMO_BRIEF_ID) {
+    return NextResponse.json({ brief: DEMO_BRIEF });
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

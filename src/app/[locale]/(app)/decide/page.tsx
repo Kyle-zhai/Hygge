@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ArrowUpRight, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_SESSION_ID, isDemoMode } from "@/lib/demo";
 
 export default async function DecideHomePage({
   params,
@@ -16,6 +17,9 @@ export default async function DecideHomePage({
   const t = await getTranslations({ locale, namespace: "decide" });
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Demo mode has exactly one pre-built decision; send visitors straight
+  // into it rather than showing an empty list they cannot add to.
+  if (!user && isDemoMode()) redirect(`/${locale}/decide/${DEMO_SESSION_ID}`);
   if (!user) redirect(`/${locale}/auth/login`);
 
   const { data: sessions } = await supabase

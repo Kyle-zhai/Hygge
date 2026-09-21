@@ -1,302 +1,168 @@
 # Hygge
 
-Multi-agent decision analysis. You describe a decision; a panel of AI personas
-runs it through six analysis mechanisms and returns a structured report where
-every conclusion carries a pointer back to the mechanism run that produced it.
+**Multi-agent decision analysis with traceable provenance.**
+
+You describe a decision. A panel of AI personas argues it through six analysis
+mechanisms. You get back a structured report in which every conclusion stores a
+foreign key to the transcript that produced it.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
 [![React 19](https://img.shields.io/badge/React-19-black.svg)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-black.svg)](https://www.typescriptlang.org)
 
----
-
-## Why
-
-Ask one model a hard product question and you get one confident voice with
-invisible reasoning. You cannot tell which parts were contested, which
-assumptions carried the answer, or where it would break.
-
-Hygge makes the deliberation the product. Personas with genuinely different
-priors argue the decision, disagree on the record, and every finding in the
-final report stores the `mechanism_run_id` it came from — so the trail back to
-the transcript is a foreign key, not a citation the model wrote for itself.
-
-| | Single-model chat | Hygge |
-|---|---|---|
-| Perspectives | One voice | A panel with conflicting priors |
-| Disagreement | Averaged away | Emitted as a first-class `conflict_warning` finding |
-| Provenance | Model-authored, unverifiable | `finding.mechanism_run_id` FK to the run |
-| Output | Prose | Typed findings: severity, confidence, cited personas |
+<img src=".github/assets/report.png" alt="A finished decision report" width="100%">
 
 ---
 
-## How a decision flows
+## Try it without setting anything up
 
-### 1 · Conversational intake
+Demo mode serves one complete, pre-built decision — *"rewrite our Rails
+monolith in Go, or modularize it in place?"* — with no auth, no worker, no
+database and no LLM key:
 
-Instead of a settings form, an intake agent extracts routing fields from what
-you wrote and asks at most three clarifying questions (`MAX_INTAKE_QUESTIONS = 3`).
-Every extracted field carries its own confidence and the verbatim quote it came
-from — nothing is silently inferred:
-
-```ts
-interface ExtractedField<T> {
-  value: T;
-  confidence: number;          // 0–1; "known" threshold is 0.7
-  source_quote: string | null; // verbatim user text, or null if defaulted
-  was_asked: boolean;          // came from a clarifying question, not extraction
-}
+```bash
+git clone https://github.com/Kyle-zhai/Hygge.git && cd Hygge && npm install
+NEXT_PUBLIC_DEMO_MODE=true npm run dev
 ```
 
-Those fields decide the routing:
+Open `localhost:3000/en/decide` and the finished analysis is there: the intake
+conversation, nine findings across four mechanisms, every transcript, and a
+flagged conflict between two of them.
+
+---
+
+## What it produces
+
+Not a chat log. Four artifacts, each addressable:
+
+**Typed findings.** Every mechanism emits the same shape, which is what makes a
+debate result and a scenario projection comparable:
 
 ```ts
-decision_type       tradeoff | build_or_kill | hire | pivot |
-                    feature_design | vendor_selection | other
-primary_dimensions  technical | business | ux | strategic | people | finance
-timeline            immediate | weeks | months | years
-reversibility       one_way_door | two_way_door | unknown
-stakes              low | medium | high | unknown
+{ headline, severity: 1..5, confidence: 0..1, detail_summary, cited_persona_ids }
 ```
 
-The run always remains one click away — `sealed_by` records how intake ended:
-`all_required_filled`, `user_skip`, `budget_exhausted`, or `auto_timeout`.
+**Provenance as a foreign key.** Each persisted finding carries
+`mechanism_run_id` — a row pointer to the run whose transcript you can open.
+Traceability is enforced by the schema, not asserted by the model.
 
-### 2 · Mechanism fan-out
+**Surfaced disagreement.** When two mechanisms reach contradictory conclusions
+on the same point, the contradiction is not averaged away. It becomes its own
+finding, `source_mechanism: "conflict_warning"`, for you to judge.
 
-The sealed brief is routed to a subset of six mechanisms. Each becomes its own
-job, its own row, its own transcript:
-
-| Mechanism | What it does | Notable arg |
-|---|---|---|
-| `persona_review` | Each persona reviews independently, no cross-talk | — |
-| `round_table_debate` | Multi-round open debate; personas react to each other | `debate_rounds` |
-| `theory_of_mind` | Simulates how a named stakeholder receives the decision | `stakeholder_to_simulate` |
-| `scenario_simulation` | Projects the decision forward over a horizon | `time_horizon_months` |
-| `cross_challenge` | Explicit proponent-vs-challenger pairings | `challenge_pairs` |
-| `reflection_ranker` | Ranks findings, flags contradictions between mechanisms | — |
-
-Every mechanism processor must emit the same finding shape, which is what makes
-results from a debate and results from a scenario projection comparable:
+**An auditable intake trail.** Every routing field records the confidence and
+the verbatim user quote it came from, so nothing is silently inferred:
 
 ```ts
-interface MechanismFindingDraft {
-  headline: string;            // ≤ 80 chars — the one-line conclusion
-  severity: 1 | 2 | 3 | 4 | 5; // 1 info … 5 critical
-  confidence: number;          // 0–1
-  detail_summary: string;      // ≤ 200 chars — what the mechanism actually saw
-  cited_persona_ids: string[];
-}
+{ value, confidence, source_quote: string | null, was_asked: boolean }
 ```
 
-### 3 · Synthesis, including the disagreements
+---
 
-The synthesizer merges runs into persisted `Finding` rows. Each keeps its
-origin:
+## The six mechanisms
 
-```ts
-interface Finding {
-  mechanism_run_id: string;      // FK → the run whose transcript you can open
-  source_mechanism: FindingSource;
-  headline: string;
-  severity: 1 | 2 | 3 | 4 | 5;
-  confidence: number;
-  cited_persona_ids: string[];
-  content_hash: string;          // stable id for UI reconcile across reruns
-  // …
-}
+One brief fans out to a routed subset. Each becomes its own job, row, and
+transcript.
 
-type FindingSource = MechanismKind | "conflict_warning";
-```
+| Mechanism | What it does |
+|---|---|
+| `persona_review` | Each persona reviews independently — no cross-talk |
+| `round_table_debate` | Multi-round debate; personas react to each other |
+| `theory_of_mind` | Simulates how a named stakeholder receives the decision |
+| `scenario_simulation` | Projects the decision forward over a horizon |
+| `cross_challenge` | Explicit proponent-vs-challenger pairings |
+| `reflection_ranker` | Ranks findings, flags contradictions across mechanisms |
 
-`conflict_warning` is the interesting one. When two mechanisms reach
-contradictory conclusions on the same point, the contradiction is **not resolved
-silently** — it is emitted as its own finding for you to judge. Because every
-finding needs a real `mechanism_run_id`, the synthesizer anchors these to a
-run tagged `args.synthetic = true`; `ensureConflictRun` refuses to repurpose a
-genuine `reflection_ranker` run for this.
+Opening any conclusion lands in the run behind it — stance shifts, the exchange
+that caused them, and the raw transcript underneath:
 
-Briefs are **immutable once finalized** — a trigger blocks mutation of routing
-fields after `status` leaves `draft`. Changing your mind creates a child brief
-through `/rerun`, so the lineage stays auditable (`parent_brief_id`, capped at
-depth 8).
+<img src=".github/assets/mechanism.png" alt="Mechanism transcript" width="100%">
+
+---
+
+## What makes it different
+
+**Conversational intake, not a settings form.** An agent extracts routing
+fields from what you wrote and asks at most three clarifying questions. The run
+is always one click away; `sealed_by` records how intake ended — filled,
+skipped, budget-exhausted, or timed out.
+
+<img src=".github/assets/intake.png" alt="Intake conversation" width="100%">
+
+**Decisions are immutable and versioned.** A database trigger blocks mutation
+of routing fields once a brief leaves `draft`. Changing your mind creates a
+child brief through `/rerun`, so the lineage of a decision survives — it isn't
+overwritten.
+
+**Personas are records, not prompt fragments.** Each has a background, a
+discipline tag, an avatar and an evaluation lens. They can be forked, published
+to a marketplace, or authored from scratch.
+
+<img src=".github/assets/persona.png" alt="Persona detail" width="100%">
+
+**Provider-agnostic with real failover.** Up to ten LLM providers are tried in
+order. A permanent failure (401/403/404/quota) blocks that entry for the
+session instead of being retried. Content refusals count as fallbackable, so a
+chain spanning jurisdictions keeps bilingual traffic working. Users can bring
+their own keys, encrypted at rest.
+
+**Bilingual throughout** — English and Chinese, via next-intl.
 
 ---
 
 ## Architecture
 
-Two long-running processes over Postgres and Redis:
+Two long-running processes over Postgres and Redis. The web tier never calls an
+LLM provider directly; it proxies to the worker, which owns the fallback chain
+and keeps provider keys on one host.
 
 ```
 ┌────────────────────────────┐              ┌────────────────────────────┐
 │  Next.js 16 (App Router)   │    HTTPS     │  Worker (Node)             │
-│                            │ ───────────▶ │                            │
-│  · /decide chat UI         │  shared      │  · BullMQ consumers        │
-│  · /api/decisions/*        │  secret      │  · LLM fallback chain      │
-│  · Stripe, auth, admin     │              │  · Tavily web grounding    │
+│  · /decide chat UI         │ ───────────▶ │  · BullMQ consumers        │
+│  · /api/decisions/*        │   shared     │  · LLM fallback chain      │
+│  · Stripe, auth, admin     │   secret     │  · Tavily web grounding    │
 └─────────────┬──────────────┘              └─────────────┬──────────────┘
-              │                                           │
-              │        Supabase — Postgres + RLS          │
+              │       Supabase — Postgres + RLS           │
               └────────── + Realtime publication ─────────┘
                                    │
                     Redis — BullMQ queues + rate limits
 ```
 
-Four queues carry the work:
-
-- `evaluations` — round-table evaluations (the original product surface)
-- `decision-intake` — the conversational state machine (extract → ask → seal)
-- `decision-orchestrator` — fans out mechanism jobs, then runs the synthesizer
-- `decision-mechanism` — six job names share this queue, one per mechanism
-
-In production the Next.js side never calls an LLM provider directly; it proxies
-to the worker, which owns the fallback chain. Provider keys stay on one host,
-and the chain can hop providers when one refuses or times out.
-
-### Repository layout
-
-```
-src/
-  app/[locale]/      Localized pages (en · zh) — landing, decide, personas, settings
-  app/api/           Route handlers — decisions, personas, stripe, admin, cron
-  components/        UI by feature: decide, landing, personas, settings, ui
-  lib/               auth · billing · decide · llm · queue · rate-limit · supabase
-shared/types/        Types imported by BOTH the app and the worker
-worker/src/
-  processors/        One file per job kind — the mechanisms live here
-  queue.ts           Queue + Worker construction, concurrency
-supabase/migrations/ Ordered SQL migrations (001 → 069)
-messages/            en.json · zh.json (next-intl)
-tests/               App-side vitest; worker/tests/ for the worker
-```
+Four queues: `evaluations`, `decision-intake`, `decision-orchestrator`, and
+`decision-mechanism` (six job names share the last one).
 
 ---
 
-## Quick start
+## Run it
 
-**Prerequisites:** Node 20+, a [Supabase](https://supabase.com) project, a Redis
-instance (local or [Upstash](https://upstash.com)), and one OpenAI-compatible
-LLM endpoint. The LLM layer is provider-agnostic — anything speaking the OpenAI
-chat-completions shape works, plus native Anthropic and Google adapters.
+Needs Node 20+, Supabase, Redis, and any OpenAI-compatible LLM endpoint.
 
 ```bash
-git clone https://github.com/Kyle-zhai/Hygge.git
-cd Hygge
-npm install
+git clone https://github.com/Kyle-zhai/Hygge.git && cd Hygge && npm install
+cp .env.example .env.local          # web
+cp worker/.env.example worker/.env  # worker — required, tests read it too
+npm run db:migrate
+npm run dev          # web    → localhost:3000
+npm run dev:worker   # worker → separate terminal, required for any decision
 ```
 
-### 1 · Environment
+Both `.env.example` files document every variable inline. Verify with
+`npm run typecheck:all && npm test && npm run test:worker`.
 
-Two env files, read by two different processes. Create **both** before running
-anything — several worker tests construct a Supabase client at import time and
-will fail to collect without `worker/.env`:
+<details>
+<summary><b>Conventions that bite</b></summary>
 
-```bash
-cp .env.example .env.local         # Next.js: Supabase, Stripe, analytics, worker URL
-cp worker/.env.example worker/.env # Worker: LLM chain, Redis, service-role key
-```
+- **`personas.id` is `TEXT`, not `UUID`** — every FK to it must be `text` / `text[]`.
+- **Briefs are immutable post-finalize** — use `/rerun`; `parent_brief_id` depth caps at 8.
+- **One draft brief per session**, enforced by a partial unique index.
+- **User text is fenced** in `<user_input>` before reaching a prompt; LLM-returned
+  enums and array shapes are re-validated before being persisted.
+- **RLS on every user-owned table**; the service-role key never reaches the browser.
+- **Rate limits**: `decisionMessages` 60/min/user, `decisionRerun` 10/h/user.
 
-Both are documented inline. Minimum to boot the app is
-`NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`; minimum to run a
-decision end-to-end adds `REDIS_URL` and one `LLM_1_*` group in `worker/.env`.
-
-### 2 · Database
-
-```bash
-npm run db:migrate   # apply migrations in order
-# npm run db:reset   # drop and rebuild from scratch
-```
-
-### 3 · Run
-
-```bash
-npm run dev          # Next.js  → http://localhost:3000
-npm run dev:worker   # Worker   (separate terminal)
-```
-
-The worker must be running for any decision to execute. Without it the chat
-accepts messages but no intake or orchestrator job is ever consumed.
-
-### 4 · Verify
-
-```bash
-npm run typecheck:all   # app + worker
-npm test                # app-side vitest   — 35 tests
-npm run test:worker     # worker-side vitest — 185 tests
-npm run lint
-```
-
----
-
-## Configuration notes
-
-**LLM fallback chain.** Up to ten numbered provider groups (`LLM_1_*` through
-`LLM_10_*`) are tried in order. A permanent failure — 401, 403, 404, quota —
-blocks that entry for the rest of the session rather than being retried.
-Content refusals are treated as fallbackable, so if you serve bilingual traffic
-keep at least one provider from a different jurisdiction in the chain.
-
-**BYOK.** Users can save their own chain at `/settings/llm`, overriding the env
-defaults per request. Keys are encrypted at rest with
-`LLM_KEY_ENCRYPTION_SECRET` (any string ≥16 chars; `openssl rand -base64 32`).
-
-**Web grounding.** `TAVILY_API_KEY` enables source-cited findings. Without it,
-mechanisms that would cite external evidence emit "no authoritative source
-found" instead of a citation.
-
-**Admin panel.** `/admin` is deny-by-default — access requires an exact match
-against the comma-separated `ADMIN_EMAILS` list.
-
----
-
-## Database conventions
-
-These bite people who assume otherwise:
-
-- **`personas.id` is `TEXT`, not `UUID`.** Every FK referencing `personas(id)`
-  must be `text` / `text[]`.
-- **Decision briefs are immutable post-finalize.** A trigger blocks mutation of
-  routing fields once `status` leaves `draft`. Use `/rerun` to create a child.
-- **One draft brief per session**, enforced by a partial unique index that
-  closes a TOCTOU window in the intake processor.
-- **`parent_brief_id` chain depth is capped at 8** by a trigger.
-
----
-
-## Security model
-
-- Row-level security on every user-owned table; the service-role key never
-  reaches the browser.
-- All user-supplied text is wrapped in `<user_input>` fences before reaching a
-  prompt, and LLM-returned enums and array shapes are re-validated against the
-  schema before being persisted. `canonical_question` is capped at 1000 chars.
-- LLM-trigger surfaces are rate limited: `decisionMessages` 60/min/user,
-  `decisionRerun` 10/h/user.
-- Stripe webhooks are idempotent and signature-verified.
-
----
-
-## Deployment
-
-The Next.js app deploys to Vercel (region `hkg1`, cron jobs declared in
-`vercel.json`). The worker deploys independently — it ships with a `Dockerfile`
-and a `railway.toml`, but anything running a long-lived Node process works.
-
-They only need to agree on three things: the same Redis, the same Supabase
-project, and a matching `WORKER_SHARED_SECRET`.
-
----
-
-## Contributing
-
-Issues and pull requests are welcome. Before opening a PR:
-
-```bash
-npm run typecheck:all && npm run lint && npm test && npm run test:worker
-```
-
-CI runs typecheck, lint, and the app-side test suite on every pull request.
+</details>
 
 ---
 

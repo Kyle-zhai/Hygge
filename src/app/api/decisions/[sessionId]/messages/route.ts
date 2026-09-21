@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueDecisionIntake } from "@/lib/queue/decision";
 import { parseAttachment, composeUserContent } from "@/lib/decide/parse-attachment";
+import { DEMO_MESSAGES, DEMO_SESSION_ID, isDemoMode } from "@/lib/demo";
 
 // Bumped from 15 to 60 because the multipart-with-attachments path
 // runs server-side parse for each file (officeparser can take several
@@ -24,6 +25,11 @@ export async function GET(
   context: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await context.params;
+
+  if (isDemoMode() && sessionId === DEMO_SESSION_ID) {
+    return NextResponse.json({ messages: DEMO_MESSAGES });
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

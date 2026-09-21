@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
+import { DEMO_SESSION, DEMO_SESSION_ID, isDemoMode } from "@/lib/demo";
 import { PLANS } from "@/lib/stripe/plans";
 
 interface DebateRow {
@@ -220,6 +221,22 @@ export default async function AppLayout({
       evaluationsUsed = subscription.evaluations_used;
       evaluationsLimit = subscription.evaluations_limit;
     }
+  }
+
+  // Demo mode: there is no user, so every query above was skipped. Surface
+  // the one pre-built decision so the sidebar is navigable instead of empty.
+  if (!user && isDemoMode()) {
+    history.push({
+      id: `decision-${DEMO_SESSION_ID}`,
+      name: DEMO_SESSION.title ?? "Demo decision",
+      evaluationId: null,
+      status: "completed",
+      mode: "decision",
+      isCompare: false,
+      isDecision: true,
+      decisionSessionId: DEMO_SESSION_ID,
+      createdAt: DEMO_SESSION.last_msg_at,
+    });
   }
 
   return (
