@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveSupabaseAnonKey, resolveSupabaseUrl } from "./demo-fallback";
 
 // Realtime channels read tables that are RLS-gated by the authenticated
 // user. The Supabase realtime transport only sends the anon key by
@@ -24,8 +25,8 @@ export function createClient(): SupabaseClient {
   // path because the HTTP server tolerates it, but encodes as %0A in
   // the realtime WebSocket URL and gets rejected at WS upgrade with
   // "HTTP Authentication failed; no valid credentials available".
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
-  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+  const url = resolveSupabaseUrl();
+  const anonKey = resolveSupabaseAnonKey();
 
   const client = createBrowserClient(url, anonKey);
 

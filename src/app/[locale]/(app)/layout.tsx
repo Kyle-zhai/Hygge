@@ -43,10 +43,12 @@ export default async function AppLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Demo mode boots with no Supabase credentials, so the client is never
+  // constructed — createClient() throws without a URL and key.
+  const supabase = isDemoMode() ? null : await createClient();
+  const { data: { user } } = supabase
+    ? await supabase.auth.getUser()
+    : { data: { user: null } };
 
   const history: { id: string; name: string; evaluationId: string | null; status: string | null; mode: string; isCompare: boolean; isDebate?: boolean; debateId?: string; isDecision?: boolean; decisionSessionId?: string; createdAt?: string }[] = [];
   let plan = "free";
@@ -54,7 +56,7 @@ export default async function AppLayout({
   let evaluationsLimit = PLANS.free.evaluationsLimit;
 
   let isBYOK = false;
-  if (user) {
+  if (user && supabase) {
     // Note: legacy evaluations + projects (the /evaluate flow) are no
     // longer surfaced in the sidebar — those routes were removed in the
     // 2026-05-08 cleanup. Only debate history is included here.

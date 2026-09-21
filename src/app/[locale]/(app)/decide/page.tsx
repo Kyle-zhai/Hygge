@@ -15,11 +15,13 @@ export default async function DecideHomePage({
 }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "decide" });
+  // Demo mode has exactly one pre-built decision; send visitors straight
+  // into it rather than showing an empty list they cannot add to. Checked
+  // before touching Supabase, which has no credentials in this mode.
+  if (isDemoMode()) redirect(`/${locale}/decide/${DEMO_SESSION_ID}`);
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  // Demo mode has exactly one pre-built decision; send visitors straight
-  // into it rather than showing an empty list they cannot add to.
-  if (!user && isDemoMode()) redirect(`/${locale}/decide/${DEMO_SESSION_ID}`);
   if (!user) redirect(`/${locale}/auth/login`);
 
   const { data: sessions } = await supabase

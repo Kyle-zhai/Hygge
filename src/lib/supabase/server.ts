@@ -1,12 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { resolveSupabaseAnonKey, resolveSupabaseUrl } from "./demo-fallback";
 
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
+    resolveSupabaseUrl(),
+    resolveSupabaseAnonKey(),
     {
       cookies: {
         getAll() {

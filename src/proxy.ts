@@ -24,8 +24,12 @@ export async function proxy(request: NextRequest) {
   // Run i18n middleware first to get locale-aware response
   const response = intlMiddleware(request);
 
-  // Run Supabase session refresh
-  const { user } = await updateSession(request, response);
+  // Run Supabase session refresh. Skipped in demo mode, which is meant to
+  // boot with no Supabase credentials at all — constructing a client
+  // without a URL and key throws.
+  const { user } = isDemoMode()
+    ? { user: null }
+    : await updateSession(request, response);
 
   const { pathname } = request.nextUrl;
   const locale = detectLocale(pathname);
